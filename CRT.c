@@ -187,9 +187,17 @@ void CRT_init(int delay, int colorScheme) {
       define_key("\033[17;2~", KEY_F(18));
    }
 #ifndef DEBUG
-   signal(11, CRT_handleSIGSEGV);
+   struct sigaction saSIGSEGV;
+   saSIGSEGV.sa_handler = CRT_handleSIGSEGV;
+   sigemptyset(&saSIGSEGV.sa_mask);
+   saSIGSEGV.sa_flags = SA_RESTART;
+   sigaction(SIGSEGV, &saSIGSEGV, NULL);
 #endif
-   signal(SIGTERM, CRT_handleSIGTERM);
+   struct sigaction saSIGTERM;
+   saSIGTERM.sa_handler = CRT_handleSIGTERM;
+   sigemptyset(&saSIGTERM.sa_mask);
+   saSIGTERM.sa_flags = SA_RESTART;
+   sigaction(SIGTERM, &saSIGTERM, NULL);
    use_default_colors();
    if (!has_colors())
       CRT_colorScheme = 1;

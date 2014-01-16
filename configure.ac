@@ -4,14 +4,16 @@
 AC_PREREQ(2.65)
 AC_INIT([htop],[1.0.2],[hisham@gobolinux.org])
 
-# The following two lines are required by hwloc scripts
-AC_USE_SYSTEM_EXTENSIONS
+# The following line is required by hwloc scripts
 AC_CANONICAL_TARGET
 
 AM_INIT_AUTOMAKE([1.11])
 AC_CONFIG_SRCDIR([htop.c])
 AC_CONFIG_HEADER([config.h])
 AC_CONFIG_MACRO_DIR([m4])
+
+# The following line is required by hwloc scripts
+AC_USE_SYSTEM_EXTENSIONS
 
 # Checks for programs.
 AC_PROG_CC
@@ -30,7 +32,7 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([stdlib.h string.h strings.h sys/param.h sys/time.h unistd.h],[:],[
   missing_headers="$missing_headers $ac_header"
 ])
-AC_CHECK_HEADERS([execinfo.h],[:],[:])
+AC_CHECK_HEADERS([execinfo.h sys/syscall.h],[:],[:])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_HEADER_STDBOOL

@@ -26,7 +26,11 @@ in the source distribution for its full text.
 #include <sched.h>
 #include <time.h>
 #include <assert.h>
+#ifdef HAVE_SYS_SYSCALL_H
 #include <sys/syscall.h>
+#else
+#include <errno.h>
+#endif
 
 #ifdef HAVE_LIBHWLOC
 #include <hwloc/linux.h>
@@ -634,13 +638,24 @@ bool Process_changePriorityBy(Process* this, size_t delta) {
 }
 
 IOPriority Process_updateIOPriority(Process* this) {
+#ifdef HAVE_SYS_SYSCALL_H
    IOPriority ioprio = syscall(SYS_ioprio_get, IOPRIO_WHO_PROCESS, this->pid);
+#else
+   /* Emulate reasonable ioprio_get failure. */
+   IOPriority ioprio = -1;
+   errno = EPERM;
+#endif
    this->ioPriority = ioprio;
    return ioprio;
 }
 
 bool Process_setIOPriority(Process* this, IOPriority ioprio) {
+#ifdef HAVE_SYS_SYSCALL_H
    syscall(SYS_ioprio_set, IOPRIO_WHO_PROCESS, this->pid, ioprio);
+#else
+   /* Emulate reasonable ioprio_set failure. */
+   errno = EPERM;
+#endif
    return (Process_updateIOPriority(this) == ioprio);
 }
 

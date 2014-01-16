@@ -548,7 +548,7 @@ int main(int argc, char** argv) {
          continue;
       }
       
-      if (isdigit((char)ch)) {
+      if (isdigit(ch)) {
          if (Panel_size(panel) == 0) continue;
          pid_t pid = ch-48 + acc;
          for (int i = 0; i < ProcessList_size(pl) && ((Process*) Panel_getSelected(panel))->pid != pid; i++)
