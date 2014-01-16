@@ -9,6 +9,10 @@ Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
+#ifdef HAVE_SYS_SYSCALL_H
+#else
+#endif
+
 #ifdef HAVE_LIBHWLOC
 #endif
 
