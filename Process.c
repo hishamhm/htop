@@ -654,7 +654,6 @@ bool Process_setIOPriority(Process* this, IOPriority ioprio) {
    syscall(SYS_ioprio_set, IOPRIO_WHO_PROCESS, this->pid, ioprio);
 #else
    /* Emulate reasonable ioprio_set failure. */
-   -1;
    errno = EPERM;
 #endif
    return (Process_updateIOPriority(this) == ioprio);
