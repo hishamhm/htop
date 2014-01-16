@@ -13,6 +13,7 @@ in the source distribution for its full text.
 
 #include "ListItem.h"
 #include "ProcessList.h"
+#include <sys/time.h>
 
 typedef struct Meter_ Meter;
 
