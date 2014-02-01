@@ -81,8 +81,8 @@ typedef enum ProcessField_ {
    #ifdef HAVE_CGROUP
    CGROUP,
    #endif
-   OOM,
    IO_PRIORITY,
+   OOM,
    LAST_PROCESSFIELD
 } ProcessField;
 
@@ -205,8 +205,7 @@ const char *Process_fieldNames[] = {
 #ifdef HAVE_CGROUP
    "CGROUP",
 #endif
-   "OOM",
-   "IO_PRIORITY",
+   "IO_PRIORITY", "OOM",
 "*** report bug! ***"
 };
 
@@ -232,8 +231,7 @@ const int Process_fieldFlags[] = {
 #ifdef HAVE_CGROUP
    PROCESS_FLAG_CGROUP,
 #endif
-   0,
-   PROCESS_FLAG_IOPRIO
+   PROCESS_FLAG_IOPRIO, 0
 };
 
 const char *Process_fieldTitles[] = {
@@ -258,8 +256,7 @@ const char *Process_fieldTitles[] = {
 #ifdef HAVE_CGROUP
    "    CGROUP ",
 #endif
-   "    OOM ",
-   "IO ",
+   "IO ", "    OOM ",
 "*** report bug! ***"
 };
 
@@ -552,7 +549,6 @@ static void Process_writeField(Process* this, RichString* str, ProcessField fiel
    #ifdef HAVE_CGROUP
    case CGROUP: snprintf(buffer, n, "%-10s ", this->cgroup); break;
    #endif
-   case OOM: snprintf(buffer, n, Process_pidFormat, this->oom); break;
    case IO_PRIORITY: {
       int klass = IOPriority_class(this->ioPriority);
       if (klass == IOPRIO_CLASS_NONE) {
@@ -571,6 +567,7 @@ static void Process_writeField(Process* this, RichString* str, ProcessField fiel
       }
       break;
    }
+   case OOM: snprintf(buffer, n, Process_pidFormat, this->oom); break;
    default:
       snprintf(buffer, n, "- ");
    }
@@ -822,10 +819,10 @@ int Process_compare(const void* v1, const void* v2) {
    case CGROUP:
       return strcmp(p1->cgroup ? p1->cgroup : "", p2->cgroup ? p2->cgroup : "");
    #endif
-   case OOM:
-      return (p1->oom - p2->oom);
    case IO_PRIORITY:
       return Process_effectiveIOPriority(p1) - Process_effectiveIOPriority(p2);
+   case OOM:
+      return (p1->oom - p2->oom);
    default:
       return (p1->pid - p2->pid);
    }

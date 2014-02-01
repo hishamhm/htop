@@ -60,8 +60,8 @@ typedef enum ProcessField_ {
    #ifdef HAVE_CGROUP
    CGROUP,
    #endif
-   OOM,
    IO_PRIORITY,
+   OOM,
    LAST_PROCESSFIELD
 } ProcessField;
 
