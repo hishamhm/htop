@@ -660,8 +660,6 @@ static void ProcessList_readVServerData(Process* process, const char* dirname, c
 
 #endif
 
-#ifdef HAVE_OOM
-
 static void ProcessList_readOomData(Process* process, const char* dirname, const char* name) {
    char filename[MAX_NAME+1];
    snprintf(filename, MAX_NAME, "%s/%s/oom_score", dirname, name);
@@ -679,8 +677,6 @@ static void ProcessList_readOomData(Process* process, const char* dirname, const
    }
    fclose(file);
 }
-
-#endif
 
 static bool ProcessList_readCmdlineFile(Process* process, const char* dirname, const char* name) {
    if (Process_isKernelThread(process))
@@ -806,9 +802,7 @@ static bool ProcessList_processEntries(ProcessList* this, const char* dirname, P
             ProcessList_readVServerData(process, dirname, name);
          #endif
          
-         #ifdef HAVE_OOM
          ProcessList_readOomData(process, dirname, name);
-         #endif
 
          if (! ProcessList_readCmdlineFile(process, dirname, name))
             goto errorReadingProcess;

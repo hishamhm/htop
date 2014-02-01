@@ -60,9 +60,7 @@ typedef enum ProcessField_ {
    #ifdef HAVE_CGROUP
    CGROUP,
    #endif
-   #ifdef HAVE_OOM
    OOM,
-   #endif
    IO_PRIORITY,
    LAST_PROCESSFIELD
 } ProcessField;
@@ -159,9 +157,7 @@ typedef struct Process_ {
    #ifdef HAVE_CGROUP
    char* cgroup;
    #endif
-   #ifdef HAVE_OOM
    unsigned int oom;
-   #endif
 } Process;
 
 
