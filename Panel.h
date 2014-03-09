@@ -31,9 +31,9 @@ typedef struct PanelClass_ {
    const Panel_EventHandler eventHandler;
 } PanelClass;
 
-#define As_Panel(this_)                ((PanelClass*)((this_)->super.klass))
-#define Panel_eventHandlerFn(this_)    As_Panel(this_)->eventHandler
-#define Panel_eventHandler(this_, ev_) As_Panel(this_)->eventHandler((Panel*)(this_), ev_)
+#define As_Panel(htop_this_)                ((PanelClass*)((htop_this_)->super.klass))
+#define Panel_eventHandlerFn(htop_this_)    As_Panel(htop_this_)->eventHandler
+#define Panel_eventHandler(htop_this_, ev_) As_Panel(htop_this_)->eventHandler((Panel*)(htop_this_), ev_)
 
 struct Panel_ {
    Object super;
@@ -69,46 +69,46 @@ Panel* Panel_new(int x, int y, int w, int h, bool owner, ObjectClass* type);
 
 void Panel_delete(Object* cast);
 
-void Panel_init(Panel* this, int x, int y, int w, int h, ObjectClass* type, bool owner);
+void Panel_init(Panel* htop_this, int x, int y, int w, int h, ObjectClass* type, bool owner);
 
-void Panel_done(Panel* this);
+void Panel_done(Panel* htop_this);
 
-RichString* Panel_getHeader(Panel* this);
+RichString* Panel_getHeader(Panel* htop_this);
 
-extern void Panel_setHeader(Panel* this, const char* header);
+extern void Panel_setHeader(Panel* htop_this, const char* header);
 
-void Panel_move(Panel* this, int x, int y);
+void Panel_move(Panel* htop_this, int x, int y);
 
-void Panel_resize(Panel* this, int w, int h);
+void Panel_resize(Panel* htop_this, int w, int h);
 
-void Panel_prune(Panel* this);
+void Panel_prune(Panel* htop_this);
 
-void Panel_add(Panel* this, Object* o);
+void Panel_add(Panel* htop_this, Object* o);
 
-void Panel_insert(Panel* this, int i, Object* o);
+void Panel_insert(Panel* htop_this, int i, Object* o);
 
-void Panel_set(Panel* this, int i, Object* o);
+void Panel_set(Panel* htop_this, int i, Object* o);
 
-Object* Panel_get(Panel* this, int i);
+Object* Panel_get(Panel* htop_this, int i);
 
-Object* Panel_remove(Panel* this, int i);
+Object* Panel_remove(Panel* htop_this, int i);
 
-Object* Panel_getSelected(Panel* this);
+Object* Panel_getSelected(Panel* htop_this);
 
-void Panel_moveSelectedUp(Panel* this);
+void Panel_moveSelectedUp(Panel* htop_this);
 
-void Panel_moveSelectedDown(Panel* this);
+void Panel_moveSelectedDown(Panel* htop_this);
 
-int Panel_getSelectedIndex(Panel* this);
+int Panel_getSelectedIndex(Panel* htop_this);
 
-int Panel_size(Panel* this);
+int Panel_size(Panel* htop_this);
 
-void Panel_setSelected(Panel* this, int selected);
+void Panel_setSelected(Panel* htop_this, int selected);
 
-void Panel_draw(Panel* this, bool focus);
+void Panel_draw(Panel* htop_this, bool focus);
 
-bool Panel_onKey(Panel* this, int key);
+bool Panel_onKey(Panel* htop_this, int key);
 
-HandlerResult Panel_selectByTyping(Panel* this, int ch);
+HandlerResult Panel_selectByTyping(Panel* htop_this, int ch);
 
 #endif

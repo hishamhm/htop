@@ -63,10 +63,10 @@ static SignalItem signals[] = {
 };
 
 Panel* SignalsPanel_new() {
-   Panel* this = Panel_new(1, 1, 1, 1, true, Class(ListItem));
+   Panel* htop_this = Panel_new(1, 1, 1, 1, true, Class(ListItem));
    for(unsigned int i = 0; i < sizeof(signals)/sizeof(SignalItem); i++)
-      Panel_set(this, i, (Object*) ListItem_new(signals[i].name, signals[i].number));
-   Panel_setHeader(this, "Send signal:");
-   Panel_setSelected(this, 16); // 16th item is SIGTERM
-   return this;
+      Panel_set(htop_this, i, (Object*) ListItem_new(signals[i].name, signals[i].number));
+   Panel_setHeader(htop_this, "Send signal:");
+   Panel_setSelected(htop_this, 16); // 16th item is SIGTERM
+   return htop_this;
 }

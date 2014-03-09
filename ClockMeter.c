@@ -19,10 +19,10 @@ int ClockMeter_attributes[] = {
    CLOCK
 };
 
-static void ClockMeter_setValues(Meter* this, char* buffer, int size) {
+static void ClockMeter_setValues(Meter* htop_this, char* buffer, int size) {
    time_t t = time(NULL);
    struct tm *lt = localtime(&t);
-   this->values[0] = lt->tm_hour * 60 + lt->tm_min;
+   htop_this->values[0] = lt->tm_hour * 60 + lt->tm_min;
    strftime(buffer, size, "%H:%M:%S", lt);
 }
 

@@ -19,8 +19,8 @@ in the source distribution for its full text.
 #include "ListItem.h"
 }*/
 
-static HandlerResult AffinityPanel_eventHandler(Panel* this, int ch) {
-   CheckItem* selected = (CheckItem*) Panel_getSelected(this);
+static HandlerResult AffinityPanel_eventHandler(Panel* htop_this, int ch) {
+   CheckItem* selected = (CheckItem*) Panel_getSelected(htop_this);
    switch(ch) {
    case KEY_MOUSE:
    case ' ':
@@ -43,10 +43,10 @@ PanelClass AffinityPanel_class = {
 };
 
 Panel* AffinityPanel_new(ProcessList* pl, Affinity* affinity) {
-   Panel* this = Panel_new(1, 1, 1, 1, true, Class(CheckItem));
-   Object_setClass(this, Class(AffinityPanel));
+   Panel* htop_this = Panel_new(1, 1, 1, 1, true, Class(CheckItem));
+   Object_setClass(htop_this, Class(AffinityPanel));
 
-   Panel_setHeader(this, "Use CPUs:");
+   Panel_setHeader(htop_this, "Use CPUs:");
    int curCpu = 0;
    for (int i = 0; i < pl->cpuCount; i++) {
       char number[10];
@@ -58,16 +58,16 @@ Panel* AffinityPanel_new(ProcessList* pl, Affinity* affinity) {
       } else {
          mode = false;
       }
-      Panel_add(this, (Object*) CheckItem_new(strdup(number), NULL, mode));
+      Panel_add(htop_this, (Object*) CheckItem_new(strdup(number), NULL, mode));
    }
-   return this;
+   return htop_this;
 }
 
-Affinity* AffinityPanel_getAffinity(Panel* this) {
+Affinity* AffinityPanel_getAffinity(Panel* htop_this) {
    Affinity* affinity = Affinity_new();
-   int size = Panel_size(this);
+   int size = Panel_size(htop_this);
    for (int i = 0; i < size; i++) {
-      if (CheckItem_get((CheckItem*)Panel_get(this, i)))
+      if (CheckItem_get((CheckItem*)Panel_get(htop_this, i)))
          Affinity_add(affinity, i);
    }
    return affinity;

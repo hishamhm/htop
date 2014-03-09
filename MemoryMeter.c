@@ -24,26 +24,26 @@ int MemoryMeter_attributes[] = {
    MEMORY_USED, MEMORY_BUFFERS, MEMORY_CACHE
 };
 
-static void MemoryMeter_setValues(Meter* this, char* buffer, int size) {
-   long int usedMem = this->pl->usedMem;
-   long int buffersMem = this->pl->buffersMem;
-   long int cachedMem = this->pl->cachedMem;
+static void MemoryMeter_setValues(Meter* htop_this, char* buffer, int size) {
+   long int usedMem = htop_this->pl->usedMem;
+   long int buffersMem = htop_this->pl->buffersMem;
+   long int cachedMem = htop_this->pl->cachedMem;
    usedMem -= buffersMem + cachedMem;
-   this->total = this->pl->totalMem;
-   this->values[0] = usedMem;
-   this->values[1] = buffersMem;
-   this->values[2] = cachedMem;
-   snprintf(buffer, size, "%ld/%ldMB", (long int) usedMem / 1024, (long int) this->total / 1024);
+   htop_this->total = htop_this->pl->totalMem;
+   htop_this->values[0] = usedMem;
+   htop_this->values[1] = buffersMem;
+   htop_this->values[2] = cachedMem;
+   snprintf(buffer, size, "%ld/%ldMB", (long int) usedMem / 1024, (long int) htop_this->total / 1024);
 }
 
 static void MemoryMeter_display(Object* cast, RichString* out) {
    char buffer[50];
-   Meter* this = (Meter*)cast;
+   Meter* htop_this = (Meter*)cast;
    int k = 1024; const char* format = "%ldM ";
-   long int totalMem = this->total / k;
-   long int usedMem = this->values[0] / k;
-   long int buffersMem = this->values[1] / k;
-   long int cachedMem = this->values[2] / k;
+   long int totalMem = htop_this->total / k;
+   long int usedMem = htop_this->values[0] / k;
+   long int buffersMem = htop_this->values[1] / k;
+   long int cachedMem = htop_this->values[2] / k;
    RichString_write(out, CRT_colors[METER_TEXT], ":");
    sprintf(buffer, format, totalMem);
    RichString_append(out, CRT_colors[METER_VALUE], buffer);

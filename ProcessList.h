@@ -142,19 +142,19 @@ extern const char *ProcessList_treeStrUtf8[TREE_STR_COUNT];
 
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList);
 
-void ProcessList_delete(ProcessList* this);
+void ProcessList_delete(ProcessList* htop_this);
 
-void ProcessList_setPanel(ProcessList* this, Panel* panel);
+void ProcessList_setPanel(ProcessList* htop_this, Panel* panel);
 
-void ProcessList_invertSortOrder(ProcessList* this);
+void ProcessList_invertSortOrder(ProcessList* htop_this);
 
-void ProcessList_printHeader(ProcessList* this, RichString* header);
+void ProcessList_printHeader(ProcessList* htop_this, RichString* header);
 
-Process* ProcessList_get(ProcessList* this, int idx);
+Process* ProcessList_get(ProcessList* htop_this, int idx);
 
-int ProcessList_size(ProcessList* this);
+int ProcessList_size(ProcessList* htop_this);
 
-void ProcessList_sort(ProcessList* this);
+void ProcessList_sort(ProcessList* htop_this);
 
 #ifdef HAVE_TASKSTATS
 
@@ -173,12 +173,12 @@ void ProcessList_sort(ProcessList* this);
 #endif
 
 
-void ProcessList_scan(ProcessList* this);
+void ProcessList_scan(ProcessList* htop_this);
 
-ProcessField ProcessList_keyAt(ProcessList* this, int at);
+ProcessField ProcessList_keyAt(ProcessList* htop_this, int at);
 
-void ProcessList_expandTree(ProcessList* this);
+void ProcessList_expandTree(ProcessList* htop_this);
 
-void ProcessList_rebuildPanel(ProcessList* this, bool flags, int following, bool userOnly, uid_t userId, const char* incFilter);
+void ProcessList_rebuildPanel(ProcessList* htop_this, bool flags, int following, bool userOnly, uid_t userId, const char* incFilter);
 
 #endif

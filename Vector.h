@@ -29,40 +29,40 @@ typedef struct Vector_ {
 
 Vector* Vector_new(ObjectClass* type, bool owner, int size);
 
-void Vector_delete(Vector* this);
+void Vector_delete(Vector* htop_this);
 
 #ifdef DEBUG
 
-int Vector_count(Vector* this);
+int Vector_count(Vector* htop_this);
 
 #endif
 
-void Vector_prune(Vector* this);
+void Vector_prune(Vector* htop_this);
 
-// If I were to use only one sorting algorithm for both cases, it would probably be this one:
+// If I were to use only one sorting algorithm for both cases, it would probably be htop_this one:
 /*
 
 */
 
-void Vector_quickSort(Vector* this);
+void Vector_quickSort(Vector* htop_this);
 
-void Vector_insertionSort(Vector* this);
+void Vector_insertionSort(Vector* htop_this);
 
-void Vector_insert(Vector* this, int idx, void* data_);
+void Vector_insert(Vector* htop_this, int idx, void* data_);
 
-Object* Vector_take(Vector* this, int idx);
+Object* Vector_take(Vector* htop_this, int idx);
 
-Object* Vector_remove(Vector* this, int idx);
+Object* Vector_remove(Vector* htop_this, int idx);
 
-void Vector_moveUp(Vector* this, int idx);
+void Vector_moveUp(Vector* htop_this, int idx);
 
-void Vector_moveDown(Vector* this, int idx);
+void Vector_moveDown(Vector* htop_this, int idx);
 
-void Vector_set(Vector* this, int idx, void* data_);
+void Vector_set(Vector* htop_this, int idx, void* data_);
 
 #ifdef DEBUG
 
-extern Object* Vector_get(Vector* this, int idx);
+extern Object* Vector_get(Vector* htop_this, int idx);
 
 #else
 
@@ -70,14 +70,14 @@ extern Object* Vector_get(Vector* this, int idx);
 
 #endif
 
-extern int Vector_size(Vector* this);
+extern int Vector_size(Vector* htop_this);
 
 /*
 
 */
 
-void Vector_add(Vector* this, void* data_);
+void Vector_add(Vector* htop_this, void* data_);
 
-extern int Vector_indexOf(Vector* this, void* search_, Object_Compare compare);
+extern int Vector_indexOf(Vector* htop_this, void* search_, Object_Compare compare);
 
 #endif

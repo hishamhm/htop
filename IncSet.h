@@ -43,14 +43,14 @@ typedef const char* (*IncMode_GetPanelValue)(Panel*, int);
 
 IncSet* IncSet_new(FunctionBar* bar);
 
-void IncSet_delete(IncSet* this);
+void IncSet_delete(IncSet* htop_this);
 
-bool IncSet_handleKey(IncSet* this, int ch, Panel* panel, IncMode_GetPanelValue getPanelValue, Vector* lines);
+bool IncSet_handleKey(IncSet* htop_this, int ch, Panel* panel, IncMode_GetPanelValue getPanelValue, Vector* lines);
 
 const char* IncSet_getListItemValue(Panel* panel, int i);
 
-void IncSet_activate(IncSet* this, IncType type);
+void IncSet_activate(IncSet* htop_this, IncType type);
 
-void IncSet_drawBar(IncSet* this);
+void IncSet_drawBar(IncSet* htop_this);
 
 #endif

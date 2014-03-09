@@ -18,18 +18,18 @@ int TasksMeter_attributes[] = {
    TASKS_RUNNING
 };
 
-static void TasksMeter_setValues(Meter* this, char* buffer, int len) {
-   ProcessList* pl = this->pl;
-   this->total = pl->totalTasks;
-   this->values[0] = pl->runningTasks;
-   snprintf(buffer, len, "%d/%d", (int) this->values[0], (int) this->total);
+static void TasksMeter_setValues(Meter* htop_this, char* buffer, int len) {
+   ProcessList* pl = htop_this->pl;
+   htop_this->total = pl->totalTasks;
+   htop_this->values[0] = pl->runningTasks;
+   snprintf(buffer, len, "%d/%d", (int) htop_this->values[0], (int) htop_this->total);
 }
 
 static void TasksMeter_display(Object* cast, RichString* out) {
-   Meter* this = (Meter*)cast;
-   ProcessList* pl = this->pl;
+   Meter* htop_this = (Meter*)cast;
+   ProcessList* pl = htop_this->pl;
    char buffer[20];
-   sprintf(buffer, "%d", (int)(this->total - pl->userlandThreads - pl->kernelThreads));
+   sprintf(buffer, "%d", (int)(htop_this->total - pl->userlandThreads - pl->kernelThreads));
    RichString_write(out, CRT_colors[METER_VALUE], buffer);
    int threadValueColor = CRT_colors[METER_VALUE];
    int threadCaptionColor = CRT_colors[METER_TEXT];
@@ -50,7 +50,7 @@ static void TasksMeter_display(Object* cast, RichString* out) {
       RichString_append(out, threadCaptionColor, " kthr");
    }
    RichString_append(out, CRT_colors[METER_TEXT], "; ");
-   sprintf(buffer, "%d", (int)this->values[0]);
+   sprintf(buffer, "%d", (int)htop_this->values[0]);
    RichString_append(out, CRT_colors[TASKS_RUNNING], buffer);
    RichString_append(out, CRT_colors[METER_TEXT], " running");
 }

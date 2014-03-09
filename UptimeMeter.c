@@ -20,7 +20,7 @@ int UptimeMeter_attributes[] = {
    UPTIME
 };
 
-static void UptimeMeter_setValues(Meter* this, char* buffer, int len) {
+static void UptimeMeter_setValues(Meter* htop_this, char* buffer, int len) {
    double uptime = 0;
    FILE* fd = fopen(PROCDIR "/uptime", "r");
    if (fd) {
@@ -32,9 +32,9 @@ static void UptimeMeter_setValues(Meter* this, char* buffer, int len) {
    int minutes = (totalseconds/60) % 60;
    int hours = (totalseconds/3600) % 24;
    int days = (totalseconds/86400);
-   this->values[0] = days;
-   if (days > this->total) {
-      this->total = days;
+   htop_this->values[0] = days;
+   if (days > htop_this->total) {
+      htop_this->total = days;
    }
    char daysbuf[15];
    if (days > 100) {

@@ -22,8 +22,8 @@ typedef struct TraceScreen_ {
 
 TraceScreen* TraceScreen_new(Process* process);
 
-void TraceScreen_delete(TraceScreen* this);
+void TraceScreen_delete(TraceScreen* htop_this);
 
-void TraceScreen_run(TraceScreen* this);
+void TraceScreen_run(TraceScreen* htop_this);
 
 #endif

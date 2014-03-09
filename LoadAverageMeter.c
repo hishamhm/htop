@@ -34,35 +34,35 @@ static inline void LoadAverageMeter_scan(double* one, double* five, double* fift
    }
 }
 
-static void LoadAverageMeter_setValues(Meter* this, char* buffer, int size) {
-   LoadAverageMeter_scan(&this->values[2], &this->values[1], &this->values[0]);
-   snprintf(buffer, size, "%.2f/%.2f/%.2f", this->values[2], this->values[1], this->values[0]);
+static void LoadAverageMeter_setValues(Meter* htop_this, char* buffer, int size) {
+   LoadAverageMeter_scan(&htop_this->values[2], &htop_this->values[1], &htop_this->values[0]);
+   snprintf(buffer, size, "%.2f/%.2f/%.2f", htop_this->values[2], htop_this->values[1], htop_this->values[0]);
 }
 
 static void LoadAverageMeter_display(Object* cast, RichString* out) {
-   Meter* this = (Meter*)cast;
+   Meter* htop_this = (Meter*)cast;
    char buffer[20];
-   sprintf(buffer, "%.2f ", this->values[2]);
+   sprintf(buffer, "%.2f ", htop_this->values[2]);
    RichString_write(out, CRT_colors[LOAD_AVERAGE_FIFTEEN], buffer);
-   sprintf(buffer, "%.2f ", this->values[1]);
+   sprintf(buffer, "%.2f ", htop_this->values[1]);
    RichString_append(out, CRT_colors[LOAD_AVERAGE_FIVE], buffer);
-   sprintf(buffer, "%.2f ", this->values[0]);
+   sprintf(buffer, "%.2f ", htop_this->values[0]);
    RichString_append(out, CRT_colors[LOAD_AVERAGE_ONE], buffer);
 }
 
-static void LoadMeter_setValues(Meter* this, char* buffer, int size) {
+static void LoadMeter_setValues(Meter* htop_this, char* buffer, int size) {
    double five, fifteen;
-   LoadAverageMeter_scan(&this->values[0], &five, &fifteen);
-   if (this->values[0] > this->total) {
-      this->total = this->values[0];
+   LoadAverageMeter_scan(&htop_this->values[0], &five, &fifteen);
+   if (htop_this->values[0] > htop_this->total) {
+      htop_this->total = htop_this->values[0];
    }
-   snprintf(buffer, size, "%.2f", this->values[0]);
+   snprintf(buffer, size, "%.2f", htop_this->values[0]);
 }
 
 static void LoadMeter_display(Object* cast, RichString* out) {
-   Meter* this = (Meter*)cast;
+   Meter* htop_this = (Meter*)cast;
    char buffer[20];
-   sprintf(buffer, "%.2f ", ((Meter*)this)->values[0]);
+   sprintf(buffer, "%.2f ", ((Meter*)htop_this)->values[0]);
    RichString_write(out, CRT_colors[LOAD], buffer);
 }
 

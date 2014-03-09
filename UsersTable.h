@@ -17,10 +17,10 @@ typedef struct UsersTable_ {
 
 UsersTable* UsersTable_new();
 
-void UsersTable_delete(UsersTable* this);
+void UsersTable_delete(UsersTable* htop_this);
 
-char* UsersTable_getRef(UsersTable* this, unsigned int uid);
+char* UsersTable_getRef(UsersTable* htop_this, unsigned int uid);
 
-extern void UsersTable_foreach(UsersTable* this, Hashtable_PairFunction f, void* userData);
+extern void UsersTable_foreach(UsersTable* htop_this, Hashtable_PairFunction f, void* userData);
 
 #endif

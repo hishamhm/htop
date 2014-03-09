@@ -27,24 +27,24 @@ in the source distribution for its full text.
 #include <curses.h>
 #endif
 
-#define RichString_size(this) ((this)->chlen)
-#define RichString_sizeVal(this) ((this).chlen)
+#define RichString_size(htop_this) ((htop_this)->chlen)
+#define RichString_sizeVal(htop_this) ((htop_this).chlen)
 
-#define RichString_begin(this) RichString (this); (this).chlen = 0; (this).chptr = (this).chstr;
-#define RichString_beginAllocated(this) (this).chlen = 0; (this).chptr = (this).chstr;
-#define RichString_end(this) RichString_prune(&(this));
+#define RichString_begin(htop_this) RichString (htop_this); (htop_this).chlen = 0; (htop_this).chptr = (htop_this).chstr;
+#define RichString_beginAllocated(htop_this) (htop_this).chlen = 0; (htop_this).chptr = (htop_this).chstr;
+#define RichString_end(htop_this) RichString_prune(&(htop_this));
 
 #ifdef HAVE_LIBNCURSESW
-#define RichString_printVal(this, y, x) mvadd_wchstr(y, x, (this).chptr)
-#define RichString_printoffnVal(this, y, x, off, n) mvadd_wchnstr(y, x, (this).chptr + off, n)
-#define RichString_getCharVal(this, i) ((this).chptr[i].chars[0] & 255)
-#define RichString_setChar(this, at, ch) do{ (this)->chptr[(at)].chars[0] = ch; } while(0)
+#define RichString_printVal(htop_this, y, x) mvadd_wchstr(y, x, (htop_this).chptr)
+#define RichString_printoffnVal(htop_this, y, x, off, n) mvadd_wchnstr(y, x, (htop_this).chptr + off, n)
+#define RichString_getCharVal(htop_this, i) ((htop_this).chptr[i].chars[0] & 255)
+#define RichString_setChar(htop_this, at, ch) do{ (htop_this)->chptr[(at)].chars[0] = ch; } while(0)
 #define CharType cchar_t
 #else
-#define RichString_printVal(this, y, x) mvaddchstr(y, x, (this).chptr)
-#define RichString_printoffnVal(this, y, x, off, n) mvaddchnstr(y, x, (this).chptr + off, n)
-#define RichString_getCharVal(this, i) ((this).chptr[i])
-#define RichString_setChar(this, at, ch) do{ (this)->chptr[(at)] = ch; } while(0)
+#define RichString_printVal(htop_this, y, x) mvaddchstr(y, x, (htop_this).chptr)
+#define RichString_printoffnVal(htop_this, y, x, off, n) mvaddchnstr(y, x, (htop_this).chptr + off, n)
+#define RichString_getCharVal(htop_this, i) ((htop_this).chptr[i])
+#define RichString_setChar(htop_this, at, ch) do{ (htop_this)->chptr[(at)] = ch; } while(0)
 #define CharType chtype
 #endif
 
@@ -63,26 +63,26 @@ typedef struct RichString_ {
 
 #ifdef HAVE_LIBNCURSESW
 
-extern void RichString_setAttrn(RichString* this, int attrs, int start, int finish);
+extern void RichString_setAttrn(RichString* htop_this, int attrs, int start, int finish);
 
-int RichString_findChar(RichString* this, char c, int start);
+int RichString_findChar(RichString* htop_this, char c, int start);
 
 #else
 
-void RichString_setAttrn(RichString* this, int attrs, int start, int finish);
+void RichString_setAttrn(RichString* htop_this, int attrs, int start, int finish);
 
-int RichString_findChar(RichString* this, char c, int start);
+int RichString_findChar(RichString* htop_this, char c, int start);
 
 #endif
 
-void RichString_prune(RichString* this);
+void RichString_prune(RichString* htop_this);
 
-void RichString_setAttr(RichString* this, int attrs);
+void RichString_setAttr(RichString* htop_this, int attrs);
 
-void RichString_append(RichString* this, int attrs, const char* data);
+void RichString_append(RichString* htop_this, int attrs, const char* data);
 
-void RichString_appendn(RichString* this, int attrs, const char* data, int len);
+void RichString_appendn(RichString* htop_this, int attrs, const char* data, int len);
 
-void RichString_write(RichString* this, int attrs, const char* data);
+void RichString_write(RichString* htop_this, int attrs, const char* data);
 
 #endif

@@ -38,18 +38,18 @@ static void SwapMeter_humanNumber(char* buffer, const long int* value) {
       sprintf(buffer, "%ldK ", *value);
 }
 
-static void SwapMeter_setValues(Meter* this, char* buffer, int len) {
-   long int usedSwap = this->pl->usedSwap;
-   this->total = this->pl->totalSwap;
-   this->values[0] = usedSwap;
-   snprintf(buffer, len, "%ld/%ldMB", (long int) usedSwap / MEGABYTE, (long int) this->total / MEGABYTE);
+static void SwapMeter_setValues(Meter* htop_this, char* buffer, int len) {
+   long int usedSwap = htop_this->pl->usedSwap;
+   htop_this->total = htop_this->pl->totalSwap;
+   htop_this->values[0] = usedSwap;
+   snprintf(buffer, len, "%ld/%ldMB", (long int) usedSwap / MEGABYTE, (long int) htop_this->total / MEGABYTE);
 }
 
 static void SwapMeter_display(Object* cast, RichString* out) {
    char buffer[50];
-   Meter* this = (Meter*)cast;
-   long int swap = (long int) this->values[0];
-   long int total = (long int) this->total;
+   Meter* htop_this = (Meter*)cast;
+   long int swap = (long int) htop_this->values[0];
+   long int total = (long int) htop_this->total;
    RichString_write(out, CRT_colors[METER_TEXT], ":");
    SwapMeter_humanNumber(buffer, &total);
    RichString_append(out, CRT_colors[METER_VALUE], buffer);

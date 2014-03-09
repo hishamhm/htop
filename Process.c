@@ -294,7 +294,7 @@ void Process_getMaxPid() {
 #define ONE_M (ONE_K * ONE_K)
 #define ONE_G (ONE_M * ONE_K)
 
-static void Process_humanNumber(Process* this, RichString* str, unsigned long number) {
+static void Process_humanNumber(Process* htop_this, RichString* str, unsigned long number) {
    char buffer[11];
    int len;
    if(number >= (10 * ONE_M)) {
@@ -307,11 +307,11 @@ static void Process_humanNumber(Process* this, RichString* str, unsigned long nu
       }
    } else if (number >= 100000) {
       len = snprintf(buffer, 10, "%4ldM ", number / ONE_K);
-      int attr = this->pl->highlightMegabytes
+      int attr = htop_this->pl->highlightMegabytes
                ? CRT_colors[PROCESS_MEGABYTES]
                : CRT_colors[PROCESS];
       RichString_appendn(str, attr, buffer, len);
-   } else if (this->pl->highlightMegabytes && number >= 1000) {
+   } else if (htop_this->pl->highlightMegabytes && number >= 1000) {
       len = snprintf(buffer, 10, "%2ld", number/1000);
       RichString_appendn(str, CRT_colors[PROCESS_MEGABYTES], buffer, len);
       number %= 1000;
@@ -368,10 +368,10 @@ static void Process_printTime(RichString* str, unsigned long long t) {
    }
 }
 
-static inline void Process_writeCommand(Process* this, int attr, int baseattr, RichString* str) {
+static inline void Process_writeCommand(Process* htop_this, int attr, int baseattr, RichString* str) {
    int start = RichString_size(str);
-   RichString_append(str, attr, this->comm);
-   if (this->pl->highlightBaseName) {
+   RichString_append(str, attr, htop_this->comm);
+   if (htop_this->pl->highlightBaseName) {
       int finish = RichString_size(str) - 1;
       int space = RichString_findChar(str, ' ', start);
       if (space != -1)
@@ -386,7 +386,7 @@ static inline void Process_writeCommand(Process* this, int attr, int baseattr, R
    }
 }
 
-static inline void Process_outputRate(Process* this, RichString* str, int attr, char* buffer, int n, double rate) {
+static inline void Process_outputRate(Process* htop_this, RichString* str, int attr, char* buffer, int n, double rate) {
    rate = rate / 1024;
    if (rate < 0.01)
       snprintf(buffer, n, "    0 ");
@@ -395,42 +395,42 @@ static inline void Process_outputRate(Process* this, RichString* str, int attr, 
    else if (rate <= 100)
       snprintf(buffer, n, "%5.1f ", rate);
    else {
-      Process_humanNumber(this, str, rate);
+      Process_humanNumber(htop_this, str, rate);
       return;
    }
    RichString_append(str, attr, buffer);
 }
 
-static void Process_writeField(Process* this, RichString* str, ProcessField field) {
+static void Process_writeField(Process* htop_this, RichString* str, ProcessField field) {
    char buffer[128]; buffer[127] = '\0';
    int attr = CRT_colors[DEFAULT_COLOR];
    int baseattr = CRT_colors[PROCESS_BASENAME];
    int n = sizeof(buffer) - 1;
 
    switch (field) {
-   case PID: snprintf(buffer, n, Process_pidFormat, this->pid); break;
-   case PPID: snprintf(buffer, n, Process_pidFormat, this->ppid); break;
-   case PGRP: snprintf(buffer, n, Process_pidFormat, this->pgrp); break;
-   case SESSION: snprintf(buffer, n, Process_pidFormat, this->session); break;
-   case TTY_NR: snprintf(buffer, n, "%5u ", this->tty_nr); break;
-   case TGID: snprintf(buffer, n, Process_pidFormat, this->tgid); break;
-   case TPGID: snprintf(buffer, n, Process_tpgidFormat, this->tpgid); break;
-   case PROCESSOR: snprintf(buffer, n, "%3d ", ProcessList_cpuId(this->pl, this->processor)); break;
-   case NLWP: snprintf(buffer, n, "%4ld ", this->nlwp); break;
+   case PID: snprintf(buffer, n, Process_pidFormat, htop_this->pid); break;
+   case PPID: snprintf(buffer, n, Process_pidFormat, htop_this->ppid); break;
+   case PGRP: snprintf(buffer, n, Process_pidFormat, htop_this->pgrp); break;
+   case SESSION: snprintf(buffer, n, Process_pidFormat, htop_this->session); break;
+   case TTY_NR: snprintf(buffer, n, "%5u ", htop_this->tty_nr); break;
+   case TGID: snprintf(buffer, n, Process_pidFormat, htop_this->tgid); break;
+   case TPGID: snprintf(buffer, n, Process_tpgidFormat, htop_this->tpgid); break;
+   case PROCESSOR: snprintf(buffer, n, "%3d ", ProcessList_cpuId(htop_this->pl, htop_this->processor)); break;
+   case NLWP: snprintf(buffer, n, "%4ld ", htop_this->nlwp); break;
    case COMM: {
-      if (this->pl->highlightThreads && Process_isThread(this)) {
+      if (htop_this->pl->highlightThreads && Process_isThread(htop_this)) {
          attr = CRT_colors[PROCESS_THREAD];
          baseattr = CRT_colors[PROCESS_THREAD_BASENAME];
       }
-      if (!this->pl->treeView || this->indent == 0) {
-         Process_writeCommand(this, attr, baseattr, str);
+      if (!htop_this->pl->treeView || htop_this->indent == 0) {
+         Process_writeCommand(htop_this, attr, baseattr, str);
          return;
       } else {
          char* buf = buffer;
          int maxIndent = 0;
-         const char **treeStr = this->pl->treeStr;
-         bool lastItem = (this->indent < 0);
-         int indent = (this->indent < 0 ? -this->indent : this->indent);
+         const char **treeStr = htop_this->pl->treeStr;
+         bool lastItem = (htop_this->indent < 0);
+         int indent = (htop_this->indent < 0 ? -htop_this->indent : htop_this->indent);
          if (treeStr == NULL)
              treeStr = ProcessList_treeStrAscii;
 
@@ -446,49 +446,49 @@ static void Process_writeField(Process* this, RichString* str, ProcessField fiel
             buf += written;
             n -= written;
          }
-         const char* draw = treeStr[lastItem ? (this->pl->direction == 1 ? TREE_STR_BEND : TREE_STR_TEND) : TREE_STR_RTEE];
-         snprintf(buf, n, "%s%s ", draw, this->showChildren ? treeStr[TREE_STR_SHUT] : treeStr[TREE_STR_OPEN] );
+         const char* draw = treeStr[lastItem ? (htop_this->pl->direction == 1 ? TREE_STR_BEND : TREE_STR_TEND) : TREE_STR_RTEE];
+         snprintf(buf, n, "%s%s ", draw, htop_this->showChildren ? treeStr[TREE_STR_SHUT] : treeStr[TREE_STR_OPEN] );
          RichString_append(str, CRT_colors[PROCESS_TREE], buffer);
-         Process_writeCommand(this, attr, baseattr, str);
+         Process_writeCommand(htop_this, attr, baseattr, str);
          return;
       }
    }
    case STATE: {
-      snprintf(buffer, n, "%c ", this->state);
-      attr = this->state == 'R'
+      snprintf(buffer, n, "%c ", htop_this->state);
+      attr = htop_this->state == 'R'
            ? CRT_colors[PROCESS_R_STATE]
            : attr;
       break;
    }
    case PRIORITY: {
-      if(this->priority == -100)
+      if(htop_this->priority == -100)
          snprintf(buffer, n, " RT ");
       else
-         snprintf(buffer, n, "%3ld ", this->priority);
+         snprintf(buffer, n, "%3ld ", htop_this->priority);
       break;
    }
    case NICE: {
-      snprintf(buffer, n, "%3ld ", this->nice);
-      attr = this->nice < 0 ? CRT_colors[PROCESS_HIGH_PRIORITY]
-           : this->nice > 0 ? CRT_colors[PROCESS_LOW_PRIORITY]
+      snprintf(buffer, n, "%3ld ", htop_this->nice);
+      attr = htop_this->nice < 0 ? CRT_colors[PROCESS_HIGH_PRIORITY]
+           : htop_this->nice > 0 ? CRT_colors[PROCESS_LOW_PRIORITY]
            : attr;
       break;
    }
-   case M_DRS: Process_humanNumber(this, str, this->m_drs * PAGE_SIZE_KB); return;
-   case M_DT: Process_humanNumber(this, str, this->m_dt * PAGE_SIZE_KB); return;
-   case M_LRS: Process_humanNumber(this, str, this->m_lrs * PAGE_SIZE_KB); return;
-   case M_TRS: Process_humanNumber(this, str, this->m_trs * PAGE_SIZE_KB); return;
-   case M_SIZE: Process_humanNumber(this, str, this->m_size * PAGE_SIZE_KB); return;
-   case M_RESIDENT: Process_humanNumber(this, str, this->m_resident * PAGE_SIZE_KB); return;
-   case M_SHARE: Process_humanNumber(this, str, this->m_share * PAGE_SIZE_KB); return;
-   case ST_UID: snprintf(buffer, n, "%4d ", this->st_uid); break;
+   case M_DRS: Process_humanNumber(htop_this, str, htop_this->m_drs * PAGE_SIZE_KB); return;
+   case M_DT: Process_humanNumber(htop_this, str, htop_this->m_dt * PAGE_SIZE_KB); return;
+   case M_LRS: Process_humanNumber(htop_this, str, htop_this->m_lrs * PAGE_SIZE_KB); return;
+   case M_TRS: Process_humanNumber(htop_this, str, htop_this->m_trs * PAGE_SIZE_KB); return;
+   case M_SIZE: Process_humanNumber(htop_this, str, htop_this->m_size * PAGE_SIZE_KB); return;
+   case M_RESIDENT: Process_humanNumber(htop_this, str, htop_this->m_resident * PAGE_SIZE_KB); return;
+   case M_SHARE: Process_humanNumber(htop_this, str, htop_this->m_share * PAGE_SIZE_KB); return;
+   case ST_UID: snprintf(buffer, n, "%4d ", htop_this->st_uid); break;
    case USER: {
-      if (Process_getuid != (int) this->st_uid)
+      if (Process_getuid != (int) htop_this->st_uid)
          attr = CRT_colors[PROCESS_SHADOW];
-      if (this->user) {
-         snprintf(buffer, n, "%-9s ", this->user);
+      if (htop_this->user) {
+         snprintf(buffer, n, "%-9s ", htop_this->user);
       } else {
-         snprintf(buffer, n, "%-9d ", this->st_uid);
+         snprintf(buffer, n, "%-9d ", htop_this->st_uid);
       }
       if (buffer[9] != '\0') {
          buffer[9] = ' ';
@@ -496,63 +496,63 @@ static void Process_writeField(Process* this, RichString* str, ProcessField fiel
       }
       break;
    }
-   case UTIME: Process_printTime(str, this->utime); return;
-   case STIME: Process_printTime(str, this->stime); return;
-   case CUTIME: Process_printTime(str, this->cutime); return;
-   case CSTIME: Process_printTime(str, this->cstime); return;
-   case TIME: Process_printTime(str, this->utime + this->stime); return;
+   case UTIME: Process_printTime(str, htop_this->utime); return;
+   case STIME: Process_printTime(str, htop_this->stime); return;
+   case CUTIME: Process_printTime(str, htop_this->cutime); return;
+   case CSTIME: Process_printTime(str, htop_this->cstime); return;
+   case TIME: Process_printTime(str, htop_this->utime + htop_this->stime); return;
    case PERCENT_CPU: {
-      if (this->percent_cpu > 999.9) {
-         snprintf(buffer, n, "%4d ", (unsigned int)this->percent_cpu); 
-      } else if (this->percent_cpu > 99.9) {
-         snprintf(buffer, n, "%3d. ", (unsigned int)this->percent_cpu); 
+      if (htop_this->percent_cpu > 999.9) {
+         snprintf(buffer, n, "%4d ", (unsigned int)htop_this->percent_cpu); 
+      } else if (htop_this->percent_cpu > 99.9) {
+         snprintf(buffer, n, "%3d. ", (unsigned int)htop_this->percent_cpu); 
       } else {
-         snprintf(buffer, n, "%4.1f ", this->percent_cpu);
+         snprintf(buffer, n, "%4.1f ", htop_this->percent_cpu);
       }
       break;
    }
    case PERCENT_MEM: {
-      if (this->percent_mem > 99.9) {
+      if (htop_this->percent_mem > 99.9) {
          snprintf(buffer, n, "100. "); 
       } else {
-         snprintf(buffer, n, "%4.1f ", this->percent_mem);
+         snprintf(buffer, n, "%4.1f ", htop_this->percent_mem);
       }
       break;
    }
-   case STARTTIME: snprintf(buffer, n, "%s", this->starttime_show); break;
+   case STARTTIME: snprintf(buffer, n, "%s", htop_this->starttime_show); break;
    #ifdef HAVE_OPENVZ
-   case CTID: snprintf(buffer, n, "%5u ", this->ctid); break;
-   case VPID: snprintf(buffer, n, "%5u ", this->vpid); break;
+   case CTID: snprintf(buffer, n, "%5u ", htop_this->ctid); break;
+   case VPID: snprintf(buffer, n, "%5u ", htop_this->vpid); break;
    #endif
    #ifdef HAVE_VSERVER
-   case VXID: snprintf(buffer, n, "%5u ", this->vxid); break;
+   case VXID: snprintf(buffer, n, "%5u ", htop_this->vxid); break;
    #endif
    #ifdef HAVE_TASKSTATS
-   case RCHAR:  snprintf(buffer, n, "%12llu ", this->io_rchar); break;
-   case WCHAR:  snprintf(buffer, n, "%12llu ", this->io_wchar); break;   
-   case SYSCR:  snprintf(buffer, n, "%10llu ", this->io_syscr); break;   
-   case SYSCW:  snprintf(buffer, n, "%10llu ", this->io_syscw); break; 
-   case RBYTES: Process_colorNumber(str, this->io_read_bytes); return;
-   case WBYTES: Process_colorNumber(str, this->io_write_bytes); return;
-   case CNCLWB: snprintf(buffer, n, "%10llu ", this->io_cancelled_write_bytes); break; 
-   case IO_READ_RATE:  Process_outputRate(this, str, attr, buffer, n, this->io_rate_read_bps); return;
-   case IO_WRITE_RATE: Process_outputRate(this, str, attr, buffer, n, this->io_rate_write_bps); return;
-   case IO_RATE: Process_outputRate(this, str, attr, buffer, n, this->io_rate_read_bps + this->io_rate_write_bps); return;
+   case RCHAR:  snprintf(buffer, n, "%12llu ", htop_this->io_rchar); break;
+   case WCHAR:  snprintf(buffer, n, "%12llu ", htop_this->io_wchar); break;   
+   case SYSCR:  snprintf(buffer, n, "%10llu ", htop_this->io_syscr); break;   
+   case SYSCW:  snprintf(buffer, n, "%10llu ", htop_this->io_syscw); break; 
+   case RBYTES: Process_colorNumber(str, htop_this->io_read_bytes); return;
+   case WBYTES: Process_colorNumber(str, htop_this->io_write_bytes); return;
+   case CNCLWB: snprintf(buffer, n, "%10llu ", htop_this->io_cancelled_write_bytes); break; 
+   case IO_READ_RATE:  Process_outputRate(htop_this, str, attr, buffer, n, htop_this->io_rate_read_bps); return;
+   case IO_WRITE_RATE: Process_outputRate(htop_this, str, attr, buffer, n, htop_this->io_rate_write_bps); return;
+   case IO_RATE: Process_outputRate(htop_this, str, attr, buffer, n, htop_this->io_rate_read_bps + htop_this->io_rate_write_bps); return;
    #endif
    #ifdef HAVE_CGROUP
-   case CGROUP: snprintf(buffer, n, "%-10s ", this->cgroup); break;
+   case CGROUP: snprintf(buffer, n, "%-10s ", htop_this->cgroup); break;
    #endif
    case IO_PRIORITY: {
-      int klass = IOPriority_class(this->ioPriority);
+      int klass = IOPriority_class(htop_this->ioPriority);
       if (klass == IOPRIO_CLASS_NONE) {
          // see note [1] above
-         snprintf(buffer, n, "B%1d ", (int) (this->nice + 20) / 5);
+         snprintf(buffer, n, "B%1d ", (int) (htop_this->nice + 20) / 5);
       } else if (klass == IOPRIO_CLASS_BE) {
-         snprintf(buffer, n, "B%1d ", IOPriority_data(this->ioPriority));
+         snprintf(buffer, n, "B%1d ", IOPriority_data(htop_this->ioPriority));
       } else if (klass == IOPRIO_CLASS_RT) {
          attr = CRT_colors[PROCESS_HIGH_PRIORITY];
-         snprintf(buffer, n, "R%1d ", IOPriority_data(this->ioPriority));
-      } else if (this->ioPriority == IOPriority_Idle) {
+         snprintf(buffer, n, "R%1d ", IOPriority_data(htop_this->ioPriority));
+      } else if (htop_this->ioPriority == IOPriority_Idle) {
          attr = CRT_colors[PROCESS_LOW_PRIORITY]; 
          snprintf(buffer, n, "id ");
       } else {
@@ -567,26 +567,26 @@ static void Process_writeField(Process* this, RichString* str, ProcessField fiel
 }
 
 static void Process_display(Object* cast, RichString* out) {
-   Process* this = (Process*) cast;
-   ProcessField* fields = this->pl->fields;
+   Process* htop_this = (Process*) cast;
+   ProcessField* fields = htop_this->pl->fields;
    RichString_prune(out);
    for (int i = 0; fields[i]; i++)
-      Process_writeField(this, out, fields[i]);
-   if (this->pl->shadowOtherUsers && (int)this->st_uid != Process_getuid)
+      Process_writeField(htop_this, out, fields[i]);
+   if (htop_this->pl->shadowOtherUsers && (int)htop_this->st_uid != Process_getuid)
       RichString_setAttr(out, CRT_colors[PROCESS_SHADOW]);
-   if (this->tag == true)
+   if (htop_this->tag == true)
       RichString_setAttr(out, CRT_colors[PROCESS_TAG]);
    assert(out->chlen > 0);
 }
 
 void Process_delete(Object* cast) {
-   Process* this = (Process*) cast;
-   assert (this != NULL);
-   if (this->comm) free(this->comm);
+   Process* htop_this = (Process*) cast;
+   assert (htop_this != NULL);
+   if (htop_this->comm) free(htop_this->comm);
 #ifdef HAVE_CGROUP
-   if (this->cgroup) free(this->cgroup);
+   if (htop_this->cgroup) free(htop_this->cgroup);
 #endif
-   free(this);
+   free(htop_this);
 }
 
 ObjectClass Process_class = {
@@ -597,51 +597,51 @@ ObjectClass Process_class = {
 };
 
 Process* Process_new(struct ProcessList_ *pl) {
-   Process* this = calloc(1, sizeof(Process));
-   Object_setClass(this, Class(Process));
-   this->pid = 0;
-   this->pl = pl;
-   this->tag = false;
-   this->showChildren = true;
-   this->show = true;
-   this->updated = false;
-   this->utime = 0;
-   this->stime = 0;
-   this->comm = NULL;
-   this->indent = 0;
+   Process* htop_this = calloc(1, sizeof(Process));
+   Object_setClass(htop_this, Class(Process));
+   htop_this->pid = 0;
+   htop_this->pl = pl;
+   htop_this->tag = false;
+   htop_this->showChildren = true;
+   htop_this->show = true;
+   htop_this->updated = false;
+   htop_this->utime = 0;
+   htop_this->stime = 0;
+   htop_this->comm = NULL;
+   htop_this->indent = 0;
 #ifdef HAVE_CGROUP
-   this->cgroup = NULL;
+   htop_this->cgroup = NULL;
 #endif
    if (Process_getuid == -1) Process_getuid = getuid();
-   return this;
+   return htop_this;
 }
 
-void Process_toggleTag(Process* this) {
-   this->tag = this->tag == true ? false : true;
+void Process_toggleTag(Process* htop_this) {
+   htop_this->tag = htop_this->tag == true ? false : true;
 }
 
-bool Process_setPriority(Process* this, int priority) {
-   int old_prio = getpriority(PRIO_PROCESS, this->pid);
-   int err = setpriority(PRIO_PROCESS, this->pid, priority);
-   if (err == 0 && old_prio != getpriority(PRIO_PROCESS, this->pid)) {
-      this->nice = priority;
+bool Process_setPriority(Process* htop_this, int priority) {
+   int old_prio = getpriority(PRIO_PROCESS, htop_this->pid);
+   int err = setpriority(PRIO_PROCESS, htop_this->pid, priority);
+   if (err == 0 && old_prio != getpriority(PRIO_PROCESS, htop_this->pid)) {
+      htop_this->nice = priority;
    }
    return (err == 0);
 }
 
-bool Process_changePriorityBy(Process* this, size_t delta) {
-   return Process_setPriority(this, this->nice + delta);
+bool Process_changePriorityBy(Process* htop_this, size_t delta) {
+   return Process_setPriority(htop_this, htop_this->nice + delta);
 }
 
-IOPriority Process_updateIOPriority(Process* this) {
-   IOPriority ioprio = syscall(SYS_ioprio_get, IOPRIO_WHO_PROCESS, this->pid);
-   this->ioPriority = ioprio;
+IOPriority Process_updateIOPriority(Process* htop_this) {
+   IOPriority ioprio = syscall(SYS_ioprio_get, IOPRIO_WHO_PROCESS, htop_this->pid);
+   htop_this->ioPriority = ioprio;
    return ioprio;
 }
 
-bool Process_setIOPriority(Process* this, IOPriority ioprio) {
-   syscall(SYS_ioprio_set, IOPRIO_WHO_PROCESS, this->pid, ioprio);
-   return (Process_updateIOPriority(this) == ioprio);
+bool Process_setIOPriority(Process* htop_this, IOPriority ioprio) {
+   syscall(SYS_ioprio_set, IOPRIO_WHO_PROCESS, htop_this->pid, ioprio);
+   return (Process_updateIOPriority(htop_this) == ioprio);
 }
 
 /*
@@ -656,14 +656,14 @@ io_priority = (cpu_nice + 20) / 5. -- From ionice(1) man page
 
 #ifdef HAVE_LIBHWLOC
 
-Affinity* Process_getAffinity(Process* this) {
+Affinity* Process_getAffinity(Process* htop_this) {
    hwloc_cpuset_t cpuset = hwloc_bitmap_alloc();
-   bool ok = (hwloc_linux_get_tid_cpubind(this->pl->topology, this->pid, cpuset) == 0);
+   bool ok = (hwloc_linux_get_tid_cpubind(htop_this->pl->topology, htop_this->pid, cpuset) == 0);
    Affinity* affinity = NULL;
    if (ok) {
       affinity = Affinity_new();
       if (hwloc_bitmap_last(cpuset) == -1) {
-         for (int i = 0; i < this->pl->cpuCount; i++) {
+         for (int i = 0; i < htop_this->pl->cpuCount; i++) {
             Affinity_add(affinity, i);
          }
       } else {
@@ -677,44 +677,44 @@ Affinity* Process_getAffinity(Process* this) {
    return affinity;
 }
 
-bool Process_setAffinity(Process* this, Affinity* affinity) {
+bool Process_setAffinity(Process* htop_this, Affinity* affinity) {
    hwloc_cpuset_t cpuset = hwloc_bitmap_alloc();
    for (int i = 0; i < affinity->used; i++) {
       hwloc_bitmap_set(cpuset, affinity->cpus[i]);
    }
-   bool ok = (hwloc_linux_set_tid_cpubind(this->pl->topology, this->pid, cpuset) == 0);
+   bool ok = (hwloc_linux_set_tid_cpubind(htop_this->pl->topology, htop_this->pid, cpuset) == 0);
    hwloc_bitmap_free(cpuset);
    return ok;
 }
 
 #elif HAVE_NATIVE_AFFINITY
 
-Affinity* Process_getAffinity(Process* this) {
+Affinity* Process_getAffinity(Process* htop_this) {
    cpu_set_t cpuset;
-   bool ok = (sched_getaffinity(this->pid, sizeof(cpu_set_t), &cpuset) == 0);
+   bool ok = (sched_getaffinity(htop_this->pid, sizeof(cpu_set_t), &cpuset) == 0);
    if (!ok) return NULL;
    Affinity* affinity = Affinity_new();
-   for (int i = 0; i < this->pl->cpuCount; i++) {
+   for (int i = 0; i < htop_this->pl->cpuCount; i++) {
       if (CPU_ISSET(i, &cpuset))
          Affinity_add(affinity, i);
    }
    return affinity;
 }
 
-bool Process_setAffinity(Process* this, Affinity* affinity) {
+bool Process_setAffinity(Process* htop_this, Affinity* affinity) {
    cpu_set_t cpuset;
    CPU_ZERO(&cpuset);
    for (int i = 0; i < affinity->used; i++) {
       CPU_SET(affinity->cpus[i], &cpuset);
    }
-   bool ok = (sched_setaffinity(this->pid, sizeof(unsigned long), &cpuset) == 0);
+   bool ok = (sched_setaffinity(htop_this->pid, sizeof(unsigned long), &cpuset) == 0);
    return ok;
 }
 
 #endif
 
-void Process_sendSignal(Process* this, size_t sgn) {
-   kill(this->pid, (int) sgn);
+void Process_sendSignal(Process* htop_this, size_t sgn) {
+   kill(htop_this->pid, (int) sgn);
 }
 
 int Process_pidCompare(const void* v1, const void* v2) {

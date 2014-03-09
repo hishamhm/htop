@@ -55,27 +55,27 @@ static const char* ofsKeys[] = {"F3", "F4", "F5", "Esc"};
 static int ofsEvents[] = {KEY_F(3), KEY_F(4), KEY_F(5), 27};
 
 OpenFilesScreen* OpenFilesScreen_new(Process* process) {
-   OpenFilesScreen* this = (OpenFilesScreen*) malloc(sizeof(OpenFilesScreen));
-   this->process = process;
-   this->display = Panel_new(0, 1, COLS, LINES-3, false, Class(ListItem));
+   OpenFilesScreen* htop_this = (OpenFilesScreen*) malloc(sizeof(OpenFilesScreen));
+   htop_this->process = process;
+   htop_this->display = Panel_new(0, 1, COLS, LINES-3, false, Class(ListItem));
    if (Process_isThread(process))
-      this->pid = process->tgid;
+      htop_this->pid = process->tgid;
    else
-      this->pid = process->pid;
-   return this;
+      htop_this->pid = process->pid;
+   return htop_this;
 }
 
-void OpenFilesScreen_delete(OpenFilesScreen* this) {
-   Panel_delete((Object*)this->display);
-   free(this);
+void OpenFilesScreen_delete(OpenFilesScreen* htop_this) {
+   Panel_delete((Object*)htop_this->display);
+   free(htop_this);
 }
 
-static void OpenFilesScreen_draw(OpenFilesScreen* this, IncSet* inc) {
+static void OpenFilesScreen_draw(OpenFilesScreen* htop_this, IncSet* inc) {
    attrset(CRT_colors[METER_TEXT]);
    mvhline(0, 0, ' ', COLS);
-   mvprintw(0, 0, "Snapshot of files open in process %d - %s", this->pid, this->process->comm);
+   mvprintw(0, 0, "Snapshot of files open in process %d - %s", htop_this->pid, htop_this->process->comm);
    attrset(CRT_colors[DEFAULT_COLOR]);
-   Panel_draw(this->display, true);
+   Panel_draw(htop_this->display, true);
    IncSet_drawBar(inc);
 }
 
@@ -125,11 +125,11 @@ static inline void addLine(const char* line, Vector* lines, Panel* panel, const 
       Panel_add(panel, (Object*)Vector_get(lines, Vector_size(lines)-1));
 }
 
-static void OpenFilesScreen_scan(OpenFilesScreen* this, Vector* lines, IncSet* inc) {
-   Panel* panel = this->display;
+static void OpenFilesScreen_scan(OpenFilesScreen* htop_this, Vector* lines, IncSet* inc) {
+   Panel* panel = htop_this->display;
    int idx = Panel_getSelectedIndex(panel);
    Panel_prune(panel);
-   OpenFiles_ProcessData* pdata = OpenFilesScreen_getProcessData(this->pid);
+   OpenFiles_ProcessData* pdata = OpenFilesScreen_getProcessData(htop_this->pid);
    if (pdata->error == 127) {
       addLine("Could not execute 'lsof'. Please make sure it is available in your $PATH.", lines, panel, IncSet_filter(inc));
    } else if (pdata->error == 1) {
@@ -163,8 +163,8 @@ static void OpenFilesScreen_scan(OpenFilesScreen* this, Vector* lines, IncSet* i
    Panel_setSelected(panel, idx);
 }
 
-void OpenFilesScreen_run(OpenFilesScreen* this) {
-   Panel* panel = this->display;
+void OpenFilesScreen_run(OpenFilesScreen* htop_this) {
+   Panel* panel = htop_this->display;
    Panel_setHeader(panel, "   FD TYPE     DEVICE       SIZE       NODE NAME");
 
    FunctionBar* bar = FunctionBar_new(ofsFunctions, ofsKeys, ofsEvents);
@@ -172,8 +172,8 @@ void OpenFilesScreen_run(OpenFilesScreen* this) {
    
    Vector* lines = Vector_new(panel->items->type, true, DEFAULT_SIZE);
 
-   OpenFilesScreen_scan(this, lines, inc);
-   OpenFilesScreen_draw(this, inc);
+   OpenFilesScreen_scan(htop_this, lines, inc);
+   OpenFilesScreen_draw(htop_this, inc);
    
    bool looping = true;
    while (looping) {
@@ -213,12 +213,12 @@ void OpenFilesScreen_run(OpenFilesScreen* this) {
          break;
       case KEY_F(5):
          clear();
-         OpenFilesScreen_scan(this, lines, inc);
-         OpenFilesScreen_draw(this, inc);
+         OpenFilesScreen_scan(htop_this, lines, inc);
+         OpenFilesScreen_draw(htop_this, inc);
          break;
       case '\014': // Ctrl+L
          clear();
-         OpenFilesScreen_draw(this, inc);
+         OpenFilesScreen_draw(htop_this, inc);
          break;
       case 'q':
       case 27:
@@ -227,7 +227,7 @@ void OpenFilesScreen_run(OpenFilesScreen* this) {
          break;
       case KEY_RESIZE:
          Panel_resize(panel, COLS, LINES-2);
-         OpenFilesScreen_draw(this, inc);
+         OpenFilesScreen_draw(htop_this, inc);
          break;
       default:
          Panel_onKey(panel, ch);

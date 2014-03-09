@@ -25,9 +25,9 @@ typedef struct Settings_ {
 } Settings;
 
 
-void Settings_delete(Settings* this);
+void Settings_delete(Settings* htop_this);
 
-bool Settings_write(Settings* this);
+bool Settings_write(Settings* htop_this);
 
 Settings* Settings_new(ProcessList* pl, Header* header, int cpuCount);
 

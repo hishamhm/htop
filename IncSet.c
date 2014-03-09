@@ -77,28 +77,28 @@ static inline void IncMode_done(IncMode* mode) {
 }
 
 IncSet* IncSet_new(FunctionBar* bar) {
-   IncSet* this = calloc(1, sizeof(IncSet));
-   IncMode_initSearch(&(this->modes[INC_SEARCH]));
-   IncMode_initFilter(&(this->modes[INC_FILTER]));
-   this->active = NULL;
-   this->filtering = false;
-   this->bar = bar;
-   this->defaultBar = bar;
-   return this;
+   IncSet* htop_this = calloc(1, sizeof(IncSet));
+   IncMode_initSearch(&(htop_this->modes[INC_SEARCH]));
+   IncMode_initFilter(&(htop_this->modes[INC_FILTER]));
+   htop_this->active = NULL;
+   htop_this->filtering = false;
+   htop_this->bar = bar;
+   htop_this->defaultBar = bar;
+   return htop_this;
 }
 
-void IncSet_delete(IncSet* this) {
-   IncMode_done(&(this->modes[0]));
-   IncMode_done(&(this->modes[1]));
-   free(this);
+void IncSet_delete(IncSet* htop_this) {
+   IncMode_done(&(htop_this->modes[0]));
+   IncMode_done(&(htop_this->modes[1]));
+   free(htop_this);
 }
 
-static void updateWeakPanel(IncSet* this, Panel* panel, Vector* lines) {
+static void updateWeakPanel(IncSet* htop_this, Panel* panel, Vector* lines) {
    Object* selected = Panel_getSelected(panel);
    Panel_prune(panel);
-   if (this->filtering) {
+   if (htop_this->filtering) {
       int n = 0;
-      const char* incFilter = this->modes[INC_FILTER].buffer;
+      const char* incFilter = htop_this->modes[INC_FILTER].buffer;
       for (int i = 0; i < Vector_size(lines); i++) {
          ListItem* line = (ListItem*)Vector_get(lines, i);
          if (String_contains_i(line->value, incFilter)) {
@@ -132,10 +132,10 @@ static void search(IncMode* mode, Panel* panel, IncMode_GetPanelValue getPanelVa
       FunctionBar_drawAttr(mode->bar, mode->buffer, CRT_colors[FAILED_SEARCH]);
 }
 
-bool IncSet_handleKey(IncSet* this, int ch, Panel* panel, IncMode_GetPanelValue getPanelValue, Vector* lines) {
+bool IncSet_handleKey(IncSet* htop_this, int ch, Panel* panel, IncMode_GetPanelValue getPanelValue, Vector* lines) {
    if (ch == ERR)
       return true;
-   IncMode* mode = this->active;
+   IncMode* mode = htop_this->active;
    int size = Panel_size(panel);
    bool filterChange = false;
    bool doSearch = true;
@@ -159,7 +159,7 @@ bool IncSet_handleKey(IncSet* this, int ch, Panel* panel, IncMode_GetPanelValue 
       mode->buffer[mode->index] = 0;
       if (mode->isFilter) {
          filterChange = true;
-         if (mode->index == 1) this->filtering = true;
+         if (mode->index == 1) htop_this->filtering = true;
       }
    } else if ((ch == KEY_BACKSPACE || ch == 127) && (mode->index > 0)) {
       mode->index--;
@@ -167,7 +167,7 @@ bool IncSet_handleKey(IncSet* this, int ch, Panel* panel, IncMode_GetPanelValue 
       if (mode->isFilter) {
          filterChange = true;
          if (mode->index == 0) {
-            this->filtering = false;
+            htop_this->filtering = false;
             IncMode_reset(mode);
          }
       }
@@ -175,22 +175,22 @@ bool IncSet_handleKey(IncSet* this, int ch, Panel* panel, IncMode_GetPanelValue 
       if (mode->isFilter) {
          filterChange = true;
          if (ch == 27) {
-            this->filtering = false;
+            htop_this->filtering = false;
             IncMode_reset(mode);
          }
       } else {
          IncMode_reset(mode);
       }
-      this->active = NULL;
-      this->bar = this->defaultBar;
-      FunctionBar_draw(this->defaultBar, NULL);
+      htop_this->active = NULL;
+      htop_this->bar = htop_this->defaultBar;
+      FunctionBar_draw(htop_this->defaultBar, NULL);
       doSearch = false;
    }
    if (doSearch) {
       search(mode, panel, getPanelValue);
    }
    if (filterChange && lines) {
-      updateWeakPanel(this, panel, lines);
+      updateWeakPanel(htop_this, panel, lines);
    }
    return filterChange;
 }
@@ -202,12 +202,12 @@ const char* IncSet_getListItemValue(Panel* panel, int i) {
    return "";
 }
 
-void IncSet_activate(IncSet* this, IncType type) {
-   this->active = &(this->modes[type]);
-   this->bar = this->active->bar;
-   FunctionBar_draw(this->active->bar, this->active->buffer);
+void IncSet_activate(IncSet* htop_this, IncType type) {
+   htop_this->active = &(htop_this->modes[type]);
+   htop_this->bar = htop_this->active->bar;
+   FunctionBar_draw(htop_this->active->bar, htop_this->active->buffer);
 }
 
-void IncSet_drawBar(IncSet* this) {
-   FunctionBar_draw(this->bar, this->active ? this->active->buffer : NULL);
+void IncSet_drawBar(IncSet* htop_this) {
+   FunctionBar_draw(htop_this->bar, htop_this->active ? htop_this->active->buffer : NULL);
 }

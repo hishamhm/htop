@@ -44,22 +44,22 @@ static const char* tsKeys[] = {"F3", "F4", "F8", "F9", "Esc"};
 static int tsEvents[] = {KEY_F(3), KEY_F(4), KEY_F(8), KEY_F(9), 27};
 
 TraceScreen* TraceScreen_new(Process* process) {
-   TraceScreen* this = (TraceScreen*) malloc(sizeof(TraceScreen));
-   this->process = process;
-   this->display = Panel_new(0, 1, COLS, LINES-2, false, Class(ListItem));
-   this->tracing = true;
-   return this;
+   TraceScreen* htop_this = (TraceScreen*) malloc(sizeof(TraceScreen));
+   htop_this->process = process;
+   htop_this->display = Panel_new(0, 1, COLS, LINES-2, false, Class(ListItem));
+   htop_this->tracing = true;
+   return htop_this;
 }
 
-void TraceScreen_delete(TraceScreen* this) {
-   Panel_delete((Object*)this->display);
-   free(this);
+void TraceScreen_delete(TraceScreen* htop_this) {
+   Panel_delete((Object*)htop_this->display);
+   free(htop_this);
 }
 
-static void TraceScreen_draw(TraceScreen* this, IncSet* inc) {
+static void TraceScreen_draw(TraceScreen* htop_this, IncSet* inc) {
    attrset(CRT_colors[PANEL_HEADER_FOCUS]);
    mvhline(0, 0, ' ', COLS);
-   mvprintw(0, 0, "Trace of process %d - %s", this->process->pid, this->process->comm);
+   mvprintw(0, 0, "Trace of process %d - %s", htop_this->process->pid, htop_this->process->comm);
    attrset(CRT_colors[DEFAULT_COLOR]);
    IncSet_drawBar(inc);
 }
@@ -77,8 +77,8 @@ static inline void appendLine(const char* line, Vector* lines, Panel* panel, con
       Panel_add(panel, (Object*)last);
 }
 
-void TraceScreen_run(TraceScreen* this) {
-//   if (this->process->pid == getpid()) return;
+void TraceScreen_run(TraceScreen* htop_this) {
+//   if (htop_this->process->pid == getpid()) return;
    char buffer[1001];
    int fdpair[2];
    int err = pipe(fdpair);
@@ -88,7 +88,7 @@ void TraceScreen_run(TraceScreen* this) {
    if (child == 0) {
       dup2(fdpair[1], STDERR_FILENO);
       fcntl(fdpair[1], F_SETFL, O_NONBLOCK);
-      sprintf(buffer, "%d", this->process->pid);
+      sprintf(buffer, "%d", htop_this->process->pid);
       execlp("strace", "strace", "-p", buffer, NULL);
       const char* message = "Could not execute 'strace'. Please make sure it is available in your $PATH.";
       write(fdpair[1], message, strlen(message));
@@ -96,7 +96,7 @@ void TraceScreen_run(TraceScreen* this) {
    }
    fcntl(fdpair[0], F_SETFL, O_NONBLOCK);
    FILE* strace = fdopen(fdpair[0], "r");
-   Panel* panel = this->display;
+   Panel* panel = htop_this->display;
    int fd_strace = fileno(strace);
    CRT_disableDelay();
    bool contLine = false;
@@ -108,7 +108,7 @@ void TraceScreen_run(TraceScreen* this) {
 
    Vector* lines = Vector_new(panel->items->type, true, DEFAULT_SIZE);
 
-   TraceScreen_draw(this, inc);
+   TraceScreen_draw(htop_this, inc);
    
    while (looping) {
 
@@ -130,7 +130,7 @@ void TraceScreen_run(TraceScreen* this) {
          int nread = 0;
          if (ready > 0 && FD_ISSET(fd_strace, &fds))
             nread = fread(buffer, 1, 1000, strace);
-         if (nread && this->tracing) {
+         if (nread && htop_this->tracing) {
             char* line = buffer;
             buffer[nread] = '\0';
             for (int i = 0; i < nread; i++) {
@@ -197,9 +197,9 @@ void TraceScreen_run(TraceScreen* this) {
          break;
       case 't':
       case KEY_F(9):
-         this->tracing = !this->tracing;
-         FunctionBar_setLabel(bar, KEY_F(9), this->tracing?"Stop Tracing   ":"Resume Tracing ");
-         TraceScreen_draw(this, inc);
+         htop_this->tracing = !htop_this->tracing;
+         FunctionBar_setLabel(bar, KEY_F(9), htop_this->tracing?"Stop Tracing   ":"Resume Tracing ");
+         TraceScreen_draw(htop_this, inc);
          break;
       case 'q':
       case 27:
@@ -208,7 +208,7 @@ void TraceScreen_run(TraceScreen* this) {
          break;
       case KEY_RESIZE:
          Panel_resize(panel, COLS, LINES-2);
-         TraceScreen_draw(this, inc);
+         TraceScreen_draw(htop_this, inc);
          break;
       default:
          follow = false;

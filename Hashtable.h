@@ -30,20 +30,20 @@ struct Hashtable_ {
 
 #ifdef DEBUG
 
-int Hashtable_count(Hashtable* this);
+int Hashtable_count(Hashtable* htop_this);
 
 #endif
 
 Hashtable* Hashtable_new(int size, bool owner);
 
-void Hashtable_delete(Hashtable* this);
+void Hashtable_delete(Hashtable* htop_this);
 
-void Hashtable_put(Hashtable* this, unsigned int key, void* value);
+void Hashtable_put(Hashtable* htop_this, unsigned int key, void* value);
 
-void* Hashtable_remove(Hashtable* this, unsigned int key);
+void* Hashtable_remove(Hashtable* htop_this, unsigned int key);
 
-extern void* Hashtable_get(Hashtable* this, unsigned int key);
+extern void* Hashtable_get(Hashtable* htop_this, unsigned int key);
 
-void Hashtable_foreach(Hashtable* this, Hashtable_PairFunction f, void* userData);
+void Hashtable_foreach(Hashtable* htop_this, Hashtable_PairFunction f, void* userData);
 
 #endif

@@ -34,8 +34,8 @@ typedef struct OpenFilesScreen_ {
 
 OpenFilesScreen* OpenFilesScreen_new(Process* process);
 
-void OpenFilesScreen_delete(OpenFilesScreen* this);
+void OpenFilesScreen_delete(OpenFilesScreen* htop_this);
 
-void OpenFilesScreen_run(OpenFilesScreen* this);
+void OpenFilesScreen_run(OpenFilesScreen* htop_this);
 
 #endif

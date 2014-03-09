@@ -64,7 +64,7 @@ static unsigned long int parseBatInfo(const char *fileName, const unsigned short
    list *newEntry;
 
    /*
-      Some of this is based off of code found in kismet (they claim it came from gkrellm).
+      Some of htop_this is based off of code found in kismet (they claim it came from gkrellm).
       Written for multi battery use...
     */
    for (const struct dirent* dirEntries = readdir((DIR *) batteryDir); dirEntries; dirEntries = readdir((DIR *) batteryDir)) {
@@ -291,7 +291,7 @@ static double getSysBatData() {
    return percent;
 }
 
-static void BatteryMeter_setValues(Meter * this, char *buffer, int len) {
+static void BatteryMeter_setValues(Meter * htop_this, char *buffer, int len) {
    double percent = getProcBatData();
 
    if (percent == 0) {
@@ -302,12 +302,12 @@ static void BatteryMeter_setValues(Meter * this, char *buffer, int len) {
       }
    }
 
-   this->values[0] = percent;
+   htop_this->values[0] = percent;
 
    const char *onAcText, *onBatteryText, *unknownText;
 
    unknownText = "%.1f%%";
-   if (this->mode == TEXT_METERMODE) {
+   if (htop_this->mode == TEXT_METERMODE) {
       onAcText = "%.1f%% (Running on A/C)";
       onBatteryText = "%.1f%% (Running on battery)";
    } else {

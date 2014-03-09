@@ -19,9 +19,9 @@ typedef struct Affinity_ {
 
 Affinity* Affinity_new();
 
-void Affinity_delete(Affinity* this);
+void Affinity_delete(Affinity* htop_this);
 
-void Affinity_add(Affinity* this, int id);
+void Affinity_add(Affinity* htop_this, int id);
 
 
 #endif

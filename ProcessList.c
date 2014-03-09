@@ -196,15 +196,15 @@ static ssize_t xread(int fd, void *buf, size_t count) {
 }
 
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList) {
-   ProcessList* this;
-   this = calloc(1, sizeof(ProcessList));
-   this->processes = Vector_new(Class(Process), true, DEFAULT_SIZE);
-   this->processTable = Hashtable_new(140, false);
-   this->usersTable = usersTable;
-   this->pidWhiteList = pidWhiteList;
+   ProcessList* htop_this;
+   htop_this = calloc(1, sizeof(ProcessList));
+   htop_this->processes = Vector_new(Class(Process), true, DEFAULT_SIZE);
+   htop_this->processTable = Hashtable_new(140, false);
+   htop_this->usersTable = usersTable;
+   htop_this->pidWhiteList = pidWhiteList;
    
    /* tree-view auxiliary buffers */
-   this->processes2 = Vector_new(Class(Process), true, DEFAULT_SIZE);
+   htop_this->processes2 = Vector_new(Class(Process), true, DEFAULT_SIZE);
    
    FILE* file = fopen(PROCSTATFILE, "r");
    if (file == NULL) {
@@ -217,126 +217,126 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList) {
       fgets(buffer, 255, file);
    } while (String_startsWith(buffer, "cpu"));
    fclose(file);
-   this->cpuCount = cpus - 1;
+   htop_this->cpuCount = cpus - 1;
 
 #ifdef HAVE_LIBHWLOC
-   this->topologyOk = false;
-   int topoErr = hwloc_topology_init(&this->topology);
+   htop_this->topologyOk = false;
+   int topoErr = hwloc_topology_init(&htop_this->topology);
    if (topoErr == 0) {
-      topoErr = hwloc_topology_load(this->topology);
-      this->topologyOk = true;
+      topoErr = hwloc_topology_load(htop_this->topology);
+      htop_this->topologyOk = true;
    }
 #endif
-   this->cpus = calloc(cpus, sizeof(CPUData));
+   htop_this->cpus = calloc(cpus, sizeof(CPUData));
 
    for (int i = 0; i < cpus; i++) {
-      this->cpus[i].totalTime = 1;
-      this->cpus[i].totalPeriod = 1;
+      htop_this->cpus[i].totalTime = 1;
+      htop_this->cpus[i].totalPeriod = 1;
    }
 
-   this->fields = calloc(LAST_PROCESSFIELD+1, sizeof(ProcessField));
+   htop_this->fields = calloc(LAST_PROCESSFIELD+1, sizeof(ProcessField));
    // TODO: turn 'fields' into a Vector,
    // (and ProcessFields into proper objects).
-   this->flags = 0;
+   htop_this->flags = 0;
    for (int i = 0; defaultHeaders[i]; i++) {
-      this->fields[i] = defaultHeaders[i];
-      this->fields[i] |= Process_fieldFlags[defaultHeaders[i]];
+      htop_this->fields[i] = defaultHeaders[i];
+      htop_this->fields[i] |= Process_fieldFlags[defaultHeaders[i]];
    }
-   this->sortKey = PERCENT_CPU;
-   this->direction = 1;
-   this->hideThreads = false;
-   this->shadowOtherUsers = false;
-   this->showThreadNames = false;
-   this->showingThreadNames = false;
-   this->hideKernelThreads = false;
-   this->hideUserlandThreads = false;
-   this->treeView = false;
-   this->highlightBaseName = false;
-   this->highlightMegabytes = false;
-   this->detailedCPUTime = false;
-   this->countCPUsFromZero = false;
-   this->updateProcessNames = false;
-   this->treeStr = NULL;
-   this->following = -1;
+   htop_this->sortKey = PERCENT_CPU;
+   htop_this->direction = 1;
+   htop_this->hideThreads = false;
+   htop_this->shadowOtherUsers = false;
+   htop_this->showThreadNames = false;
+   htop_this->showingThreadNames = false;
+   htop_this->hideKernelThreads = false;
+   htop_this->hideUserlandThreads = false;
+   htop_this->treeView = false;
+   htop_this->highlightBaseName = false;
+   htop_this->highlightMegabytes = false;
+   htop_this->detailedCPUTime = false;
+   htop_this->countCPUsFromZero = false;
+   htop_this->updateProcessNames = false;
+   htop_this->treeStr = NULL;
+   htop_this->following = -1;
 
    if (CRT_utf8)
-      this->treeStr = CRT_utf8 ? ProcessList_treeStrUtf8 : ProcessList_treeStrAscii;
+      htop_this->treeStr = CRT_utf8 ? ProcessList_treeStrUtf8 : ProcessList_treeStrAscii;
 
-   return this;
+   return htop_this;
 }
 
-void ProcessList_delete(ProcessList* this) {
-   Hashtable_delete(this->processTable);
-   Vector_delete(this->processes);
-   Vector_delete(this->processes2);
-   free(this->cpus);
-   free(this->fields);
-   free(this);
+void ProcessList_delete(ProcessList* htop_this) {
+   Hashtable_delete(htop_this->processTable);
+   Vector_delete(htop_this->processes);
+   Vector_delete(htop_this->processes2);
+   free(htop_this->cpus);
+   free(htop_this->fields);
+   free(htop_this);
 }
 
-void ProcessList_setPanel(ProcessList* this, Panel* panel) {
-   this->panel = panel;
+void ProcessList_setPanel(ProcessList* htop_this, Panel* panel) {
+   htop_this->panel = panel;
 }
 
-void ProcessList_invertSortOrder(ProcessList* this) {
-   if (this->direction == 1)
-      this->direction = -1;
+void ProcessList_invertSortOrder(ProcessList* htop_this) {
+   if (htop_this->direction == 1)
+      htop_this->direction = -1;
    else
-      this->direction = 1;
+      htop_this->direction = 1;
 }
 
-void ProcessList_printHeader(ProcessList* this, RichString* header) {
+void ProcessList_printHeader(ProcessList* htop_this, RichString* header) {
    RichString_prune(header);
-   ProcessField* fields = this->fields;
+   ProcessField* fields = htop_this->fields;
    for (int i = 0; fields[i]; i++) {
       const char* field = Process_fieldTitles[fields[i]];
-      if (!this->treeView && this->sortKey == fields[i])
+      if (!htop_this->treeView && htop_this->sortKey == fields[i])
          RichString_append(header, CRT_colors[PANEL_HIGHLIGHT_FOCUS], field);
       else
          RichString_append(header, CRT_colors[PANEL_HEADER_FOCUS], field);
    }
 }
 
-static void ProcessList_add(ProcessList* this, Process* p) {
-   assert(Vector_indexOf(this->processes, p, Process_pidCompare) == -1);
-   assert(Hashtable_get(this->processTable, p->pid) == NULL);
+static void ProcessList_add(ProcessList* htop_this, Process* p) {
+   assert(Vector_indexOf(htop_this->processes, p, Process_pidCompare) == -1);
+   assert(Hashtable_get(htop_this->processTable, p->pid) == NULL);
    
-   Vector_add(this->processes, p);
-   Hashtable_put(this->processTable, p->pid, p);
+   Vector_add(htop_this->processes, p);
+   Hashtable_put(htop_this->processTable, p->pid, p);
    
-   assert(Vector_indexOf(this->processes, p, Process_pidCompare) != -1);
-   assert(Hashtable_get(this->processTable, p->pid) != NULL);
-   assert(Hashtable_count(this->processTable) == Vector_count(this->processes));
+   assert(Vector_indexOf(htop_this->processes, p, Process_pidCompare) != -1);
+   assert(Hashtable_get(htop_this->processTable, p->pid) != NULL);
+   assert(Hashtable_count(htop_this->processTable) == Vector_count(htop_this->processes));
 }
 
-static void ProcessList_remove(ProcessList* this, Process* p) {
-   assert(Vector_indexOf(this->processes, p, Process_pidCompare) != -1);
-   assert(Hashtable_get(this->processTable, p->pid) != NULL);
-   Process* pp = Hashtable_remove(this->processTable, p->pid);
+static void ProcessList_remove(ProcessList* htop_this, Process* p) {
+   assert(Vector_indexOf(htop_this->processes, p, Process_pidCompare) != -1);
+   assert(Hashtable_get(htop_this->processTable, p->pid) != NULL);
+   Process* pp = Hashtable_remove(htop_this->processTable, p->pid);
    assert(pp == p); (void)pp;
    unsigned int pid = p->pid;
-   int idx = Vector_indexOf(this->processes, p, Process_pidCompare);
+   int idx = Vector_indexOf(htop_this->processes, p, Process_pidCompare);
    assert(idx != -1);
-   if (idx >= 0) Vector_remove(this->processes, idx);
-   assert(Hashtable_get(this->processTable, pid) == NULL); (void)pid;
-   assert(Hashtable_count(this->processTable) == Vector_count(this->processes));
+   if (idx >= 0) Vector_remove(htop_this->processes, idx);
+   assert(Hashtable_get(htop_this->processTable, pid) == NULL); (void)pid;
+   assert(Hashtable_count(htop_this->processTable) == Vector_count(htop_this->processes));
 }
 
-Process* ProcessList_get(ProcessList* this, int idx) {
-   return (Process*) (Vector_get(this->processes, idx));
+Process* ProcessList_get(ProcessList* htop_this, int idx) {
+   return (Process*) (Vector_get(htop_this->processes, idx));
 }
 
-int ProcessList_size(ProcessList* this) {
-   return (Vector_size(this->processes));
+int ProcessList_size(ProcessList* htop_this) {
+   return (Vector_size(htop_this->processes));
 }
 
-static void ProcessList_buildTree(ProcessList* this, pid_t pid, int level, int indent, int direction, bool show) {
+static void ProcessList_buildTree(ProcessList* htop_this, pid_t pid, int level, int indent, int direction, bool show) {
    Vector* children = Vector_new(Class(Process), false, DEFAULT_SIZE);
 
-   for (int i = Vector_size(this->processes) - 1; i >= 0; i--) {
-      Process* process = (Process*) (Vector_get(this->processes, i));
+   for (int i = Vector_size(htop_this->processes) - 1; i >= 0; i--) {
+      Process* process = (Process*) (Vector_get(htop_this->processes, i));
       if (process->tgid == pid || (process->tgid == process->pid && process->ppid == pid)) {
-         process = (Process*) (Vector_take(this->processes, i));
+         process = (Process*) (Vector_take(htop_this->processes, i));
          Vector_add(children, process);
       }
    }
@@ -345,14 +345,14 @@ static void ProcessList_buildTree(ProcessList* this, pid_t pid, int level, int i
       Process* process = (Process*) (Vector_get(children, i));
       if (!show)
          process->show = false;
-      int s = this->processes2->items;
+      int s = htop_this->processes2->items;
       if (direction == 1)
-         Vector_add(this->processes2, process);
+         Vector_add(htop_this->processes2, process);
       else
-         Vector_insert(this->processes2, 0, process);
-      assert(this->processes2->items == s+1); (void)s;
+         Vector_insert(htop_this->processes2, 0, process);
+      assert(htop_this->processes2->items == s+1); (void)s;
       int nextIndent = indent | (1 << level);
-      ProcessList_buildTree(this, process->pid, level+1, (i < size - 1) ? nextIndent : indent, direction, show ? process->showChildren : false);
+      ProcessList_buildTree(htop_this, process->pid, level+1, (i < size - 1) ? nextIndent : indent, direction, show ? process->showChildren : false);
       if (i == size - 1)
          process->indent = -nextIndent;
       else
@@ -361,43 +361,43 @@ static void ProcessList_buildTree(ProcessList* this, pid_t pid, int level, int i
    Vector_delete(children);
 }
 
-void ProcessList_sort(ProcessList* this) {
-   if (!this->treeView) {
-      Vector_insertionSort(this->processes);
+void ProcessList_sort(ProcessList* htop_this) {
+   if (!htop_this->treeView) {
+      Vector_insertionSort(htop_this->processes);
    } else {
       // Save settings
-      int direction = this->direction;
-      int sortKey = this->sortKey;
+      int direction = htop_this->direction;
+      int sortKey = htop_this->sortKey;
       // Sort by PID
-      this->sortKey = PID;
-      this->direction = 1;
-      Vector_quickSort(this->processes);
+      htop_this->sortKey = PID;
+      htop_this->direction = 1;
+      Vector_quickSort(htop_this->processes);
       // Restore settings
-      this->sortKey = sortKey;
-      this->direction = direction;
+      htop_this->sortKey = sortKey;
+      htop_this->direction = direction;
       // Take PID 1 as root and add to the new listing
-      int vsize = Vector_size(this->processes);
-      Process* init = (Process*) (Vector_take(this->processes, 0));
+      int vsize = Vector_size(htop_this->processes);
+      Process* init = (Process*) (Vector_take(htop_this->processes, 0));
       // This assertion crashes on hardened kernels.
       // I wonder how well tree view works on those systems.
       // assert(init->pid == 1);
       init->indent = 0;
-      Vector_add(this->processes2, init);
+      Vector_add(htop_this->processes2, init);
       // Recursively empty list
-      ProcessList_buildTree(this, init->pid, 0, 0, direction, true);
+      ProcessList_buildTree(htop_this, init->pid, 0, 0, direction, true);
       // Add leftovers
-      while (Vector_size(this->processes)) {
-         Process* p = (Process*) (Vector_take(this->processes, 0));
+      while (Vector_size(htop_this->processes)) {
+         Process* p = (Process*) (Vector_take(htop_this->processes, 0));
          p->indent = 0;
-         Vector_add(this->processes2, p);
-         ProcessList_buildTree(this, p->pid, 0, 0, direction, p->showChildren);
+         Vector_add(htop_this->processes2, p);
+         ProcessList_buildTree(htop_this, p->pid, 0, 0, direction, p->showChildren);
       }
-      assert(Vector_size(this->processes2) == vsize); (void)vsize;
-      assert(Vector_size(this->processes) == 0);
+      assert(Vector_size(htop_this->processes2) == vsize); (void)vsize;
+      assert(Vector_size(htop_this->processes) == 0);
       // Swap listings around
-      Vector* t = this->processes;
-      this->processes = this->processes2;
-      this->processes2 = t;
+      Vector* t = htop_this->processes;
+      htop_this->processes = htop_this->processes2;
+      htop_this->processes2 = t;
    }
 }
 
@@ -687,7 +687,7 @@ static bool ProcessList_readCmdlineFile(Process* process, const char* dirname, c
 }
 
 
-static bool ProcessList_processEntries(ProcessList* this, const char* dirname, Process* parent, double period, struct timeval tv) {
+static bool ProcessList_processEntries(ProcessList* htop_this, const char* dirname, Process* parent, double period, struct timeval tv) {
    DIR* dir;
    struct dirent* entry;
 
@@ -698,15 +698,15 @@ static bool ProcessList_processEntries(ProcessList* this, const char* dirname, P
 
    dir = opendir(dirname);
    if (!dir) return false;
-   int cpus = this->cpuCount;
-   bool hideKernelThreads = this->hideKernelThreads;
-   bool hideUserlandThreads = this->hideUserlandThreads;
+   int cpus = htop_this->cpuCount;
+   bool hideKernelThreads = htop_this->hideKernelThreads;
+   bool hideUserlandThreads = htop_this->hideUserlandThreads;
    while ((entry = readdir(dir)) != NULL) {
       char* name = entry->d_name;
 
       // The RedHat kernel hides threads with a dot.
-      // I believe this is non-standard.
-      if ((!this->hideThreads) && name[0] == '.') {
+      // I believe htop_this is non-standard.
+      if ((!htop_this->hideThreads) && name[0] == '.') {
          name++;
       }
 
@@ -724,14 +724,14 @@ static bool ProcessList_processEntries(ProcessList* this, const char* dirname, P
          continue;
 
       Process* process = NULL;
-      Process* existingProcess = (Process*) Hashtable_get(this->processTable, pid);
+      Process* existingProcess = (Process*) Hashtable_get(htop_this->processTable, pid);
 
       if (existingProcess) {
-         assert(Vector_indexOf(this->processes, existingProcess, Process_pidCompare) != -1);
+         assert(Vector_indexOf(htop_this->processes, existingProcess, Process_pidCompare) != -1);
          process = existingProcess;
          assert(process->pid == pid);
       } else {
-         process = Process_new(this);
+         process = Process_new(htop_this);
          assert(process->comm == NULL);
          process->pid = pid;
          process->tgid = parent ? parent->pid : pid;
@@ -739,10 +739,10 @@ static bool ProcessList_processEntries(ProcessList* this, const char* dirname, P
 
       char subdirname[MAX_NAME+1];
       snprintf(subdirname, MAX_NAME, "%s/%s/task", dirname, name);
-      ProcessList_processEntries(this, subdirname, process, period, tv);
+      ProcessList_processEntries(htop_this, subdirname, process, period, tv);
 
       #ifdef HAVE_TASKSTATS
-      if (this->flags & PROCESS_FLAG_IO)
+      if (htop_this->flags & PROCESS_FLAG_IO)
          ProcessList_readIoFile(process, dirname, name, now);
       #endif
 
@@ -755,41 +755,41 @@ static bool ProcessList_processEntries(ProcessList* this, const char* dirname, P
       unsigned long long int lasttimes = (process->utime + process->stime);
       if (! ProcessList_readStatFile(process, dirname, name, command))
          goto errorReadingProcess;
-      if (this->flags & PROCESS_FLAG_IOPRIO)
+      if (htop_this->flags & PROCESS_FLAG_IOPRIO)
          Process_updateIOPriority(process);
       float percent_cpu = (process->utime + process->stime - lasttimes) / period * 100.0;
       process->percent_cpu = MAX(MIN(percent_cpu, cpus*100.0), 0.0);
       if (isnan(process->percent_cpu)) process->percent_cpu = 0.0;
-      process->percent_mem = (process->m_resident * PAGE_SIZE_KB) / (double)(this->totalMem) * 100.0;
+      process->percent_mem = (process->m_resident * PAGE_SIZE_KB) / (double)(htop_this->totalMem) * 100.0;
 
       if(!existingProcess) {
 
          if (! ProcessList_statProcessDir(process, dirname, name, curTime))
             goto errorReadingProcess;
 
-         process->user = UsersTable_getRef(this->usersTable, process->st_uid);
+         process->user = UsersTable_getRef(htop_this->usersTable, process->st_uid);
 
          #ifdef HAVE_OPENVZ
-         if (this->flags & PROCESS_FLAG_OPENVZ)
+         if (htop_this->flags & PROCESS_FLAG_OPENVZ)
             ProcessList_readOpenVZData(process, dirname, name);
          #endif
 
          #ifdef HAVE_CGROUP
-         if (this->flags & PROCESS_FLAG_CGROUP)
+         if (htop_this->flags & PROCESS_FLAG_CGROUP)
             ProcessList_readCGroupFile(process, dirname, name);
          #endif
          
          #ifdef HAVE_VSERVER
-         if (this->flags & PROCESS_FLAG_VSERVER)
+         if (htop_this->flags & PROCESS_FLAG_VSERVER)
             ProcessList_readVServerData(process, dirname, name);
          #endif
          
          if (! ProcessList_readCmdlineFile(process, dirname, name))
             goto errorReadingProcess;
 
-         ProcessList_add(this, process);
+         ProcessList_add(htop_this, process);
       } else {
-         if (this->updateProcessNames) {
+         if (htop_this->updateProcessNames) {
             if (! ProcessList_readCmdlineFile(process, dirname, name))
                goto errorReadingProcess;
          }
@@ -799,23 +799,23 @@ static bool ProcessList_processEntries(ProcessList* this, const char* dirname, P
          free(process->comm);
          process->comm = strdup(command);
       } else if (Process_isThread(process)) {
-         if (this->showThreadNames || Process_isKernelThread(process) || process->state == 'Z') {
+         if (htop_this->showThreadNames || Process_isKernelThread(process) || process->state == 'Z') {
             free(process->comm);
             process->comm = strdup(command);
-         } else if (this->showingThreadNames) {
+         } else if (htop_this->showingThreadNames) {
             if (! ProcessList_readCmdlineFile(process, dirname, name))
                goto errorReadingProcess;
          }
          if (Process_isKernelThread(process)) {
-            this->kernelThreads++;
+            htop_this->kernelThreads++;
          } else {
-            this->userlandThreads++;
+            htop_this->userlandThreads++;
          }
       }
 
-      this->totalTasks++;
+      htop_this->totalTasks++;
       if (process->state == 'R')
-         this->runningTasks++;
+         htop_this->runningTasks++;
       process->updated = true;
 
       continue;
@@ -827,7 +827,7 @@ static bool ProcessList_processEntries(ProcessList* this, const char* dirname, P
             process->comm = NULL;
          }
          if (existingProcess)
-            ProcessList_remove(this, process);
+            ProcessList_remove(htop_this, process);
          else
             Process_delete((Object*)process);
       }
@@ -836,7 +836,7 @@ static bool ProcessList_processEntries(ProcessList* this, const char* dirname, P
    return true;
 }
 
-void ProcessList_scan(ProcessList* this) {
+void ProcessList_scan(ProcessList* htop_this) {
    unsigned long long int usertime, nicetime, systemtime, systemalltime, idlealltime, idletime, totaltime, virtalltime;
    unsigned long long int swapFree = 0;
 
@@ -844,7 +844,7 @@ void ProcessList_scan(ProcessList* this) {
    if (file == NULL) {
       CRT_fatalError("Cannot open " PROCMEMINFOFILE);
    }
-   int cpus = this->cpuCount;
+   int cpus = htop_this->cpuCount;
    {
       char buffer[128];
       while (fgets(buffer, 128, file)) {
@@ -852,23 +852,23 @@ void ProcessList_scan(ProcessList* this) {
          switch (buffer[0]) {
          case 'M':
             if (String_startsWith(buffer, "MemTotal:"))
-               sscanf(buffer, "MemTotal: %llu kB", &this->totalMem);
+               sscanf(buffer, "MemTotal: %llu kB", &htop_this->totalMem);
             else if (String_startsWith(buffer, "MemFree:"))
-               sscanf(buffer, "MemFree: %llu kB", &this->freeMem);
+               sscanf(buffer, "MemFree: %llu kB", &htop_this->freeMem);
             else if (String_startsWith(buffer, "MemShared:"))
-               sscanf(buffer, "MemShared: %llu kB", &this->sharedMem);
+               sscanf(buffer, "MemShared: %llu kB", &htop_this->sharedMem);
             break;
          case 'B':
             if (String_startsWith(buffer, "Buffers:"))
-               sscanf(buffer, "Buffers: %llu kB", &this->buffersMem);
+               sscanf(buffer, "Buffers: %llu kB", &htop_this->buffersMem);
             break;
          case 'C':
             if (String_startsWith(buffer, "Cached:"))
-               sscanf(buffer, "Cached: %llu kB", &this->cachedMem);
+               sscanf(buffer, "Cached: %llu kB", &htop_this->cachedMem);
             break;
          case 'S':
             if (String_startsWith(buffer, "SwapTotal:"))
-               sscanf(buffer, "SwapTotal: %llu kB", &this->totalSwap);
+               sscanf(buffer, "SwapTotal: %llu kB", &htop_this->totalSwap);
             if (String_startsWith(buffer, "SwapFree:"))
                sscanf(buffer, "SwapFree: %llu kB", &swapFree);
             break;
@@ -876,8 +876,8 @@ void ProcessList_scan(ProcessList* this) {
       }
    }
 
-   this->usedMem = this->totalMem - this->freeMem;
-   this->usedSwap = this->totalSwap - swapFree;
+   htop_this->usedMem = htop_this->totalMem - htop_this->freeMem;
+   htop_this->usedSwap = htop_this->totalSwap - swapFree;
    fclose(file);
 
    file = fopen(PROCSTATFILE, "r");
@@ -908,7 +908,7 @@ void ProcessList_scan(ProcessList* this) {
       systemalltime = systemtime + irq + softIrq;
       virtalltime = guest + guestnice;
       totaltime = usertime + nicetime + systemalltime + idlealltime + steal + virtalltime;
-      CPUData* cpuData = &(this->cpus[i]);
+      CPUData* cpuData = &(htop_this->cpus[i]);
       assert (usertime >= cpuData->userTime);
       assert (nicetime >= cpuData->niceTime);
       assert (systemtime >= cpuData->systemTime);
@@ -946,38 +946,38 @@ void ProcessList_scan(ProcessList* this) {
       cpuData->guestTime = virtalltime;
       cpuData->totalTime = totaltime;
    }
-   double period = (double)this->cpus[0].totalPeriod / cpus; fclose(file);
+   double period = (double)htop_this->cpus[0].totalPeriod / cpus; fclose(file);
 
    // mark all process as "dirty"
-   for (int i = 0; i < Vector_size(this->processes); i++) {
-      Process* p = (Process*) Vector_get(this->processes, i);
+   for (int i = 0; i < Vector_size(htop_this->processes); i++) {
+      Process* p = (Process*) Vector_get(htop_this->processes, i);
       p->updated = false;
    }
    
-   this->totalTasks = 0;
-   this->userlandThreads = 0;
-   this->kernelThreads = 0;
-   this->runningTasks = 0;
+   htop_this->totalTasks = 0;
+   htop_this->userlandThreads = 0;
+   htop_this->kernelThreads = 0;
+   htop_this->runningTasks = 0;
 
    struct timeval tv;
    gettimeofday(&tv, NULL);
-   ProcessList_processEntries(this, PROCDIR, NULL, period, tv);
+   ProcessList_processEntries(htop_this, PROCDIR, NULL, period, tv);
    
-   this->showingThreadNames = this->showThreadNames;
+   htop_this->showingThreadNames = htop_this->showThreadNames;
    
-   for (int i = Vector_size(this->processes) - 1; i >= 0; i--) {
-      Process* p = (Process*) Vector_get(this->processes, i);
+   for (int i = Vector_size(htop_this->processes) - 1; i >= 0; i--) {
+      Process* p = (Process*) Vector_get(htop_this->processes, i);
       if (p->updated == false)
-         ProcessList_remove(this, p);
+         ProcessList_remove(htop_this, p);
       else
          p->updated = false;
    }
 
 }
 
-ProcessField ProcessList_keyAt(ProcessList* this, int at) {
+ProcessField ProcessList_keyAt(ProcessList* htop_this, int at) {
    int x = 0;
-   ProcessField* fields = this->fields;
+   ProcessField* fields = htop_this->fields;
    ProcessField field;
    for (int i = 0; (field = fields[i]); i++) {
       int len = strlen(Process_fieldTitles[field]);
@@ -989,49 +989,49 @@ ProcessField ProcessList_keyAt(ProcessList* this, int at) {
    return COMM;
 }
 
-void ProcessList_expandTree(ProcessList* this) {
-   int size = Vector_size(this->processes);
+void ProcessList_expandTree(ProcessList* htop_this) {
+   int size = Vector_size(htop_this->processes);
    for (int i = 0; i < size; i++) {
-      Process* process = (Process*) Vector_get(this->processes, i);
+      Process* process = (Process*) Vector_get(htop_this->processes, i);
       process->showChildren = true;
    }
 }
 
-void ProcessList_rebuildPanel(ProcessList* this, bool flags, int following, bool userOnly, uid_t userId, const char* incFilter) {
+void ProcessList_rebuildPanel(ProcessList* htop_this, bool flags, int following, bool userOnly, uid_t userId, const char* incFilter) {
    if (!flags) {
-      following = this->following;
-      userOnly = this->userOnly;
-      userId = this->userId;
-      incFilter = this->incFilter;
+      following = htop_this->following;
+      userOnly = htop_this->userOnly;
+      userId = htop_this->userId;
+      incFilter = htop_this->incFilter;
    } else {
-      this->following = following;
-      this->userOnly = userOnly;
-      this->userId = userId;
-      this->incFilter = incFilter;
+      htop_this->following = following;
+      htop_this->userOnly = userOnly;
+      htop_this->userId = userId;
+      htop_this->incFilter = incFilter;
    }
 
-   int currPos = Panel_getSelectedIndex(this->panel);
+   int currPos = Panel_getSelectedIndex(htop_this->panel);
    pid_t currPid = following != -1 ? following : 0;
-   int currScrollV = this->panel->scrollV;
+   int currScrollV = htop_this->panel->scrollV;
 
-   Panel_prune(this->panel);
-   int size = ProcessList_size(this);
+   Panel_prune(htop_this->panel);
+   int size = ProcessList_size(htop_this);
    int idx = 0;
    for (int i = 0; i < size; i++) {
       bool hidden = false;
-      Process* p = ProcessList_get(this, i);
+      Process* p = ProcessList_get(htop_this, i);
 
       if ( (!p->show)
          || (userOnly && (p->st_uid != userId))
          || (incFilter && !(String_contains_i(p->comm, incFilter)))
-         || (this->pidWhiteList && !Hashtable_get(this->pidWhiteList, p->pid)) )
+         || (htop_this->pidWhiteList && !Hashtable_get(htop_this->pidWhiteList, p->pid)) )
          hidden = true;
 
       if (!hidden) {
-         Panel_set(this->panel, idx, (Object*)p);
+         Panel_set(htop_this->panel, idx, (Object*)p);
          if ((following == -1 && idx == currPos) || (following != -1 && p->pid == currPid)) {
-            Panel_setSelected(this->panel, idx);
-            this->panel->scrollV = currScrollV;
+            Panel_setSelected(htop_this->panel, idx);
+            htop_this->panel->scrollV = currScrollV;
          }
          idx++;
       }

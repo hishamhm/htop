@@ -39,21 +39,21 @@ typedef struct MeterClass_ {
    char curItems;
 } MeterClass;
 
-#define As_Meter(this_)                ((MeterClass*)((this_)->super.klass))
-#define Meter_initFn(this_)            As_Meter(this_)->init
-#define Meter_init(this_)              As_Meter(this_)->init((Meter*)(this_))
-#define Meter_done(this_)              As_Meter(this_)->done((Meter*)(this_))
-#define Meter_updateModeFn(this_)      As_Meter(this_)->updateMode
-#define Meter_updateMode(this_, m_)    As_Meter(this_)->updateMode((Meter*)(this_), m_)
-#define Meter_drawFn(this_)            As_Meter(this_)->draw
-#define Meter_doneFn(this_)            As_Meter(this_)->done
-#define Meter_setValues(this_, c_, i_) As_Meter(this_)->setValues((Meter*)(this_), c_, i_)
-#define Meter_defaultMode(this_)       As_Meter(this_)->defaultMode
-#define Meter_getItems(this_)          As_Meter(this_)->curItems
-#define Meter_setItems(this_, n_)      As_Meter(this_)->curItems = (n_)
-#define Meter_attributes(this_)        As_Meter(this_)->attributes
-#define Meter_name(this_)              As_Meter(this_)->name
-#define Meter_uiName(this_)            As_Meter(this_)->uiName
+#define As_Meter(htop_this_)                ((MeterClass*)((htop_this_)->super.klass))
+#define Meter_initFn(htop_this_)            As_Meter(htop_this_)->init
+#define Meter_init(htop_this_)              As_Meter(htop_this_)->init((Meter*)(htop_this_))
+#define Meter_done(htop_this_)              As_Meter(htop_this_)->done((Meter*)(htop_this_))
+#define Meter_updateModeFn(htop_this_)      As_Meter(htop_this_)->updateMode
+#define Meter_updateMode(htop_this_, m_)    As_Meter(htop_this_)->updateMode((Meter*)(htop_this_), m_)
+#define Meter_drawFn(htop_this_)            As_Meter(htop_this_)->draw
+#define Meter_doneFn(htop_this_)            As_Meter(htop_this_)->done
+#define Meter_setValues(htop_this_, c_, i_) As_Meter(htop_this_)->setValues((Meter*)(htop_this_), c_, i_)
+#define Meter_defaultMode(htop_this_)       As_Meter(htop_this_)->defaultMode
+#define Meter_getItems(htop_this_)          As_Meter(htop_this_)->curItems
+#define Meter_setItems(htop_this_, n_)      As_Meter(htop_this_)->curItems = (n_)
+#define Meter_attributes(htop_this_)        As_Meter(htop_this_)->attributes
+#define Meter_name(htop_this_)              As_Meter(htop_this_)->name
+#define Meter_uiName(htop_this_)            As_Meter(htop_this_)->uiName
 
 struct Meter_ {
    Object super;
@@ -105,11 +105,11 @@ Meter* Meter_new(ProcessList* pl, int param, MeterClass* type);
 
 void Meter_delete(Object* cast);
 
-void Meter_setCaption(Meter* this, const char* caption);
+void Meter_setCaption(Meter* htop_this, const char* caption);
 
-void Meter_setMode(Meter* this, int modeIndex);
+void Meter_setMode(Meter* htop_this, int modeIndex);
 
-ListItem* Meter_toListItem(Meter* this);
+ListItem* Meter_toListItem(Meter* htop_this);
 
 /* ---------- TextMeterMode ---------- */
 

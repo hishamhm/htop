@@ -26,29 +26,29 @@ typedef struct UsersTable_ {
 }*/
 
 UsersTable* UsersTable_new() {
-   UsersTable* this;
-   this = malloc(sizeof(UsersTable));
-   this->users = Hashtable_new(20, true);
-   return this;
+   UsersTable* htop_this;
+   htop_this = malloc(sizeof(UsersTable));
+   htop_this->users = Hashtable_new(20, true);
+   return htop_this;
 }
 
-void UsersTable_delete(UsersTable* this) {
-   Hashtable_delete(this->users);
-   free(this);
+void UsersTable_delete(UsersTable* htop_this) {
+   Hashtable_delete(htop_this->users);
+   free(htop_this);
 }
 
-char* UsersTable_getRef(UsersTable* this, unsigned int uid) {
-   char* name = (char*) (Hashtable_get(this->users, uid));
+char* UsersTable_getRef(UsersTable* htop_this, unsigned int uid) {
+   char* name = (char*) (Hashtable_get(htop_this->users, uid));
    if (name == NULL) {
       struct passwd* userData = getpwuid(uid);
       if (userData != NULL) {
          name = strdup(userData->pw_name);
-         Hashtable_put(this->users, uid, name);
+         Hashtable_put(htop_this->users, uid, name);
       }
    }
    return name;
 }
 
-inline void UsersTable_foreach(UsersTable* this, Hashtable_PairFunction f, void* userData) {
-   Hashtable_foreach(this->users, f, userData);
+inline void UsersTable_foreach(UsersTable* htop_this, Hashtable_PairFunction f, void* userData) {
+   Hashtable_foreach(htop_this->users, f, userData);
 }

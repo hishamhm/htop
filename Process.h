@@ -178,15 +178,15 @@ extern ObjectClass Process_class;
 
 Process* Process_new(struct ProcessList_ *pl);
 
-void Process_toggleTag(Process* this);
+void Process_toggleTag(Process* htop_this);
 
-bool Process_setPriority(Process* this, int priority);
+bool Process_setPriority(Process* htop_this, int priority);
 
-bool Process_changePriorityBy(Process* this, size_t delta);
+bool Process_changePriorityBy(Process* htop_this, size_t delta);
 
-IOPriority Process_updateIOPriority(Process* this);
+IOPriority Process_updateIOPriority(Process* htop_this);
 
-bool Process_setIOPriority(Process* this, IOPriority ioprio);
+bool Process_setIOPriority(Process* htop_this, IOPriority ioprio);
 
 /*
 [1] Note that before kernel 2.6.26 a process that has not asked for
@@ -200,19 +200,19 @@ extern io_priority;
 
 #ifdef HAVE_LIBHWLOC
 
-Affinity* Process_getAffinity(Process* this);
+Affinity* Process_getAffinity(Process* htop_this);
 
-bool Process_setAffinity(Process* this, Affinity* affinity);
+bool Process_setAffinity(Process* htop_this, Affinity* affinity);
 
 #elif HAVE_NATIVE_AFFINITY
 
-Affinity* Process_getAffinity(Process* this);
+Affinity* Process_getAffinity(Process* htop_this);
 
-bool Process_setAffinity(Process* this, Affinity* affinity);
+bool Process_setAffinity(Process* htop_this, Affinity* affinity);
 
 #endif
 
-void Process_sendSignal(Process* this, size_t sgn);
+void Process_sendSignal(Process* htop_this, size_t sgn);
 
 int Process_pidCompare(const void* v1, const void* v2);
 
