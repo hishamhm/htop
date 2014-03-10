@@ -31,13 +31,13 @@ typedef struct AvailableColumnsPanel_ {
 
 static void AvailableColumnsPanel_delete(Object* object) {
    Panel* super = (Panel*) object;
-   AvailableColumnsPanel* this = (AvailableColumnsPanel*) object;
+   AvailableColumnsPanel* htop_this = (AvailableColumnsPanel*) object;
    Panel_done(super);
-   free(this);
+   free(htop_this);
 }
 
 static HandlerResult AvailableColumnsPanel_eventHandler(Panel* super, int ch) {
-   AvailableColumnsPanel* this = (AvailableColumnsPanel*) super;
+   AvailableColumnsPanel* htop_this = (AvailableColumnsPanel*) super;
    char* text = ((ListItem*) Panel_getSelected(super))->value;
    HandlerResult result = IGNORED;
 
@@ -46,10 +46,10 @@ static HandlerResult AvailableColumnsPanel_eventHandler(Panel* super, int ch) {
       case KEY_ENTER:
       case KEY_F(5):
       {
-         int at = Panel_getSelectedIndex(this->columns);
-         Panel_insert(this->columns, at, (Object*) ListItem_new(text, 0));
-         Panel_setSelected(this->columns, at+1);
-         ColumnsPanel_update(this->columns);
+         int at = Panel_getSelectedIndex(htop_this->columns);
+         Panel_insert(htop_this->columns, at, (Object*) ListItem_new(text, 0));
+         Panel_setSelected(htop_this->columns, at+1);
+         ColumnsPanel_update(htop_this->columns);
          result = HANDLED;
          break;
       }
@@ -72,12 +72,12 @@ PanelClass AvailableColumnsPanel_class = {
 };
 
 AvailableColumnsPanel* AvailableColumnsPanel_new(Settings* settings, Panel* columns, ScreenManager* scr) {
-   AvailableColumnsPanel* this = AllocThis(AvailableColumnsPanel);
-   Panel* super = (Panel*) this;
+   AvailableColumnsPanel* htop_this = AllocThis(htop_this,AvailableColumnsPanel);
+   Panel* super = (Panel*) htop_this;
    Panel_init(super, 1, 1, 1, 1, Class(ListItem), true);
    
-   this->settings = settings;
-   this->scr = scr;
+   htop_this->settings = settings;
+   htop_this->scr = scr;
 
    Panel_setHeader(super, "Available Columns");
 
@@ -85,6 +85,6 @@ AvailableColumnsPanel* AvailableColumnsPanel_new(Settings* settings, Panel* colu
       if (i != COMM)
          Panel_add(super, (Object*) ListItem_new(Process_fieldNames[i], 0));
    }
-   this->columns = columns;
-   return this;
+   htop_this->columns = columns;
+   return htop_this;
 }

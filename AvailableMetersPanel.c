@@ -32,9 +32,9 @@ typedef struct AvailableMetersPanel_ {
 
 static void AvailableMetersPanel_delete(Object* object) {
    Panel* super = (Panel*) object;
-   AvailableMetersPanel* this = (AvailableMetersPanel*) object;
+   AvailableMetersPanel* htop_this = (AvailableMetersPanel*) object;
    Panel_done(super);
-   free(this);
+   free(htop_this);
 }
 
 static inline void AvailableMetersPanel_addHeader(Header* header, Panel* panel, MeterClass* type, int param, HeaderSide side) {
@@ -43,8 +43,8 @@ static inline void AvailableMetersPanel_addHeader(Header* header, Panel* panel, 
 }
 
 static HandlerResult AvailableMetersPanel_eventHandler(Panel* super, int ch) {
-   AvailableMetersPanel* this = (AvailableMetersPanel*) super;
-   Header* header = this->settings->header;
+   AvailableMetersPanel* htop_this = (AvailableMetersPanel*) super;
+   Header* header = htop_this->settings->header;
    
    ListItem* selected = (ListItem*) Panel_getSelected(super);
    int param = selected->key & 0xff;
@@ -56,7 +56,7 @@ static HandlerResult AvailableMetersPanel_eventHandler(Panel* super, int ch) {
       case 'l':
       case 'L':
       {
-         AvailableMetersPanel_addHeader(header, this->leftPanel, Meter_types[type], param, LEFT_HEADER);
+         AvailableMetersPanel_addHeader(header, htop_this->leftPanel, Meter_types[type], param, LEFT_HEADER);
          result = HANDLED;
          break;
       }
@@ -64,16 +64,16 @@ static HandlerResult AvailableMetersPanel_eventHandler(Panel* super, int ch) {
       case 'r':
       case 'R':
       {
-         AvailableMetersPanel_addHeader(header, this->rightPanel, Meter_types[type], param, RIGHT_HEADER);
+         AvailableMetersPanel_addHeader(header, htop_this->rightPanel, Meter_types[type], param, RIGHT_HEADER);
          result = HANDLED;
          break;
       }
    }
    if (result == HANDLED) {
-      this->settings->changed = true;
+      htop_this->settings->changed = true;
       Header_calculateHeight(header);
       Header_draw(header);
-      ScreenManager_resize(this->scr, this->scr->x1, header->height, this->scr->x2, this->scr->y2);
+      ScreenManager_resize(htop_this->scr, htop_this->scr->x1, header->height, htop_this->scr->x2, htop_this->scr->y2);
    }
    return result;
 }
@@ -87,14 +87,14 @@ PanelClass AvailableMetersPanel_class = {
 };
 
 AvailableMetersPanel* AvailableMetersPanel_new(Settings* settings, Panel* leftMeters, Panel* rightMeters, ScreenManager* scr) {
-   AvailableMetersPanel* this = AllocThis(AvailableMetersPanel);
-   Panel* super = (Panel*) this;
+   AvailableMetersPanel* htop_this = AllocThis(htop_this, AvailableMetersPanel);
+   Panel* super = (Panel*) htop_this;
    Panel_init(super, 1, 1, 1, 1, Class(ListItem), true);
    
-   this->settings = settings;
-   this->leftPanel = leftMeters;
-   this->rightPanel = rightMeters;
-   this->scr = scr;
+   htop_this->settings = settings;
+   htop_this->leftPanel = leftMeters;
+   htop_this->rightPanel = rightMeters;
+   htop_this->scr = scr;
 
    Panel_setHeader(super, "Available meters");
    for (int i = 1; Meter_types[i]; i++) {
@@ -115,5 +115,5 @@ AvailableMetersPanel* AvailableMetersPanel_new(Settings* settings, Panel* leftMe
    } else {
       Panel_add(super, (Object*) ListItem_new("CPU", 1));
    }
-   return this;
+   return htop_this;
 }

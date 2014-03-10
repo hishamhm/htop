@@ -29,13 +29,13 @@ typedef struct DisplayOptionsPanel_ {
 
 static void DisplayOptionsPanel_delete(Object* object) {
    Panel* super = (Panel*) object;
-   DisplayOptionsPanel* this = (DisplayOptionsPanel*) object;
+   DisplayOptionsPanel* htop_this = (DisplayOptionsPanel*) object;
    Panel_done(super);
-   free(this);
+   free(htop_this);
 }
 
 static HandlerResult DisplayOptionsPanel_eventHandler(Panel* super, int ch) {
-   DisplayOptionsPanel* this = (DisplayOptionsPanel*) super;
+   DisplayOptionsPanel* htop_this = (DisplayOptionsPanel*) super;
    
    HandlerResult result = IGNORED;
    CheckItem* selected = (CheckItem*) Panel_getSelected(super);
@@ -51,12 +51,12 @@ static HandlerResult DisplayOptionsPanel_eventHandler(Panel* super, int ch) {
    }
 
    if (result == HANDLED) {
-      this->settings->changed = true;
-      Header* header = this->settings->header;
+      htop_this->settings->changed = true;
+      Header* header = htop_this->settings->header;
       Header_calculateHeight(header);
       Header_reinit(header);
       Header_draw(header);
-      ScreenManager_resize(this->scr, this->scr->x1, header->height, this->scr->x2, this->scr->y2);
+      ScreenManager_resize(htop_this->scr, htop_this->scr->x1, header->height, htop_this->scr->x2, htop_this->scr->y2);
    }
    return result;
 }
@@ -70,12 +70,12 @@ PanelClass DisplayOptionsPanel_class = {
 };
 
 DisplayOptionsPanel* DisplayOptionsPanel_new(Settings* settings, ScreenManager* scr) {
-   DisplayOptionsPanel* this = AllocThis(DisplayOptionsPanel);
-   Panel* super = (Panel*) this;
+   DisplayOptionsPanel* htop_this = AllocThis(htop_this, DisplayOptionsPanel);
+   Panel* super = (Panel*) htop_this;
    Panel_init(super, 1, 1, 1, 1, Class(CheckItem), true);
 
-   this->settings = settings;
-   this->scr = scr;
+   htop_this->settings = settings;
+   htop_this->scr = scr;
 
    Panel_setHeader(super, "Display options");
    Panel_add(super, (Object*) CheckItem_new(strdup("Tree view"), &(settings->pl->treeView), false));
@@ -91,5 +91,5 @@ DisplayOptionsPanel* DisplayOptionsPanel_new(Settings* settings, ScreenManager* 
    Panel_add(super, (Object*) CheckItem_new(strdup("Count CPUs from 0 instead of 1"), &(settings->pl->countCPUsFromZero), false));
    Panel_add(super, (Object*) CheckItem_new(strdup("Update process names on every refresh"), &(settings->pl->updateProcessNames), false));
    Panel_add(super, (Object*) CheckItem_new(strdup("Add guest time in CPU meter percentage"), &(settings->pl->accountGuestInCPUMeter), false));
-   return this;
+   return htop_this;
 }

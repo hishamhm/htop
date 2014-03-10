@@ -27,12 +27,12 @@ FunctionBar* FunctionBar_new(const char** functions, const char** keys, int* eve
 
 void FunctionBar_delete(Object* cast);
 
-void FunctionBar_setLabel(FunctionBar* this, int event, const char* text);
+void FunctionBar_setLabel(FunctionBar* htop_this, int event, const char* text);
 
-void FunctionBar_draw(const FunctionBar* this, char* buffer);
+void FunctionBar_draw(const FunctionBar* htop_this, char* buffer);
 
-void FunctionBar_drawAttr(const FunctionBar* this, char* buffer, int attr);
+void FunctionBar_drawAttr(const FunctionBar* htop_this, char* buffer, int attr);
 
-int FunctionBar_synthesizeEvent(const FunctionBar* this, int pos);
+int FunctionBar_synthesizeEvent(const FunctionBar* htop_this, int pos);
 
 #endif

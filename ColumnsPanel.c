@@ -29,9 +29,9 @@ typedef struct ColumnsPanel_ {
 
 static void ColumnsPanel_delete(Object* object) {
    Panel* super = (Panel*) object;
-   ColumnsPanel* this = (ColumnsPanel*) object;
+   ColumnsPanel* htop_this = (ColumnsPanel*) object;
    Panel_done(super);
-   free(this);
+   free(htop_this);
 }
 
 static HandlerResult ColumnsPanel_eventHandler(Panel* super, int ch) {
@@ -91,19 +91,19 @@ PanelClass ColumnsPanel_class = {
 };
 
 ColumnsPanel* ColumnsPanel_new(Settings* settings, ScreenManager* scr) {
-   ColumnsPanel* this = AllocThis(ColumnsPanel);
-   Panel* super = (Panel*) this;
+   ColumnsPanel* htop_this = AllocThis(htop_this, ColumnsPanel);
+   Panel* super = (Panel*) htop_this;
    Panel_init(super, 1, 1, 1, 1, Class(ListItem), true);
 
-   this->settings = settings;
-   this->scr = scr;
+   htop_this->settings = settings;
+   htop_this->scr = scr;
    Panel_setHeader(super, "Active Columns");
 
-   ProcessField* fields = this->settings->pl->fields;
+   ProcessField* fields = htop_this->settings->pl->fields;
    for (; *fields; fields++) {
       Panel_add(super, (Object*) ListItem_new(Process_fieldNames[*fields], 0));
    }
-   return this;
+   return htop_this;
 }
 
 int ColumnsPanel_fieldNameToIndex(const char* name) {
@@ -116,21 +116,21 @@ int ColumnsPanel_fieldNameToIndex(const char* name) {
 }
 
 void ColumnsPanel_update(Panel* super) {
-   ColumnsPanel* this = (ColumnsPanel*) super;
+   ColumnsPanel* htop_this = (ColumnsPanel*) super;
    int size = Panel_size(super);
-   this->settings->changed = true;
-   // FIXME: this is crappily inefficient
-   free(this->settings->pl->fields);
-   this->settings->pl->fields = (ProcessField*) malloc(sizeof(ProcessField) * (size+1));
-   this->settings->pl->flags = 0;
+   htop_this->settings->changed = true;
+   // FIXME: htop_this is crappily inefficient
+   free(htop_this->settings->pl->fields);
+   htop_this->settings->pl->fields = (ProcessField*) malloc(sizeof(ProcessField) * (size+1));
+   htop_this->settings->pl->flags = 0;
    for (int i = 0; i < size; i++) {
       char* text = ((ListItem*) Panel_get(super, i))->value;
           int j = ColumnsPanel_fieldNameToIndex(text);
           if (j > 0) {
-             this->settings->pl->fields[i] = j;
-             this->settings->pl->flags |= Process_fieldFlags[j];
+             htop_this->settings->pl->fields[i] = j;
+             htop_this->settings->pl->flags |= Process_fieldFlags[j];
           }
    }
-   this->settings->pl->fields[size] = 0;
+   htop_this->settings->pl->fields[size] = 0;
 }
 

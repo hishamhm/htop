@@ -19,8 +19,8 @@ int HostnameMeter_attributes[] = {
    HOSTNAME
 };
 
-static void HostnameMeter_setValues(Meter* this, char* buffer, int size) {
-   (void) this;
+static void HostnameMeter_setValues(Meter* htop_this, char* buffer, int size) {
+   (void) htop_this;
    gethostname(buffer, size-1);
 }
 

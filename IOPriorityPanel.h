@@ -15,6 +15,6 @@ in the source distribution for its full text.
 
 Panel* IOPriorityPanel_new(IOPriority currPrio);
 
-IOPriority IOPriorityPanel_getIOPriority(Panel* this);
+IOPriority IOPriorityPanel_getIOPriority(Panel*  htop_this);
 
 #endif

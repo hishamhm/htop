@@ -23,8 +23,8 @@ extern ObjectClass CheckItem_class;
 
 CheckItem* CheckItem_new(char* text, bool* ref, bool value);
 
-void CheckItem_set(CheckItem* this, bool value);
+void CheckItem_set(CheckItem* htop_this, bool value);
 
-bool CheckItem_get(CheckItem* this);
+bool CheckItem_get(CheckItem* htop_this);
 
 #endif

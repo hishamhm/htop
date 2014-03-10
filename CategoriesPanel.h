@@ -21,7 +21,7 @@ typedef struct CategoriesPanel_ {
 } CategoriesPanel;
 
 
-void CategoriesPanel_makeMetersPage(CategoriesPanel* this);
+void CategoriesPanel_makeMetersPage(CategoriesPanel* htop_this);
 
 extern PanelClass CategoriesPanel_class;
 

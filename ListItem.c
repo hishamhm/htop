@@ -27,20 +27,20 @@ typedef struct ListItem_ {
 }*/
 
 static void ListItem_delete(Object* cast) {
-   ListItem* this = (ListItem*)cast;
-   free(this->value);
-   free(this);
+   ListItem* htop_this = (ListItem*)cast;
+   free(htop_this->value);
+   free(htop_this);
 }
 
 static void ListItem_display(Object* cast, RichString* out) {
-   ListItem* this = (ListItem*)cast;
-   assert (this != NULL);
+   ListItem* htop_this = (ListItem*)cast;
+   assert (htop_this != NULL);
    /*
-   int len = strlen(this->value)+1;
+   int len = strlen(htop_this->value)+1;
    char buffer[len+1];
-   snprintf(buffer, len, "%s", this->value);
+   snprintf(buffer, len, "%s", htop_this->value);
    */
-   RichString_write(out, CRT_colors[DEFAULT_COLOR], this->value/*buffer*/);
+   RichString_write(out, CRT_colors[DEFAULT_COLOR], htop_this->value/*buffer*/);
 }
 
 ObjectClass ListItem_class = {
@@ -50,23 +50,24 @@ ObjectClass ListItem_class = {
 };
 
 ListItem* ListItem_new(const char* value, int key) {
-   ListItem* this = AllocThis(ListItem);
-   this->value = strdup(value);
-   this->key = key;
-   return this;
+   ListItem* htop_this = AllocThis(htop_this, ListItem);
+   htop_this->value = strdup(value);
+   htop_this->key = key;
+   return htop_this;
+
 }
 
-void ListItem_append(ListItem* this, const char* text) {
-   int oldLen = strlen(this->value);
+void ListItem_append(ListItem* htop_this, const char* text) {
+   int oldLen = strlen(htop_this->value);
    int textLen = strlen(text);
-   int newLen = strlen(this->value) + textLen;
-   this->value = realloc(this->value, newLen + 1);
-   memcpy(this->value + oldLen, text, textLen);
-   this->value[newLen] = '\0';
+   int newLen = strlen(htop_this->value) + textLen;
+   htop_this->value = realloc(htop_this->value, newLen + 1);
+   memcpy(htop_this->value + oldLen, text, textLen);
+   htop_this->value[newLen] = '\0';
 }
 
-const char* ListItem_getRef(ListItem* this) {
-   return this->value;
+const char* ListItem_getRef(ListItem* htop_this) {
+   return htop_this->value;
 }
 
 int ListItem_compare(const void* cast1, const void* cast2) {

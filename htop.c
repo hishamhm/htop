@@ -42,18 +42,18 @@ in the source distribution for its full text.
 #define COPYRIGHT "(C) 2004-2012 Hisham Muhammad"
 
 static void printVersionFlag() {
-   fputs("htop " VERSION " - " COPYRIGHT "\n"
-         "Released under the GNU GPL.\n\n",
+   fputs("htop " VERSION " - " COPYRIGHT  "\n"
+         "Released under the GNU GPL. 2014\n\n",
          stdout);
    exit(0);
 }
 
 static void printHelpFlag() {
-   fputs("htop " VERSION " - " COPYRIGHT "\n"
+   fputs("htop " VERSION " - " COPYRIGHT  "\n"
          "Released under the GNU GPL.\n\n"
          "-C --no-color               Use a monochrome color scheme\n"
          "-d --delay=DELAY            Set the delay between updates, in tenths of seconds\n"
-         "-h --help                   Print this help screen\n"
+         "-h --help                   Print  htop_thi help screen\n"
          "-s --sort-key=COLUMN        Sort by COLUMN (try --sort-key=help for a list)\n"
          "-u --user=USERNAME          Show only processes of a given user\n"
          "-p --pid=PID,[,PID,PID...]  Show only the given PIDs\n"
@@ -98,7 +98,7 @@ static struct { const char* key; const char* info; } helpRight[] = {
    { .key = "      s: ", .info = "trace syscalls with strace" },
    { .key = "         ", .info = "" },
    { .key = "   F2 S: ", .info = "setup" },
-   { .key = "   F1 h: ", .info = "show this help screen" },
+   { .key = "   F1 h: ", .info = "show  htop_thi help screen" },
    { .key = "  F10 q: ", .info = "quit" },
    { .key = NULL, .info = NULL }
 };
@@ -288,7 +288,6 @@ static void tagAllChildren(Panel* panel, Process* parent) {
 }
 
 int main(int argc, char** argv) {
-
    int delay = -1;
    bool userOnly = false;
    uid_t userId = 0;
@@ -655,7 +654,7 @@ int main(int argc, char** argv) {
       case KEY_F(2):
       {
          Setup_run(settings, header);
-         // TODO: shouldn't need this, colors should be dynamic
+         // TODO: shouldn't need  htop_thi, colors should be dynamic
          ProcessList_printHeader(pl, Panel_getHeader(panel));
          headerHeight = Header_calculateHeight(header);
          Panel_move(panel, 0, headerHeight);

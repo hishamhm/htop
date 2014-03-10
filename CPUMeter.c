@@ -30,28 +30,28 @@ int CPUMeter_attributes[] = {
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #endif
 
-static void CPUMeter_init(Meter* this) {
-   int cpu = this->param;
-   if (this->pl->cpuCount > 1) {
+static void CPUMeter_init(Meter* htop_this) {
+   int cpu = htop_this->param;
+   if (htop_this->pl->cpuCount > 1) {
       char caption[10];
-      sprintf(caption, "%-3d", ProcessList_cpuId(this->pl, cpu - 1));
-      Meter_setCaption(this, caption);
+      sprintf(caption, "%-3d", ProcessList_cpuId(htop_this->pl, cpu - 1));
+      Meter_setCaption(htop_this, caption);
    }
-   if (this->param == 0)
-      Meter_setCaption(this, "Avg");
+   if (htop_this->param == 0)
+      Meter_setCaption(htop_this, "Avg");
 }
 
-static void CPUMeter_setValues(Meter* this, char* buffer, int size) {
-   ProcessList* pl = this->pl;
-   int cpu = this->param;
-   if (cpu > this->pl->cpuCount) {
+static void CPUMeter_setValues(Meter* htop_this, char* buffer, int size) {
+   ProcessList* pl = htop_this->pl;
+   int cpu = htop_this->param;
+   if (cpu > htop_this->pl->cpuCount) {
       snprintf(buffer, size, "absent");
       return;
    }
    CPUData* cpuData = &(pl->cpus[cpu]);
    double total = (double) ( cpuData->totalPeriod == 0 ? 1 : cpuData->totalPeriod);
    double percent;
-   double* v = this->values;
+   double* v = htop_this->values;
    v[0] = cpuData->nicePeriod / total * 100.0;
    v[1] = cpuData->userPeriod / total * 100.0;
    if (pl->detailedCPUTime) {
@@ -61,7 +61,7 @@ static void CPUMeter_setValues(Meter* this, char* buffer, int size) {
       v[5] = cpuData->stealPeriod / total * 100.0;
       v[6] = cpuData->guestPeriod / total * 100.0;
       v[7] = cpuData->ioWaitPeriod / total * 100.0;
-      Meter_setItems(this, 8);
+      Meter_setItems(htop_this, 8);
       if (pl->accountGuestInCPUMeter) {
          percent = v[0]+v[1]+v[2]+v[3]+v[4]+v[5]+v[6];
       } else {
@@ -70,7 +70,7 @@ static void CPUMeter_setValues(Meter* this, char* buffer, int size) {
    } else {
       v[2] = cpuData->systemAllPeriod / total * 100.0;
       v[3] = (cpuData->stealPeriod + cpuData->guestPeriod) / total * 100.0;
-      Meter_setItems(this, 4);
+      Meter_setItems(htop_this, 4);
       percent = v[0]+v[1]+v[2]+v[3];
    }
    percent = MIN(100.0, MAX(0.0, percent));      
@@ -80,59 +80,59 @@ static void CPUMeter_setValues(Meter* this, char* buffer, int size) {
 
 static void CPUMeter_display(Object* cast, RichString* out) {
    char buffer[50];
-   Meter* this = (Meter*)cast;
+   Meter* htop_this = (Meter*)cast;
    RichString_prune(out);
-   if (this->param > this->pl->cpuCount) {
+   if (htop_this->param > htop_this->pl->cpuCount) {
       RichString_append(out, CRT_colors[METER_TEXT], "absent");
       return;
    }
-   sprintf(buffer, "%5.1f%% ", this->values[1]);
+   sprintf(buffer, "%5.1f%% ", htop_this->values[1]);
    RichString_append(out, CRT_colors[METER_TEXT], ":");
    RichString_append(out, CRT_colors[CPU_NORMAL], buffer);
-   if (this->pl->detailedCPUTime) {
-      sprintf(buffer, "%5.1f%% ", this->values[2]);
+   if (htop_this->pl->detailedCPUTime) {
+      sprintf(buffer, "%5.1f%% ", htop_this->values[2]);
       RichString_append(out, CRT_colors[METER_TEXT], "sy:");
       RichString_append(out, CRT_colors[CPU_KERNEL], buffer);
-      sprintf(buffer, "%5.1f%% ", this->values[0]);
+      sprintf(buffer, "%5.1f%% ", htop_this->values[0]);
       RichString_append(out, CRT_colors[METER_TEXT], "ni:");
       RichString_append(out, CRT_colors[CPU_NICE], buffer);
-      sprintf(buffer, "%5.1f%% ", this->values[3]);
+      sprintf(buffer, "%5.1f%% ", htop_this->values[3]);
       RichString_append(out, CRT_colors[METER_TEXT], "hi:");
       RichString_append(out, CRT_colors[CPU_IRQ], buffer);
-      sprintf(buffer, "%5.1f%% ", this->values[4]);
+      sprintf(buffer, "%5.1f%% ", htop_this->values[4]);
       RichString_append(out, CRT_colors[METER_TEXT], "si:");
       RichString_append(out, CRT_colors[CPU_SOFTIRQ], buffer);
-      if (this->values[5]) {
-         sprintf(buffer, "%5.1f%% ", this->values[5]);
+      if (htop_this->values[5]) {
+         sprintf(buffer, "%5.1f%% ", htop_this->values[5]);
          RichString_append(out, CRT_colors[METER_TEXT], "st:");
          RichString_append(out, CRT_colors[CPU_STEAL], buffer);
       }
-      if (this->values[6]) {
-         sprintf(buffer, "%5.1f%% ", this->values[6]);
+      if (htop_this->values[6]) {
+         sprintf(buffer, "%5.1f%% ", htop_this->values[6]);
          RichString_append(out, CRT_colors[METER_TEXT], "gu:");
          RichString_append(out, CRT_colors[CPU_GUEST], buffer);
       }
-      sprintf(buffer, "%5.1f%% ", this->values[7]);
+      sprintf(buffer, "%5.1f%% ", htop_this->values[7]);
       RichString_append(out, CRT_colors[METER_TEXT], "wa:");
       RichString_append(out, CRT_colors[CPU_IOWAIT], buffer);
    } else {
-      sprintf(buffer, "%5.1f%% ", this->values[2]);
+      sprintf(buffer, "%5.1f%% ", htop_this->values[2]);
       RichString_append(out, CRT_colors[METER_TEXT], "sys:");
       RichString_append(out, CRT_colors[CPU_KERNEL], buffer);
-      sprintf(buffer, "%5.1f%% ", this->values[0]);
+      sprintf(buffer, "%5.1f%% ", htop_this->values[0]);
       RichString_append(out, CRT_colors[METER_TEXT], "low:");
       RichString_append(out, CRT_colors[CPU_NICE], buffer);
-      if (this->values[3]) {
-         sprintf(buffer, "%5.1f%% ", this->values[3]);
+      if (htop_this->values[3]) {
+         sprintf(buffer, "%5.1f%% ", htop_this->values[3]);
          RichString_append(out, CRT_colors[METER_TEXT], "vir:");
          RichString_append(out, CRT_colors[CPU_GUEST], buffer);
       }
    }
 }
 
-static void AllCPUsMeter_getRange(Meter* this, int* start, int* count) {
-   int cpus = this->pl->cpuCount;
-   switch(Meter_name(this)[0]) {
+static void AllCPUsMeter_getRange(Meter* htop_this, int* start, int* count) {
+   int cpus = htop_this->pl->cpuCount;
+   switch(Meter_name(htop_this)[0]) {
       default:
       case 'A': // All
          *start = 0;
@@ -149,54 +149,54 @@ static void AllCPUsMeter_getRange(Meter* this, int* start, int* count) {
    }
 }
 
-static void AllCPUsMeter_init(Meter* this) {
-   int cpus = this->pl->cpuCount;
-   if (!this->drawData)
-      this->drawData = calloc(cpus, sizeof(Meter*));
-   Meter** meters = (Meter**) this->drawData;
+static void AllCPUsMeter_init(Meter* htop_this) {
+   int cpus = htop_this->pl->cpuCount;
+   if (!htop_this->drawData)
+      htop_this->drawData = calloc(cpus, sizeof(Meter*));
+   Meter** meters = (Meter**) htop_this->drawData;
    int start, count;
-   AllCPUsMeter_getRange(this, &start, &count);
+   AllCPUsMeter_getRange(htop_this, &start, &count);
    for (int i = 0; i < count; i++) {
       if (!meters[i])
-         meters[i] = Meter_new(this->pl, start+i+1, (MeterClass*) Class(CPUMeter));
+         meters[i] = Meter_new(htop_this->pl, start+i+1, (MeterClass*) Class(CPUMeter));
       Meter_init(meters[i]);
    }
-   if (this->mode == 0)
-      this->mode = BAR_METERMODE;
-   int h = Meter_modes[this->mode]->h;
-   if (strchr(Meter_name(this), '2'))
-      this->h = h * ((count+1) / 2);
+   if (htop_this->mode == 0)
+      htop_this->mode = BAR_METERMODE;
+   int h = Meter_modes[htop_this->mode]->h;
+   if (strchr(Meter_name(htop_this), '2'))
+      htop_this->h = h * ((count+1) / 2);
    else
-      this->h = h * count;
+      htop_this->h = h * count;
 }
 
-static void AllCPUsMeter_done(Meter* this) {
-   Meter** meters = (Meter**) this->drawData;
+static void AllCPUsMeter_done(Meter* htop_this) {
+   Meter** meters = (Meter**) htop_this->drawData;
    int start, count;
-   AllCPUsMeter_getRange(this, &start, &count);
+   AllCPUsMeter_getRange(htop_this, &start, &count);
    for (int i = 0; i < count; i++)
       Meter_delete((Object*)meters[i]);
 }
 
-static void AllCPUsMeter_updateMode(Meter* this, int mode) {
-   Meter** meters = (Meter**) this->drawData;
-   this->mode = mode;
+static void AllCPUsMeter_updateMode(Meter* htop_this, int mode) {
+   Meter** meters = (Meter**) htop_this->drawData;
+   htop_this->mode = mode;
    int h = Meter_modes[mode]->h;
    int start, count;
-   AllCPUsMeter_getRange(this, &start, &count);
+   AllCPUsMeter_getRange(htop_this, &start, &count);
    for (int i = 0; i < count; i++) {
       Meter_setMode(meters[i], mode);
    }
-   if (strchr(Meter_name(this), '2'))
-      this->h = h * ((count+1) / 2);
+   if (strchr(Meter_name(htop_this), '2'))
+      htop_this->h = h * ((count+1) / 2);
    else
-      this->h = h * count;
+      htop_this->h = h * count;
 }
 
-static void DualColCPUsMeter_draw(Meter* this, int x, int y, int w) {
-   Meter** meters = (Meter**) this->drawData;
+static void DualColCPUsMeter_draw(Meter* htop_this, int x, int y, int w) {
+   Meter** meters = (Meter**) htop_this->drawData;
    int start, count;
-   AllCPUsMeter_getRange(this, &start, &count);
+   AllCPUsMeter_getRange(htop_this, &start, &count);
    int height = (count+1)/2;
    int startY = y;
    for (int i = 0; i < height; i++) {
@@ -210,10 +210,10 @@ static void DualColCPUsMeter_draw(Meter* this, int x, int y, int w) {
    }
 }
 
-static void SingleColCPUsMeter_draw(Meter* this, int x, int y, int w) {
-   Meter** meters = (Meter**) this->drawData;
+static void SingleColCPUsMeter_draw(Meter* htop_this, int x, int y, int w) {
+   Meter** meters = (Meter**) htop_this->drawData;
    int start, count;
-   AllCPUsMeter_getRange(this, &start, &count);
+   AllCPUsMeter_getRange(htop_this, &start, &count);
    for (int i = 0; i < count; i++) {
       meters[i]->draw(meters[i], x, y, w);
       y += meters[i]->h;

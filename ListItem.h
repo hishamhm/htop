@@ -22,9 +22,9 @@ extern ObjectClass ListItem_class;
 
 ListItem* ListItem_new(const char* value, int key);
 
-void ListItem_append(ListItem* this, const char* text);
+void ListItem_append(ListItem* htop_this, const char* text);
 
-const char* ListItem_getRef(ListItem* this);
+const char* ListItem_getRef(ListItem* htop_this);
 
 int ListItem_compare(const void* cast1, const void* cast2);
 

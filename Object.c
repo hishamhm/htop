@@ -26,7 +26,7 @@ typedef void(*Object_Delete)(Object*);
 
 #define Class(class_)                 ((ObjectClass*)(&(class_ ## _class)))
 
-#define AllocThis(class_) (class_*) malloc(sizeof(class_)); Object_setClass(this, Class(class_));
+#define AllocThis(var, class_) (class_*) malloc(sizeof(class_)); Object_setClass(var, Class(class_));
  
 typedef struct ObjectClass_ {
    const void* extends;

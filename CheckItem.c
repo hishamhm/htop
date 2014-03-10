@@ -25,23 +25,23 @@ typedef struct CheckItem_ {
 }*/
 
 static void CheckItem_delete(Object* cast) {
-   CheckItem* this = (CheckItem*)cast;
-   assert (this != NULL);
+   CheckItem* htop_this = (CheckItem*)cast;
+   assert (htop_this != NULL);
 
-   free(this->text);
-   free(this);
+   free(htop_this->text);
+   free(htop_this);
 }
 
 static void CheckItem_display(Object* cast, RichString* out) {
-   CheckItem* this = (CheckItem*)cast;
-   assert (this != NULL);
+   CheckItem* htop_this = (CheckItem*)cast;
+   assert (htop_this != NULL);
    RichString_write(out, CRT_colors[CHECK_BOX], "[");
-   if (CheckItem_get(this))
+   if (CheckItem_get(htop_this))
       RichString_append(out, CRT_colors[CHECK_MARK], "x");
    else
       RichString_append(out, CRT_colors[CHECK_MARK], " ");
    RichString_append(out, CRT_colors[CHECK_BOX], "] ");
-   RichString_append(out, CRT_colors[CHECK_TEXT], this->text);
+   RichString_append(out, CRT_colors[CHECK_TEXT], htop_this->text);
 }
 
 ObjectClass CheckItem_class = {
@@ -50,23 +50,23 @@ ObjectClass CheckItem_class = {
 };
 
 CheckItem* CheckItem_new(char* text, bool* ref, bool value) {
-   CheckItem* this = AllocThis(CheckItem);
-   this->text = text;
-   this->value = value;
-   this->ref = ref;
-   return this;
+   CheckItem* htop_this = AllocThis(htop_this, CheckItem);
+   htop_this->text = text;
+   htop_this->value = value;
+   htop_this->ref = ref;
+   return htop_this;
 }
 
-void CheckItem_set(CheckItem* this, bool value) {
-   if (this->ref) 
-      *(this->ref) = value;
+void CheckItem_set(CheckItem* htop_this, bool value) {
+   if (htop_this->ref) 
+      *(htop_this->ref) = value;
    else
-      this->value = value;
+      htop_this->value = value;
 }
 
-bool CheckItem_get(CheckItem* this) {
-   if (this->ref) 
-      return *(this->ref);
+bool CheckItem_get(CheckItem* htop_this) {
+   if (htop_this->ref) 
+      return *(htop_this->ref);
    else
-      return this->value;
+      return htop_this->value;
 }
