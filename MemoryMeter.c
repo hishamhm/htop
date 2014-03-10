@@ -61,7 +61,7 @@ static void MemoryMeter_display(Object* cast, RichString* out) {
 MeterClass MemoryMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete,
+      .htop_delete = Meter_delete,
       .display = MemoryMeter_display,
    },
    .setValues = MemoryMeter_setValues, 

@@ -64,7 +64,7 @@ static HandlerResult DisplayOptionsPanel_eventHandler(Panel* super, int ch) {
 PanelClass DisplayOptionsPanel_class = {
    .super = {
       .extends = Class(Panel),
-      .delete = DisplayOptionsPanel_delete
+      .htop_delete = DisplayOptionsPanel_delete
    },
    .eventHandler = DisplayOptionsPanel_eventHandler
 };

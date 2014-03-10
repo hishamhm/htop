@@ -86,7 +86,7 @@ static HandlerResult ColorsPanel_eventHandler(Panel* super, int ch) {
 PanelClass ColorsPanel_class = {
    .super = {
       .extends = Class(Panel),
-      .delete = ColorsPanel_delete
+      .htop_delete = ColorsPanel_delete
    },
    .eventHandler = ColorsPanel_eventHandler
 };

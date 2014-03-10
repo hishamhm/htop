@@ -95,7 +95,7 @@ static HandlerResult MetersPanel_eventHandler(Panel* super, int ch) {
 PanelClass MetersPanel_class = {
    .super = {
       .extends = Class(Panel),
-      .delete = MetersPanel_delete
+      .htop_delete = MetersPanel_delete
    },
    .eventHandler = MetersPanel_eventHandler
 };

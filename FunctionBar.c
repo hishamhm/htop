@@ -35,7 +35,7 @@ static const char* FunctionBar_FLabels[] = {"      ", "      ", "      ", "     
 static int FunctionBar_FEvents[] = {KEY_F(1), KEY_F(2), KEY_F(3), KEY_F(4), KEY_F(5), KEY_F(6), KEY_F(7), KEY_F(8), KEY_F(9), KEY_F(10)};
 
 ObjectClass FunctionBar_class = {
-   .delete = FunctionBar_delete
+   .htop_delete = FunctionBar_delete
 };
 
 FunctionBar* FunctionBar_new(const char** functions, const char** keys, int* events) {

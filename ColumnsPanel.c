@@ -85,7 +85,7 @@ static HandlerResult ColumnsPanel_eventHandler(Panel* super, int ch) {
 PanelClass ColumnsPanel_class = {
    .super = {
       .extends = Class(Panel),
-      .delete = ColumnsPanel_delete
+      .htop_delete = ColumnsPanel_delete
    },
    .eventHandler = ColumnsPanel_eventHandler
 };

@@ -37,7 +37,7 @@ static HandlerResult AffinityPanel_eventHandler(Panel* htop_this, int ch) {
 PanelClass AffinityPanel_class = {
    .super = {
       .extends = Class(Panel),
-      .delete = Panel_delete
+      .htop_delete = Panel_delete
    },
    .eventHandler = AffinityPanel_eventHandler
 };

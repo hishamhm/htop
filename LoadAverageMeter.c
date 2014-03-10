@@ -69,7 +69,7 @@ static void LoadMeter_display(Object* cast, RichString* out) {
 MeterClass LoadAverageMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete,
+      .htop_delete = Meter_delete,
       .display = LoadAverageMeter_display,
    },
    .setValues = LoadAverageMeter_setValues, 
@@ -85,7 +85,7 @@ MeterClass LoadAverageMeter_class = {
 MeterClass LoadMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete,
+      .htop_delete = Meter_delete,
       .display = LoadMeter_display,
    },
    .setValues = LoadMeter_setValues, 

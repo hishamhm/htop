@@ -78,7 +78,7 @@ struct Panel_ {
 PanelClass Panel_class = {
    .super = {
       .extends = Class(Object),
-      .delete = Panel_delete
+      .htop_delete = Panel_delete
    },
    .eventHandler = Panel_selectByTyping
 };

@@ -45,7 +45,7 @@ static void ListItem_display(Object* cast, RichString* out) {
 
 ObjectClass ListItem_class = {
    .display = ListItem_display,
-   .delete = ListItem_delete,
+   .htop_delete = ListItem_delete,
    .compare = ListItem_compare
 };
 

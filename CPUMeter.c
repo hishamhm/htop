@@ -223,7 +223,7 @@ static void SingleColCPUsMeter_draw(Meter* htop_this, int x, int y, int w) {
 MeterClass CPUMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete,
+      .htop_delete = Meter_delete,
       .display = CPUMeter_display
    },
    .setValues = CPUMeter_setValues, 
@@ -240,7 +240,7 @@ MeterClass CPUMeter_class = {
 MeterClass AllCPUsMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete,
+      .htop_delete = Meter_delete,
       .display = CPUMeter_display
    },
    .defaultMode = CUSTOM_METERMODE,
@@ -258,7 +258,7 @@ MeterClass AllCPUsMeter_class = {
 MeterClass AllCPUs2Meter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete,
+      .htop_delete = Meter_delete,
       .display = CPUMeter_display
    },
    .defaultMode = CUSTOM_METERMODE,
@@ -276,7 +276,7 @@ MeterClass AllCPUs2Meter_class = {
 MeterClass LeftCPUsMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete,
+      .htop_delete = Meter_delete,
       .display = CPUMeter_display
    },
    .defaultMode = CUSTOM_METERMODE,
@@ -294,7 +294,7 @@ MeterClass LeftCPUsMeter_class = {
 MeterClass RightCPUsMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete,
+      .htop_delete = Meter_delete,
       .display = CPUMeter_display
    },
    .defaultMode = CUSTOM_METERMODE,
@@ -312,7 +312,7 @@ MeterClass RightCPUsMeter_class = {
 MeterClass LeftCPUs2Meter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete,
+      .htop_delete = Meter_delete,
       .display = CPUMeter_display
    },
    .defaultMode = CUSTOM_METERMODE,
@@ -330,7 +330,7 @@ MeterClass LeftCPUs2Meter_class = {
 MeterClass RightCPUs2Meter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete,
+      .htop_delete = Meter_delete,
       .display = CPUMeter_display
    },
    .defaultMode = CUSTOM_METERMODE,

@@ -135,7 +135,7 @@ static HandlerResult CategoriesPanel_eventHandler(Panel* super, int ch) {
 PanelClass CategoriesPanel_class = {
    .super = {
       .extends = Class(Panel),
-      .delete = CategoriesPanel_delete
+      .htop_delete = CategoriesPanel_delete
    },
    .eventHandler = CategoriesPanel_eventHandler
 };

@@ -46,7 +46,7 @@ static void CheckItem_display(Object* cast, RichString* out) {
 
 ObjectClass CheckItem_class = {
    .display = CheckItem_display,
-   .delete = CheckItem_delete
+   .htop_delete = CheckItem_delete
 };
 
 CheckItem* CheckItem_new(char* text, bool* ref, bool value) {

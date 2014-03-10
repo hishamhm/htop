@@ -331,7 +331,7 @@ static void BatteryMeter_setValues(Meter * htop_this, char *buffer, int len) {
 MeterClass BatteryMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete
+      .htop_delete = Meter_delete
    },
    .setValues = BatteryMeter_setValues,
    .defaultMode = TEXT_METERMODE,

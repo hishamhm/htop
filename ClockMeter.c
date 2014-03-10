@@ -29,7 +29,7 @@ static void ClockMeter_setValues(Meter* htop_this, char* buffer, int size) {
 MeterClass ClockMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete
+      .htop_delete = Meter_delete
    },
    .setValues = ClockMeter_setValues, 
    .defaultMode = TEXT_METERMODE,

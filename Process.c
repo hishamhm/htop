@@ -592,7 +592,7 @@ void Process_delete(Object* cast) {
 ObjectClass Process_class = {
    .extends = Class(Object),
    .display = Process_display,
-   .delete = Process_delete,
+   .htop_delete = Process_delete,
    .compare = Process_compare
 };
 

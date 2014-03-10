@@ -58,7 +58,7 @@ static void TasksMeter_display(Object* cast, RichString* out) {
 MeterClass TasksMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete,
+      .htop_delete = Meter_delete,
       .display = TasksMeter_display,
    },
    .setValues = TasksMeter_setValues, 

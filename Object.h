@@ -20,7 +20,7 @@ typedef void(*Object_Delete)(Object*);
 #define Object_getClass(obj_)         ((Object*)(obj_))->klass
 #define Object_setClass(obj_, class_) Object_getClass(obj_) = (ObjectClass*) class_
 
-#define Object_delete(obj_)           Object_getClass(obj_)->delete((Object*)(obj_))
+#define Object_delete(obj_)           Object_getClass(obj_)->htop_delete((Object*)(obj_))
 #define Object_displayFn(obj_)        Object_getClass(obj_)->display
 #define Object_display(obj_, str_)    Object_getClass(obj_)->display((Object*)(obj_), str_)
 #define Object_compare(obj_, other_)  Object_getClass(obj_)->compare((const void*)(obj_), other_)
@@ -32,7 +32,7 @@ typedef void(*Object_Delete)(Object*);
 typedef struct ObjectClass_ {
    const void* extends;
    const Object_Display display;
-   const Object_Delete delete;
+   const Object_Delete htop_delete;
    const Object_Compare compare;
 } ObjectClass;
 

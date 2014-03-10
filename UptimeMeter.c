@@ -52,7 +52,7 @@ static void UptimeMeter_setValues(Meter* htop_this, char* buffer, int len) {
 MeterClass UptimeMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete
+      .htop_delete = Meter_delete
    },
    .setValues = UptimeMeter_setValues, 
    .defaultMode = TEXT_METERMODE,

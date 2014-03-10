@@ -61,7 +61,7 @@ static void SwapMeter_display(Object* cast, RichString* out) {
 MeterClass SwapMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete,
+      .htop_delete = Meter_delete,
       .display = SwapMeter_display,
    },
    .setValues = SwapMeter_setValues, 
