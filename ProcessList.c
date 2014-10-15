@@ -621,18 +621,19 @@ static void ProcessList_readCGroupFile(Process* process, const char* dirname, co
       return;
    }
    char buffer[256];
-   char *ok = fgets(buffer, 255, file);
-   if (ok) {
-      char* trimmed = String_trim(buffer);
-      int nFields;
-      char** fields = String_split(trimmed, ':', &nFields);
-      free(trimmed);
-      if (nFields >= 3) {
-         process->cgroup = strndup(fields[2] + 1, 10);
-      } else {
-         process->cgroup = strdup("");
+   while (fgets(buffer, 255, file)) {
+      if (!String_endsWith(buffer, "/")) {
+         char* trimmed = String_trim(buffer);
+         int nFields;
+         char** fields = String_split(trimmed, ':', &nFields);
+         free(trimmed);
+         if (nFields >= 3) {
+            process->cgroup = strndup(fields[2] + 1, 10);
+         } else {
+            process->cgroup = strdup("");
+         }
+         String_freeArray(fields);
       }
-      String_freeArray(fields);
    }
    fclose(file);
 }

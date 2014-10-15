@@ -127,3 +127,13 @@ char* String_getToken(const char* line, const unsigned short int numMatch) {
    match[foundCount] = '\0';
    return((char*)strdup(match));
 }
+
+inline int String_endsWith(const char* s, const char* match) {
+   if (s == NULL || match == NULL)
+      return 0;
+   size_t lens = strlen(s);
+   size_t lenmatch = strlen(match);
+   if (lenmatch > lens)
+      return 0;
+   return strncmp(s + lens - lenmatch, match, lenmatch) == 0;
+}

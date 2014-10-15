@@ -24,4 +24,6 @@ void String_freeArray(char** s);
 
 char* String_getToken(const char* line, const unsigned short int numMatch);
 
+extern int String_endsWith(const char* s, const char* match);
+
 #endif
