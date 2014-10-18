@@ -537,8 +537,9 @@ static void Process_writeField(Process* this, RichString* str, ProcessField fiel
           case 'R':
               attr = CRT_colors[PROCESS_R_STATE];
               break;
+          case 'Z':
           case 'D':
-              attr = CRT_colors[PROCESS_D_STATE];
+              attr = CRT_colors[PROCESS_BAD_STATE];
               break;
       }
       break;
