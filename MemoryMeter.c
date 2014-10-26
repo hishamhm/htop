@@ -20,23 +20,27 @@ in the source distribution for its full text.
 #include "Meter.h"
 }*/
 
+#define KILOBYTE 1
+#define MEGABYTE 1024
+#define GIGABYTE 1048576
+
 int MemoryMeter_attributes[] = {
    MEMORY_USED, MEMORY_BUFFERS, MEMORY_CACHE
 };
 
 static void MemoryMeter_setValues(Meter* this, char* buffer, int size) {
    Platform_setMemoryValues(this);
-   snprintf(buffer, size, "%ld/%ldMiB", (long int) this->values[0] / 1024, (long int) this->total / 1024);
+   snprintf(buffer, size, "%ld/%ldMiB", (long int) this->values[0] / MEGABYTE, (long int) this->total / MEGABYTE);
 }
 
 static void MemoryMeter_display(Object* cast, RichString* out) {
    char buffer[50];
    Meter* this = (Meter*)cast;
-   int k = 1024; const char* format = "%ldMi ";
-   long int totalMem = this->total / k;
-   long int usedMem = this->values[0] / k;
-   long int buffersMem = this->values[1] / k;
-   long int cachedMem = this->values[2] / k;
+   const char* format = "%ldMi ";
+   long int totalMem = this->total / MEGABYTE;
+   long int usedMem = this->values[0] / MEGABYTE;
+   long int buffersMem = this->values[1] / MEGABYTE;
+   long int cachedMem = this->values[2] / MEGABYTE;
    RichString_write(out, CRT_colors[METER_TEXT], ":");
    sprintf(buffer, format, totalMem);
    RichString_append(out, CRT_colors[METER_VALUE], buffer);
