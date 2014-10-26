@@ -30,12 +30,12 @@ int SwapMeter_attributes[] = {
 
 /* NOTE: Value is in kilobytes */
 static void SwapMeter_humanNumber(char* buffer, const long int* value) {
-   sprintf(buffer, "%ldM ", *value / MEGABYTE);
+   sprintf(buffer, "%ldMi ", *value / MEGABYTE);
 }
 
 static void SwapMeter_setValues(Meter* this, char* buffer, int len) {
    Platform_setSwapValues(this);
-   snprintf(buffer, len, "%ld/%ldMB", (long int) this->values[0] / MEGABYTE, (long int) this->total / MEGABYTE);
+   snprintf(buffer, len, "%ld/%ldMiB", (long int) this->values[0] / MEGABYTE, (long int) this->total / MEGABYTE);
 }
 
 static void SwapMeter_display(Object* cast, RichString* out) {

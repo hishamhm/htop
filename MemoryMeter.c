@@ -26,13 +26,13 @@ int MemoryMeter_attributes[] = {
 
 static void MemoryMeter_setValues(Meter* this, char* buffer, int size) {
    Platform_setMemoryValues(this);
-   snprintf(buffer, size, "%ld/%ldMB", (long int) this->values[0] / 1024, (long int) this->total / 1024);
+   snprintf(buffer, size, "%ld/%ldMiB", (long int) this->values[0] / 1024, (long int) this->total / 1024);
 }
 
 static void MemoryMeter_display(Object* cast, RichString* out) {
    char buffer[50];
    Meter* this = (Meter*)cast;
-   int k = 1024; const char* format = "%ldM ";
+   int k = 1024; const char* format = "%ldMi ";
    long int totalMem = this->total / k;
    long int usedMem = this->values[0] / k;
    long int buffersMem = this->values[1] / k;
