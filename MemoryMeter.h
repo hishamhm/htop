@@ -11,10 +11,6 @@ in the source distribution for its full text.
 
 #include "Meter.h"
 
-#define KILOBYTE 1
-#define MEGABYTE 1024
-#define GIGABYTE 1048576
-
 extern int MemoryMeter_attributes[];
 
 extern MeterClass MemoryMeter_class;

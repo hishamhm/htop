@@ -25,6 +25,10 @@ in the source distribution for its full text.
 
 #define GRAPH_DELAY (DEFAULT_DELAY/2)
 
+#define KILOBYTE 1
+#define MEGABYTE 1024
+#define GIGABYTE 1048576
+
 /*{
 #include "ListItem.h"
 

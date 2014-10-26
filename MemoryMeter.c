@@ -20,10 +20,6 @@ in the source distribution for its full text.
 #include "Meter.h"
 }*/
 
-#define KILOBYTE 1
-#define MEGABYTE 1024
-#define GIGABYTE 1048576
-
 int MemoryMeter_attributes[] = {
    MEMORY_USED, MEMORY_BUFFERS, MEMORY_CACHE
 };
