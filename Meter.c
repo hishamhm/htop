@@ -28,6 +28,7 @@ in the source distribution for its full text.
 #define KILOBYTE 1
 #define MEGABYTE 1024
 #define GIGABYTE 1048576
+#define TERABYTE 1073741824
 
 /*{
 #include "ListItem.h"
@@ -143,6 +144,26 @@ Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type) {
       Meter_init(this);
    Meter_setMode(this, type->defaultMode);
    return this;
+}
+
+int human_unit(char* buffer, long int value, int * len) {
+	int written;
+
+	if (value > TERABYTE) {
+		written = snprintf(buffer, *len, "%ld.%ldTiB",
+				value / TERABYTE, value * 10 / TERABYTE % 10);
+	} else if (value > GIGABYTE) {
+		written = snprintf(buffer, *len, "%ld.%ldGiB",
+				value / GIGABYTE, value * 10 / GIGABYTE % 10);
+	} else if (value > MEGABYTE) {
+		written = snprintf(buffer, *len, "%ld.%ldMiB",
+				value / MEGABYTE, value * 10 / MEGABYTE % 10);
+	} else {
+		written = snprintf(buffer, *len, "%ldkiB", value);
+	}
+
+	*len -= written;
+	return written;
 }
 
 void Meter_delete(Object* cast) {

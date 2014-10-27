@@ -16,6 +16,7 @@ in the source distribution for its full text.
 #define KILOBYTE 1
 #define MEGABYTE 1024
 #define GIGABYTE 1048576
+#define TERABYTE 1073741824
 
 #include "ListItem.h"
 
@@ -108,6 +109,8 @@ typedef struct GraphData_ {
 extern MeterClass Meter_class;
 
 Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type);
+
+int human_unit(char* buffer, long int value, int * len);
 
 void Meter_delete(Object* cast);
 
