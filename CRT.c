@@ -28,6 +28,7 @@ in the source distribution for its full text.
 #define COLORSCHEME_BLACKONWHITE2 3
 #define COLORSCHEME_MIDNIGHT 4
 #define COLORSCHEME_BLACKNIGHT 5
+#define COLORSCHEME_SOLARIZED 6
 
 #define Black COLOR_BLACK
 #define Red COLOR_RED
@@ -577,6 +578,70 @@ void CRT_setColors(int colorScheme) {
       CRT_colors[CPU_SOFTIRQ] = ColorPair(Blue,Black);
       CRT_colors[CPU_STEAL] = ColorPair(Cyan,Black);
       CRT_colors[CPU_GUEST] = ColorPair(Cyan,Black);
+   } else if (CRT_colorScheme == COLORSCHEME_SOLARIZED) {
+      CRT_colors[RESET_COLOR] = ColorPair(White,Black);
+      CRT_colors[DEFAULT_COLOR] = ColorPair(White,Black);
+      CRT_colors[FUNCTION_BAR] = ColorPair(Black,Cyan);
+      CRT_colors[FUNCTION_KEY] = ColorPair(White,Black);
+      CRT_colors[PANEL_HEADER_FOCUS] = ColorPair(Black,Green);
+      CRT_colors[PANEL_HEADER_UNFOCUS] = ColorPair(Black,Green);
+      CRT_colors[PANEL_HIGHLIGHT_FOCUS] = ColorPair(Black,Cyan);
+      CRT_colors[PANEL_HIGHLIGHT_UNFOCUS] = ColorPair(Black,White);
+      CRT_colors[FAILED_SEARCH] = ColorPair(Red,Cyan);
+      CRT_colors[UPTIME] = A_BOLD | ColorPair(Cyan,Black);
+      CRT_colors[BATTERY] = A_BOLD | ColorPair(Cyan,Black);
+      CRT_colors[LARGE_NUMBER] = A_BOLD | ColorPair(Red,Black);
+      CRT_colors[METER_TEXT] = ColorPair(Cyan,Black);
+      CRT_colors[METER_VALUE] = A_BOLD | ColorPair(Cyan,Black);
+      CRT_colors[LED_COLOR] = ColorPair(Green,Black);
+      CRT_colors[TASKS_RUNNING] = A_BOLD | ColorPair(Green,Black);
+      CRT_colors[PROCESS] = A_NORMAL;
+      CRT_colors[PROCESS_SHADOW] = A_BOLD | ColorPair(Green,Black);
+      CRT_colors[PROCESS_TAG] = A_BOLD | ColorPair(Yellow,Black);
+      CRT_colors[PROCESS_MEGABYTES] = ColorPair(Cyan,Black);
+      CRT_colors[PROCESS_BASENAME] = A_BOLD | ColorPair(Cyan,Black);
+      CRT_colors[PROCESS_TREE] = ColorPair(Cyan,Black);
+      CRT_colors[PROCESS_R_STATE] = ColorPair(Green,Black);
+      CRT_colors[PROCESS_D_STATE] = A_BOLD | ColorPair(Red,Black);
+      CRT_colors[PROCESS_HIGH_PRIORITY] = ColorPair(Red,Black);
+      CRT_colors[PROCESS_LOW_PRIORITY] = ColorPair(Red,Black);
+      CRT_colors[PROCESS_THREAD] = ColorPair(Green,Black);
+      CRT_colors[PROCESS_THREAD_BASENAME] = A_BOLD | ColorPair(Green,Black);
+      CRT_colors[BAR_BORDER] = A_BOLD;
+      CRT_colors[BAR_SHADOW] = A_BOLD | ColorPair(Green,Black);
+      CRT_colors[SWAP] = ColorPair(Red,Black);
+      CRT_colors[GRAPH_1] = A_BOLD | ColorPair(Red,Black);
+      CRT_colors[GRAPH_2] = ColorPair(Red,Black);
+      CRT_colors[GRAPH_3] = A_BOLD | ColorPair(Yellow,Black);
+      CRT_colors[GRAPH_4] = A_BOLD | ColorPair(Green,Black);
+      CRT_colors[GRAPH_5] = ColorPair(Green,Black);
+      CRT_colors[GRAPH_6] = ColorPair(Cyan,Black);
+      CRT_colors[GRAPH_7] = A_BOLD | ColorPair(Blue,Black);
+      CRT_colors[GRAPH_8] = ColorPair(Blue,Black);
+      CRT_colors[GRAPH_9] = A_BOLD | ColorPair(Green,Black);
+      CRT_colors[MEMORY_USED] = ColorPair(Green,Black);
+      CRT_colors[MEMORY_BUFFERS] = ColorPair(Blue,Black);
+      CRT_colors[MEMORY_BUFFERS_TEXT] = A_BOLD | ColorPair(Blue,Black);
+      CRT_colors[MEMORY_CACHE] = ColorPair(Yellow,Black);
+      CRT_colors[LOAD_AVERAGE_FIFTEEN] = A_BOLD | ColorPair(Green,Black);
+      CRT_colors[LOAD_AVERAGE_FIVE] = A_NORMAL;
+      CRT_colors[LOAD_AVERAGE_ONE] = A_BOLD;
+      CRT_colors[LOAD] = A_BOLD;
+      CRT_colors[HELP_BOLD] = A_BOLD | ColorPair(Cyan,Black);
+      CRT_colors[CLOCK] = A_BOLD;
+      CRT_colors[CHECK_BOX] = ColorPair(Cyan,Black);
+      CRT_colors[CHECK_MARK] = A_BOLD;
+      CRT_colors[CHECK_TEXT] = A_NORMAL;
+      CRT_colors[HOSTNAME] = A_BOLD;
+      CRT_colors[CPU_NICE] = ColorPair(Blue,Black);
+      CRT_colors[CPU_NICE_TEXT] = A_BOLD | ColorPair(Blue,Black);
+      CRT_colors[CPU_NORMAL] = ColorPair(Green,Black);
+      CRT_colors[CPU_KERNEL] = ColorPair(Red,Black);
+      CRT_colors[CPU_IOWAIT] = A_BOLD | ColorPair(Green, Black);
+      CRT_colors[CPU_IRQ] = ColorPair(Yellow,Black);
+      CRT_colors[CPU_SOFTIRQ] = ColorPair(Magenta,Black);
+      CRT_colors[CPU_STEAL] = ColorPair(Cyan,Black);
+      CRT_colors[CPU_GUEST] = ColorPair(Cyan,Black)
    } else {
       /* Default */
       CRT_colors[RESET_COLOR] = ColorPair(White,Black);
