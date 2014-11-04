@@ -147,20 +147,29 @@ Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type) {
 }
 
 int human_unit(char* buffer, long int value, int * len) {
-	int written;
+	const char * prefix = "kMGT";
+	unsigned long int powi = 1;
+	unsigned int written, powj = 1, precision = 2;
 
-	if (value > TERABYTE) {
-		written = snprintf(buffer, *len, "%ld.%ldTiB",
-				value / TERABYTE, value * 10 / TERABYTE % 10);
-	} else if (value > GIGABYTE) {
-		written = snprintf(buffer, *len, "%ld.%ldGiB",
-				value / GIGABYTE, value * 10 / GIGABYTE % 10);
-	} else if (value > MEGABYTE) {
-		written = snprintf(buffer, *len, "%ld.%ldMiB",
-				value / MEGABYTE, value * 10 / MEGABYTE % 10);
-	} else {
-		written = snprintf(buffer, *len, "%ldkiB", value);
+	for(;;) {
+		if (value / 1024 < powi)
+			break;
+
+		if (prefix[1] == 0)
+			break;
+
+		powi *= 1024;
+		++prefix;
 	}
+
+	for (; precision > 0; precision--) {
+		powj *= 10;
+		if (value / powi < powj)
+			break;
+	}
+
+	written = snprintf(buffer, *len, "%.*f%ciB",
+		precision, (double) value / powi, *prefix);
 
 	*len -= written;
 	return written;
