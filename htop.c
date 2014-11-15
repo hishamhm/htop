@@ -604,6 +604,7 @@ int main(int argc, char** argv) {
                      setSortKey(pl, defaultBar, field, panel, settings);
                   }
                   refreshTimeout = 0;
+                  follow = true;
                   continue;
                } else if (mevent.y >= panel->y + 1 && mevent.y < LINES - 1) {
                   Panel_setSelected(panel, mevent.y - panel->y + panel->scrollV - 1);
@@ -650,6 +651,8 @@ int main(int argc, char** argv) {
          acc = 0;
       }
 
+      // The difference between break vs continue out of this switch
+      // is that break also resets follow = false.
       switch (ch) {
       case KEY_RESIZE:
          Panel_resize(panel, COLS, LINES-headerHeight-1);
@@ -659,13 +662,15 @@ int main(int argc, char** argv) {
       {
          refreshTimeout = 0;
          setSortKey(pl, defaultBar, PERCENT_MEM, panel, settings);
-         break;
+         follow = true;
+         continue;
       }
       case 'T':
       {
          refreshTimeout = 0;
          setSortKey(pl, defaultBar, TIME, panel, settings);
-         break;
+         follow = true;
+         continue;
       }
       case 'c':
       {
@@ -687,7 +692,8 @@ int main(int argc, char** argv) {
       {
          refreshTimeout = 0;
          setSortKey(pl, defaultBar, PERCENT_CPU, panel, settings);
-         break;
+         follow = true;
+         continue;
       }
       case KEY_F(1):
       case 'h':
@@ -847,7 +853,8 @@ int main(int argc, char** argv) {
       {
          sortBy(panel, pl, settings, headerHeight, defaultBar, header);
          refreshTimeout = 0;
-         break;
+         follow = true;
+         continue;
       }
       case KEY_F(18):
       case KEY_F(6):
@@ -887,7 +894,8 @@ int main(int argc, char** argv) {
          refreshTimeout = 0;
          settings->changed = true;
          ProcessList_invertSortOrder(pl);
-         break;
+         follow = true;
+         continue;
       }
       case KEY_F(8):
       case '[':
@@ -920,8 +928,8 @@ int main(int argc, char** argv) {
          ProcessList_printHeader(pl, Panel_getHeader(panel));
          ProcessList_expandTree(pl);
          settings->changed = true;
-         if (following != -1) continue;
-         break;
+         follow = true;
+         continue;
       case 'H':
          doRecalculate = true;
          refreshTimeout = 0;

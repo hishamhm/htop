@@ -140,7 +140,8 @@ Sort by time (top compatibility key).
 "Follow" process: if the sort order causes the currently selected process
 to move in the list, make the selection bar follow it. This is useful for
 monitoring a process: this way, you can keep a process always visible on
-screen. When a movement key is used, "follow" loses effect.
+screen. The current process is always followed on any change to sort order,
+or when toggling tree view. When a movement key is used, "follow" loses effect.
 .TP
 .B K
 Hide kernel threads: prevent the threads belonging the kernel to be
