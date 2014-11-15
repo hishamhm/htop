@@ -920,8 +920,8 @@ int main(int argc, char** argv) {
          ProcessList_printHeader(pl, Panel_getHeader(panel));
          ProcessList_expandTree(pl);
          settings->changed = true;
-         if (following != -1) continue;
-         break;
+         follow = true;
+         continue;
       case 'H':
          doRecalculate = true;
          refreshTimeout = 0;
