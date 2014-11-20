@@ -28,7 +28,8 @@ static void MemoryMeter_setValues(Meter* this, char* buffer, int size) {
    long int usedMem = this->pl->usedMem;
    long int buffersMem = this->pl->buffersMem;
    long int cachedMem = this->pl->cachedMem;
-   usedMem -= buffersMem + cachedMem;
+   long int availMem = this->pl->availMem;
+   if(!availMem) usedMem -= buffersMem + cachedMem;
    this->total = this->pl->totalMem;
    this->values[0] = usedMem;
    this->values[1] = buffersMem;

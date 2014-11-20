@@ -129,6 +129,7 @@ typedef struct ProcessList_ {
    unsigned long long int sharedMem;
    unsigned long long int buffersMem;
    unsigned long long int cachedMem;
+   unsigned long long int availMem;
    unsigned long long int totalSwap;
    unsigned long long int usedSwap;
    unsigned long long int freeSwap;
@@ -906,6 +907,8 @@ void ProcessList_scan(ProcessList* this) {
                sscanf(buffer, "MemFree: %32llu kB", &this->freeMem);
             else if (String_startsWith(buffer, "MemShared:"))
                sscanf(buffer, "MemShared: %32llu kB", &this->sharedMem);
+            else if (String_startsWith(buffer, "MemAvailable:"))
+               sscanf(buffer, "MemAvailable: %32llu kB", &this->availMem);
             break;
          case 'B':
             if (String_startsWith(buffer, "Buffers:"))
@@ -924,8 +927,7 @@ void ProcessList_scan(ProcessList* this) {
          }
       }
    }
-
-   this->usedMem = this->totalMem - this->freeMem;
+   this->usedMem = this->totalMem - (this->availMem ? this->availMem : this->freeMem);
    this->usedSwap = this->totalSwap - swapFree;
    fclose(file);
 
