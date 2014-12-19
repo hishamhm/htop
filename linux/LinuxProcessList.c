@@ -604,6 +604,8 @@ static inline void LinuxProcessList_scanMemoryInfo(ProcessList* this) {
             sscanf(buffer, "Cached: %32llu kB", &this->cachedMem);
          break;
       case 'S':
+         if (String_startsWith(buffer, "Slab:"))
+            sscanf(buffer, "Slab: %32llu kB", &this->slabMem);
          if (String_startsWith(buffer, "SwapTotal:"))
             sscanf(buffer, "SwapTotal: %32llu kB", &this->totalSwap);
          if (String_startsWith(buffer, "SwapFree:"))

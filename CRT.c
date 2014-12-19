@@ -84,6 +84,7 @@ typedef enum ColorElements_ {
    MEMORY_BUFFERS,
    MEMORY_BUFFERS_TEXT,
    MEMORY_CACHE,
+   MEMORY_SLAB,
    LOAD,
    LOAD_AVERAGE_FIFTEEN,
    LOAD_AVERAGE_FIVE,
@@ -279,6 +280,7 @@ void CRT_setColors(int colorScheme) {
       CRT_colors[MEMORY_BUFFERS] = A_NORMAL;
       CRT_colors[MEMORY_BUFFERS_TEXT] = A_NORMAL;
       CRT_colors[MEMORY_CACHE] = A_NORMAL;
+      CRT_colors[MEMORY_SLAB] = A_NORMAL;
       CRT_colors[LOAD_AVERAGE_FIFTEEN] = A_DIM;
       CRT_colors[LOAD_AVERAGE_FIVE] = A_NORMAL;
       CRT_colors[LOAD_AVERAGE_ONE] = A_BOLD;
@@ -343,6 +345,7 @@ void CRT_setColors(int colorScheme) {
       CRT_colors[MEMORY_BUFFERS] = ColorPair(Cyan,White);
       CRT_colors[MEMORY_BUFFERS_TEXT] = ColorPair(Cyan,White);
       CRT_colors[MEMORY_CACHE] = ColorPair(Yellow,White);
+      CRT_colors[MEMORY_SLAB] = ColorPair(Red,White);
       CRT_colors[LOAD_AVERAGE_FIFTEEN] = ColorPair(Black,White);
       CRT_colors[LOAD_AVERAGE_FIVE] = ColorPair(Black,White);
       CRT_colors[LOAD_AVERAGE_ONE] = ColorPair(Black,White);
@@ -407,6 +410,7 @@ void CRT_setColors(int colorScheme) {
       CRT_colors[MEMORY_BUFFERS] = ColorPair(Cyan,Black);
       CRT_colors[MEMORY_BUFFERS_TEXT] = ColorPair(Cyan,Black);
       CRT_colors[MEMORY_CACHE] = ColorPair(Yellow,Black);
+      CRT_colors[MEMORY_SLAB] = ColorPair(Red,Black);
       CRT_colors[LOAD_AVERAGE_FIFTEEN] = ColorPair(Black,Black);
       CRT_colors[LOAD_AVERAGE_FIVE] = ColorPair(Black,Black);
       CRT_colors[LOAD_AVERAGE_ONE] = ColorPair(Black,Black);
@@ -471,6 +475,7 @@ void CRT_setColors(int colorScheme) {
       CRT_colors[MEMORY_BUFFERS] = A_BOLD | ColorPair(Cyan,Blue);
       CRT_colors[MEMORY_BUFFERS_TEXT] = A_BOLD | ColorPair(Cyan,Blue);
       CRT_colors[MEMORY_CACHE] = A_BOLD | ColorPair(Yellow,Blue);
+      CRT_colors[MEMORY_SLAB] = A_BOLD | ColorPair(Red,Blue);
       CRT_colors[LOAD_AVERAGE_FIFTEEN] = A_BOLD | ColorPair(Black,Blue);
       CRT_colors[LOAD_AVERAGE_FIVE] = A_NORMAL | ColorPair(White,Blue);
       CRT_colors[LOAD_AVERAGE_ONE] = A_BOLD | ColorPair(White,Blue);
@@ -535,6 +540,7 @@ void CRT_setColors(int colorScheme) {
       CRT_colors[MEMORY_BUFFERS] = ColorPair(Blue,Black);
       CRT_colors[MEMORY_BUFFERS_TEXT] = A_BOLD | ColorPair(Blue,Black);
       CRT_colors[MEMORY_CACHE] = ColorPair(Yellow,Black);
+      CRT_colors[MEMORY_SLAB] = ColorPair(Red,Black);
       CRT_colors[LOAD_AVERAGE_FIFTEEN] = ColorPair(Green,Black);
       CRT_colors[LOAD_AVERAGE_FIVE] = ColorPair(Green,Black);
       CRT_colors[LOAD_AVERAGE_ONE] = A_BOLD | ColorPair(Green,Black);
@@ -600,6 +606,7 @@ void CRT_setColors(int colorScheme) {
       CRT_colors[MEMORY_BUFFERS] = ColorPair(Blue,Black);
       CRT_colors[MEMORY_BUFFERS_TEXT] = A_BOLD | ColorPair(Blue,Black);
       CRT_colors[MEMORY_CACHE] = ColorPair(Yellow,Black);
+      CRT_colors[MEMORY_SLAB] = ColorPair(Red,Black);
       CRT_colors[LOAD_AVERAGE_FIFTEEN] = A_BOLD | ColorPair(Black,Black);
       CRT_colors[LOAD_AVERAGE_FIVE] = A_NORMAL;
       CRT_colors[LOAD_AVERAGE_ONE] = A_BOLD;
