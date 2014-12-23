@@ -24,6 +24,9 @@ in the source distribution for its full text.
 #define PROCMEMINFOFILE PROCDIR "/meminfo"
 #endif
 
+#ifndef ZFSINFOFILE
+#define ZFSINFOFILE "/proc/spl/kstat/zfs/arcstats"
+#endif
    
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList);
 
