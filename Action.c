@@ -66,7 +66,7 @@ Object* Action_pickFromVector(State* st, Panel* list, int x) {
    Panel* panel = st->panel;
    Header* header = st->header;
    Settings* settings = st->settings;
-   
+
    int y = panel->y;
    ScreenManager* scr = ScreenManager_new(0, header->height, 0, -1, HORIZONTAL, header, settings, false);
    scr->allowFocusChange = false;
@@ -273,7 +273,7 @@ static Htop_Reaction actionSetAffinity(State* st) {
       return HTOP_OK;
 #if (HAVE_LIBHWLOC || HAVE_NATIVE_AFFINITY)
    Panel* panel = st->panel;
-   
+
    Process* p = (Process*) Panel_getSelected(panel);
    if (!p) return HTOP_OK;
    Affinity* affinity = Affinity_get(p, st->pl);
@@ -302,6 +302,22 @@ static Htop_Reaction actionKill(State* st) {
          Panel_draw(st->panel, true);
          refresh();
          MainPanel_foreachProcess((MainPanel*)st->panel, (MainPanel_ForeachProcessFn) Process_sendSignal, (size_t) sgn->key, NULL);
+         napms(500);
+      }
+   }
+   Panel_delete((Object*)signalsPanel);
+   return HTOP_REFRESH | HTOP_REDRAW_BAR | HTOP_UPDATE_PANELHDR;
+}
+
+static Htop_Reaction actionKillGroup(State* st) {
+   Panel* signalsPanel = (Panel*) SignalsPanel_new();
+   ListItem* sgn = (ListItem*) Action_pickFromVector(st, signalsPanel, 15);
+   if (sgn) {
+      if (sgn->key != 0) {
+         Panel_setHeader(st->panel, "Sending...");
+         Panel_draw(st->panel, true);
+         refresh();
+         MainPanel_foreachProcess((MainPanel*)st->panel, (MainPanel_ForeachProcessFn) Process_sendGroupSignal, (size_t) sgn->key, NULL);
          napms(500);
       }
    }
@@ -403,6 +419,7 @@ static struct { const char* key; const char* info; } helpRight[] = {
    { .key = "      c: ", .info = "tag process and its children" },
    { .key = "      U: ", .info = "untag all processes" },
    { .key = "   F9 k: ", .info = "kill process/tagged processes" },
+   { .key = "      g: ", .info = "kill process group/tagged processes group" },
    { .key = "   F7 ]: ", .info = "higher priority (root only)" },
    { .key = "   F8 [: ", .info = "lower priority (+ nice)" },
 #if (HAVE_LIBHWLOC || HAVE_NATIVE_AFFINITY)
@@ -551,6 +568,7 @@ void Action_setBindings(Htop_Action* keys) {
    keys['a'] = actionSetAffinity;
    keys[KEY_F(9)] = actionKill;
    keys['k'] = actionKill;
+   keys['g'] = actionKillGroup;
    keys[KEY_RECLICK] = actionExpandOrCollapse;
    keys['+'] = actionExpandOrCollapse;
    keys['='] = actionExpandOrCollapse;
@@ -571,4 +589,3 @@ void Action_setBindings(Htop_Action* keys) {
    keys['c'] = actionTagAllChildren;
    keys['e'] = actionShowEnvScreen;
 }
-

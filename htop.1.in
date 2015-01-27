@@ -110,6 +110,12 @@ Decrease the selected process's priority (add to 'nice' value)
 of processes. If processes were tagged, sends the signal to all tagged processes.
 If none is tagged, sends to the currently selected process.
 .TP
+.B g
+"Kill" whole process group: sends a signal which is selected in a menu, to one or
+a group of process groups. If processes were tagged, sends the signal to all
+tagged processes' groups.
+If none is tagged, sends to the currently selected process' group.
+.TP
 .B F10, q
 Quit
 .TP

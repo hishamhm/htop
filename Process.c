@@ -536,6 +536,10 @@ void Process_sendSignal(Process* this, size_t sgn) {
    seteuid(euid);
 }
 
+void Process_sendGroupSignal(Process* this, size_t sgn) {
+   kill(-this->pgrp, (int) sgn);
+}
+
 long Process_pidCompare(const void* v1, const void* v2) {
    Process* p1 = (Process*)v1;
    Process* p2 = (Process*)v2;
