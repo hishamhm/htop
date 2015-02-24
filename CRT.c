@@ -24,6 +24,7 @@ in the source distribution for its full text.
 #define COLORSCHEME_BLACKONWHITE2 3
 #define COLORSCHEME_MIDNIGHT 4
 #define COLORSCHEME_BLACKNIGHT 5
+#define COLORSCHEME_BLUEWEB 6
 
 #define Black COLOR_BLACK
 #define Red COLOR_RED
@@ -234,7 +235,66 @@ void CRT_setColors(int colorScheme) {
             init_pair((7-i)*8+j, i, (j==0?-1:j));
    }
 
-   if (colorScheme == COLORSCHEME_MONOCHROME) {
+   if (colorScheme == COLORSCHEME_BLUEWEB) {
+      CRT_colors[RESET_COLOR] = A_NORMAL;
+      CRT_colors[DEFAULT_COLOR] = A_NORMAL;
+      CRT_colors[FUNCTION_BAR] = ColorPair(White,Blue);
+      CRT_colors[FUNCTION_KEY] = A_REVERSE;
+      CRT_colors[PANEL_HEADER_FOCUS] = A_BOLD | ColorPair(White,Blue);
+      CRT_colors[PANEL_HEADER_UNFOCUS] = ColorPair(White,Blue);
+      CRT_colors[PANEL_HIGHLIGHT_FOCUS] = ColorPair(Blue,White);
+      CRT_colors[PANEL_HIGHLIGHT_UNFOCUS] = A_NORMAL;
+      CRT_colors[FAILED_SEARCH] = A_BOLD | ColorPair(Yellow, Red);
+      CRT_colors[UPTIME] = A_BOLD | ColorPair(Blue, Black);
+      CRT_colors[BATTERY] = A_BOLD;
+      CRT_colors[LARGE_NUMBER] = A_BOLD;
+      CRT_colors[METER_TEXT] = A_NORMAL;
+      CRT_colors[METER_VALUE] = A_BOLD | ColorPair(Blue, Black);
+      CRT_colors[LED_COLOR] = A_BOLD | ColorPair(Blue, Black);
+      CRT_colors[TASKS_RUNNING] = A_BOLD;
+      CRT_colors[PROCESS] = A_NORMAL;
+      CRT_colors[PROCESS_SHADOW] = ColorPair(Blue, Black);
+      CRT_colors[PROCESS_TAG] = ColorPair(Blue, Black);
+      CRT_colors[PROCESS_MEGABYTES] = A_BOLD;
+      CRT_colors[PROCESS_BASENAME] = A_BOLD;
+      CRT_colors[PROCESS_TREE] = A_BOLD;
+      CRT_colors[PROCESS_R_STATE] = A_BOLD;
+      CRT_colors[PROCESS_HIGH_PRIORITY] = A_BOLD;
+      CRT_colors[PROCESS_LOW_PRIORITY] = A_DIM;
+      CRT_colors[PROCESS_THREAD] = A_BOLD;
+      CRT_colors[PROCESS_THREAD_BASENAME] = A_REVERSE;
+      CRT_colors[BAR_BORDER] = A_BOLD;
+      CRT_colors[BAR_SHADOW] = A_BOLD | ColorPair(Blue, Black);
+      CRT_colors[SWAP] = A_BOLD | ColorPair(Blue, Black);
+      CRT_colors[GRAPH_1] = ColorPair(Blue, Black);
+      CRT_colors[GRAPH_2] = ColorPair(Blue, Black);
+      CRT_colors[GRAPH_3] = ColorPair(Blue, Black);
+      CRT_colors[GRAPH_4] = ColorPair(Blue, Black);
+      CRT_colors[GRAPH_5] = ColorPair(Blue, Black);
+      CRT_colors[GRAPH_6] = ColorPair(Blue, Black);
+      CRT_colors[GRAPH_7] = ColorPair(Blue, Black);
+      CRT_colors[GRAPH_8] = ColorPair(Blue, Black);
+      CRT_colors[GRAPH_9] = ColorPair(Blue, Black);
+      CRT_colors[MEMORY_USED] = A_BOLD | ColorPair(Blue, Black);
+      CRT_colors[MEMORY_BUFFERS] = A_NORMAL;
+      CRT_colors[MEMORY_CACHE] = A_NORMAL;
+      CRT_colors[LOAD_AVERAGE_FIFTEEN] = A_DIM;
+      CRT_colors[LOAD_AVERAGE_FIVE] = A_NORMAL;
+      CRT_colors[LOAD_AVERAGE_ONE] = A_BOLD;
+      CRT_colors[LOAD] = A_BOLD | ColorPair(Blue, Black);
+      CRT_colors[HELP_BOLD] = A_BOLD;
+      CRT_colors[CPU_NICE] = A_BOLD;
+      CRT_colors[CPU_NORMAL] = A_BOLD | ColorPair(Green, Black);
+      CRT_colors[CPU_KERNEL] = A_BOLD | ColorPair(Blue, Black);
+      CRT_colors[CLOCK] = A_BOLD;
+      CRT_colors[CHECK_BOX] = A_BOLD;
+      CRT_colors[CHECK_MARK] = A_NORMAL;
+      CRT_colors[CHECK_TEXT] = A_NORMAL;
+      CRT_colors[CPU_IOWAIT] = A_BOLD | ColorPair(Red, Black);
+      CRT_colors[CPU_IRQ] = A_BOLD;
+      CRT_colors[CPU_SOFTIRQ] = A_BOLD;
+      CRT_colors[HOSTNAME] = A_BOLD;
+   } else if (colorScheme == COLORSCHEME_MONOCHROME) {
       CRT_colors[RESET_COLOR] = A_NORMAL;
       CRT_colors[DEFAULT_COLOR] = A_NORMAL;
       CRT_colors[FUNCTION_BAR] = A_REVERSE;
