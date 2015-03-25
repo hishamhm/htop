@@ -43,6 +43,9 @@ in the source distribution for its full text.
 #define PROCMEMINFOFILE PROCDIR "/meminfo"
 #endif
 
+#ifndef ZFSINFOFILE
+#define ZFSINFOFILE "/proc/spl/kstat/zfs/arcstats"
+#endif
 }*/
    
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList) {
@@ -616,6 +619,31 @@ static inline void LinuxProcessList_scanMemoryInfo(ProcessList* this) {
          break;
       }
    }
+
+#ifdef HAVE_ZFS
+   FILE* zfsFile = fopen(ZFSINFOFILE,"r");
+   if( zfsFile != NULL)
+   {
+      unsigned long long int zfsMem = 0;
+      while(fgets(buffer,128,zfsFile) && zfsMem == 0)
+      {
+         switch(buffer[0])
+         {
+            case 's':
+               if(String_startsWith(buffer, "size"))
+                  sscanf(buffer,"size %*i %32llu",&zfsMem);
+                  zfsMem /= 1024;
+                  break;
+            default:
+               break;
+         }
+      }
+      this->cachedMem += zfsMem;
+      fclose(zfsFile);
+   }
+#endif
+
+
 
    this->usedMem = this->totalMem - this->freeMem;
    this->usedSwap = this->totalSwap - swapFree;

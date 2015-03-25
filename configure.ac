@@ -151,6 +151,11 @@ else
             [AC_CHECK_HEADERS([ncurses.h],[:],[missing_headers="$missing_headers $ac_header"])])])])
 fi
 
+AC_ARG_ENABLE(zfs_cache_awareness, [AC_HELP_STRING([--enable-zfs-cache-awareness],[enable ZFS cache awareness for memory usage])], enable_zfs_cache_awareness="yes",enable_zfs_cache_awareness="no")
+if test "x$enable_zfs_cache_awareness" = xyes; then
+    AC_DEFINE(HAVE_ZFS, 1, [Define if we want the memory meter to be aware of the ZFS cache])
+fi
+
 AC_ARG_ENABLE(native_affinity, [AC_HELP_STRING([--enable-native-affinity], [enable native sched_setaffinity and sched_getaffinity for affinity support, disables hwloc])], ,enable_native_affinity="yes")
 if test "x$enable_native_affinity" = xyes -a "x$cross_compiling" = xno; then
    AC_MSG_CHECKING([for usable sched_setaffinity])
