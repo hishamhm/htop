@@ -21,18 +21,20 @@ in the source distribution for its full text.
 }*/
 
 int MemoryMeter_attributes[] = {
-   MEMORY_USED, MEMORY_BUFFERS, MEMORY_CACHE
+   MEMORY_USED, MEMORY_BUFFERS, MEMORY_CACHE, MEMORY_SLAB
 };
 
 static void MemoryMeter_setValues(Meter* this, char* buffer, int size) {
    long int usedMem = this->pl->usedMem;
    long int buffersMem = this->pl->buffersMem;
    long int cachedMem = this->pl->cachedMem;
-   usedMem -= buffersMem + cachedMem;
+   long int slabMem = this->pl->slabMem;
+   usedMem -= buffersMem + cachedMem + slabMem;
    this->total = this->pl->totalMem;
    this->values[0] = usedMem;
    this->values[1] = buffersMem;
    this->values[2] = cachedMem;
+   this->values[3] = slabMem;
    snprintf(buffer, size, "%ld/%ldMB", (long int) usedMem / 1024, (long int) this->total / 1024);
 }
 
@@ -44,6 +46,7 @@ static void MemoryMeter_display(Object* cast, RichString* out) {
    long int usedMem = this->values[0] / k;
    long int buffersMem = this->values[1] / k;
    long int cachedMem = this->values[2] / k;
+   long int slabMem = this->values[3] / k;
    RichString_write(out, CRT_colors[METER_TEXT], ":");
    sprintf(buffer, format, totalMem);
    RichString_append(out, CRT_colors[METER_VALUE], buffer);
@@ -56,6 +59,9 @@ static void MemoryMeter_display(Object* cast, RichString* out) {
    sprintf(buffer, format, cachedMem);
    RichString_append(out, CRT_colors[METER_TEXT], "cache:");
    RichString_append(out, CRT_colors[MEMORY_CACHE], buffer);
+   sprintf(buffer, format, slabMem);
+   RichString_append(out, CRT_colors[METER_TEXT], "slab:");
+   RichString_append(out, CRT_colors[MEMORY_SLAB], buffer);
 }
 
 MeterClass MemoryMeter_class = {
@@ -66,7 +72,7 @@ MeterClass MemoryMeter_class = {
    },
    .setValues = MemoryMeter_setValues, 
    .defaultMode = BAR_METERMODE,
-   .maxItems = 3,
+   .maxItems = 4,
    .total = 100.0,
    .attributes = MemoryMeter_attributes,
    "Memory",
