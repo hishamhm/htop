@@ -41,6 +41,7 @@ static const char* ColorSchemes[] = {
    "Light Terminal",
    "MC",
    "Black Night",
+   "Solarized Friendly",
    NULL
 };
 
