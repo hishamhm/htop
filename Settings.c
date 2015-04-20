@@ -185,6 +185,8 @@ static bool Settings_read(Settings* this, const char* fileName, int cpuCount) {
          this->shadowOtherUsers = atoi(option[1]);
       } else if (String_eq(option[0], "show_thread_names")) {
          this->showThreadNames = atoi(option[1]);
+      } else if (String_eq(option[0], "hide_program_path")) {
+         this->hideProgramPath = atoi(option[1]);
       } else if (String_eq(option[0], "highlight_base_name")) {
          this->highlightBaseName = atoi(option[1]);
       } else if (String_eq(option[0], "highlight_megabytes")) {
@@ -271,6 +273,7 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "hide_userland_threads=%d\n", (int) this->hideUserlandThreads);
    fprintf(fd, "shadow_other_users=%d\n", (int) this->shadowOtherUsers);
    fprintf(fd, "show_thread_names=%d\n", (int) this->showThreadNames);
+   fprintf(fd, "display_only_base_name=%d\n", (int) this->hideProgramPath);
    fprintf(fd, "highlight_base_name=%d\n", (int) this->highlightBaseName);
    fprintf(fd, "highlight_megabytes=%d\n", (int) this->highlightMegabytes);
    fprintf(fd, "highlight_threads=%d\n", (int) this->highlightThreads);
@@ -302,6 +305,7 @@ Settings* Settings_new(int cpuCount) {
    this->hideKernelThreads = false;
    this->hideUserlandThreads = false;
    this->treeView = false;
+   this->hideProgramPath = false;
    this->highlightBaseName = false;
    this->highlightMegabytes = false;
    this->detailedCPUTime = false;

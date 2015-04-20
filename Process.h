@@ -60,7 +60,8 @@ typedef struct Process_ {
    char* comm;
    int indent;
 
-   int basenameOffset;
+   int basenameStart;
+   int basenameEnd;
    bool updated;
 
    char state;

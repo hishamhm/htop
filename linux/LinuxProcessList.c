@@ -416,6 +416,12 @@ static void LinuxProcessList_readVServerData(LinuxProcess* process, const char* 
          }
       }
       #endif
+      else if (String_startsWith(buffer, "Name:")) {
+         int ok = sscanf(buffer, "Name:\t%s", buffer);
+         if (ok >= 1) {
+            process
+         }
+      }
    }
    fclose(file);
 }
@@ -449,26 +455,31 @@ static bool LinuxProcessList_readCmdlineFile(Process* process, const char* dirna
    if (fd == -1)
       return false;
          
-   char command[4096+1]; // max cmdline length on Linux
-   int amtRead = xread(fd, command, sizeof(command) - 1);
+   char buffer[4096+1]; // max cmdline length on Linux
+   int amtRead = xread(fd, buffer, sizeof(buffer) - 1);
    close(fd);
-   int tokenEnd = 0; 
-   if (amtRead > 0) {
-      for (int i = 0; i < amtRead; i++)
-         if (command[i] == '\0' || command[i] == '\n') {
-            if (tokenEnd == 0) {
-               tokenEnd = i;
-            }
-            command[i] = ' ';
-         }
+   for (int i = 0; i < amtRead; i++)
+      if (buffer[i] == '\0' || buffer[i] == '\n') {
+         buffer[i] = ' ';
    }
-   if (tokenEnd == 0) {
-      tokenEnd = amtRead;
-   }
-   command[amtRead] = '\0';
+   buffer[amtRead] = '\0';
    free(process->comm);
-   process->comm = strdup(command);
-   process->basenameOffset = tokenEnd;
+   process->comm = strdup(buffer);
+
+   // assume that program name ends with the first space
+   int pathLen = 0;
+   for (int i = 0; i < amtRead; i++) {
+      if (buffer[i] == ' ') {
+        pathLen = i;
+        buffer[i] = '\0';
+        break;
+      }
+   }
+
+   char* base = basename(buffer);
+   int basenameLen = strlen(base);
+   process->basenameStart = pathLen - basenameLen;
+   process->basenameEnd = pathLen;
 
    return true;
 }
@@ -580,12 +591,10 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
 
       if (proc->state == 'Z') {
          free(proc->comm);
-         proc->basenameOffset = -1;
          proc->comm = strdup(command);
       } else if (Process_isThread(proc)) {
          if (settings->showThreadNames || Process_isKernelThread(proc) || proc->state == 'Z') {
             free(proc->comm);
-            proc->basenameOffset = -1;
             proc->comm = strdup(command);
          } else if (settings->showThreadNames) {
             if (! LinuxProcessList_readCmdlineFile(proc, dirname, name))
