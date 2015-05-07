@@ -74,6 +74,8 @@ struct Panel_ {
 #define KEY_CTRLP      0020            /* control-p key */
 #define KEY_CTRLF      0006            /* control-f key */
 #define KEY_CTRLB      0002            /* control-b key */
+#define KEY_CTRLU      0025            /* control-u key */
+#define KEY_CTRLD      0004            /* control-d key */
 
 extern PanelClass Panel_class;
 

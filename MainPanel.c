@@ -104,14 +104,14 @@ static HandlerResult MainPanel_eventHandler(Panel* super, int ch) {
       }
       switch (ch) {
       case KEY_LEFT:
-      case KEY_CTRLB:
+      case 'h':
          if (super->scrollH > 0) {
             super->scrollH -= CRT_scrollHAmount;
             super->needsRedraw = true;
          }
          return HANDLED;
       case KEY_RIGHT:
-      case KEY_CTRLF:
+      case 'l':
          super->scrollH += CRT_scrollHAmount;
          super->needsRedraw = true;
          return HANDLED;

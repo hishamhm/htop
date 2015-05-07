@@ -86,6 +86,8 @@ struct Panel_ {
 #define KEY_CTRLP      0020            /* control-p key */
 #define KEY_CTRLF      0006            /* control-f key */
 #define KEY_CTRLB      0002            /* control-b key */
+#define KEY_CTRLU      0025            /* control-u key */
+#define KEY_CTRLD      0004            /* control-d key */
 
 PanelClass Panel_class = {
    .super = {
@@ -369,14 +371,16 @@ void Panel_draw(Panel* this, bool focus) {
 
 bool Panel_onKey(Panel* this, int key) {
    assert (this != NULL);
-   
+
    int size = Vector_size(this->items);
    switch (key) {
    case KEY_DOWN:
+   case 'j':
    case KEY_CTRLN:
       this->selected++;
       break;
    case KEY_UP:
+   case 'k':
    case KEY_CTRLP:
       this->selected--;
       break;
@@ -391,31 +395,43 @@ bool Panel_onKey(Panel* this, int key) {
       break;
    #endif
    case KEY_LEFT:
-   case KEY_CTRLB:
+   case 'h':
       if (this->scrollH > 0) {
          this->scrollH -= CRT_scrollHAmount;
          this->needsRedraw = true;
       }
       break;
    case KEY_RIGHT:
-   case KEY_CTRLF:
+   case 'l':
       this->scrollH += CRT_scrollHAmount;
       this->needsRedraw = true;
       break;
+   case KEY_CTRLU:
+      this->selected -= (this->h - 1) / 2;
+      this->needsRedraw = true;
+      break;
+   case KEY_CTRLD:
+      this->selected += (this->h - 1) / 2;
+      this->needsRedraw = true;
+      break;
    case KEY_PPAGE:
+   case KEY_CTRLB:
       this->selected -= (this->h - 1);
       this->scrollV -= (this->h - 1);
       this->needsRedraw = true;
       break;
    case KEY_NPAGE:
+   case KEY_CTRLF:
       this->selected += (this->h - 1);
       this->scrollV += (this->h - 1);
       this->needsRedraw = true;
       break;
    case KEY_HOME:
+   case 'g':
       this->selected = 0;
       break;
    case KEY_END:
+   case 'G':
       this->selected = size - 1;
       break;
    default:
