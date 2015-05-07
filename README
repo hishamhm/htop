@@ -28,6 +28,40 @@ This software has evolved considerably during the last years,
 and is reasonably complete, but there is still room for
 improvement. Read the TODO file to see what's known to be missing.
 
+Vim keybindings
+----------------
+
+These are the keybindings added in this fork of htop:
+
+```
+    g        to the top (gg in vim)
+
+  <C-b>      up 1 page
+
+  <C-u>      up 1/2 page
+
+    k
+
+h       l    one character
+
+    j
+
+  <C-u>      down 1/2 page
+
+  <C-f>      down 1 page
+
+    G        to the end
+```
+
+In order to accomodate these keybindings, the following changes
+were made to the original keybindings:
+
+* Ctrl+F and Ctrt+B can now longer be used to navigate horizontally
+* 'h' can no longer be used to access the help, leaving Ctrl+F1 & '?'
+* 'k' can no longer be used to kill processes, being replaced with 'x'
+* 'l' can no longer be used to list open files, being replaced with 'L'
+
+
 Comparison between 'htop' and 'top'
 -----------------------------------
 
