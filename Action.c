@@ -515,6 +515,7 @@ void Action_setBindings(Htop_Action* keys) {
    keys['I'] = actionInvertSortOrder;
    keys[KEY_F(6)] = actionExpandCollapseOrSortColumn;
    keys[KEY_F(18)] = actionExpandCollapseOrSortColumn;
+   keys['o'] = actionExpandCollapseOrSortColumn;
    keys['<'] = actionSetSortColumn;
    keys[','] = actionSetSortColumn;
    keys['>'] = actionSetSortColumn;

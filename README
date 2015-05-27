@@ -51,6 +51,10 @@ h       l    one character
   <C-f>      down 1 page
 
     G        to the end
+
+--------------------------------------------------
+
+    o        Expand/collapse (like in NERDTree)
 ```
 
 In order to accomodate these keybindings, the following changes
