@@ -25,6 +25,11 @@ in the source distribution for its full text.
 
 #define GRAPH_DELAY (DEFAULT_DELAY/2)
 
+#define KILOBYTE 1
+#define MEGABYTE 1024
+#define GIGABYTE 1048576
+#define TERABYTE 1073741824
+
 /*{
 #include "ListItem.h"
 
@@ -139,6 +144,35 @@ Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type) {
       Meter_init(this);
    Meter_setMode(this, type->defaultMode);
    return this;
+}
+
+int human_unit(char* buffer, long int value, int * len) {
+	const char * prefix = "kMGT";
+	unsigned long int powi = 1;
+	unsigned int written, powj = 1, precision = 2;
+
+	for(;;) {
+		if (value / 1024 < powi)
+			break;
+
+		if (prefix[1] == 0)
+			break;
+
+		powi *= 1024;
+		++prefix;
+	}
+
+	for (; precision > 0; precision--) {
+		powj *= 10;
+		if (value / powi < powj)
+			break;
+	}
+
+	written = snprintf(buffer, *len, "%.*f%ciB",
+		precision, (double) value / powi, *prefix);
+
+	*len -= written;
+	return written;
 }
 
 void Meter_delete(Object* cast) {
