@@ -85,6 +85,8 @@ typedef enum ColorElements_ {
    BAR_SHADOW,
    GRAPH_1,
    GRAPH_2,
+   GRAPH_3,
+   GRAPH_4,
    MEMORY_USED,
    MEMORY_BUFFERS,
    MEMORY_BUFFERS_TEXT,
