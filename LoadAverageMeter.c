@@ -25,6 +25,12 @@ static void LoadAverageMeter_setValues(Meter* this, char* buffer, int size) {
    snprintf(buffer, size, "%.2f/%.2f/%.2f", this->values[2], this->values[1], this->values[0]);
 }
 
+static void LoadAverageMeter_init(Meter* this) {
+   int cpus = this->pl->cpuCount;
+// Load agerage should be lower than #CPUs 3 <= 1,5,15mins
+   this->total = 3*cpus;
+}
+
 static void LoadAverageMeter_display(Object* cast, RichString* out) {
    Meter* this = (Meter*)cast;
    char buffer[20];
@@ -36,12 +42,19 @@ static void LoadAverageMeter_display(Object* cast, RichString* out) {
    RichString_append(out, CRT_colors[LOAD_AVERAGE_ONE], buffer);
 }
 
+static void LoadMeter_init(Meter* this) {
+   int cpus = this->pl->cpuCount;
+// Load agerage should be lower than #CPUs
+   this->total = cpus;
+}
+
 static void LoadMeter_setValues(Meter* this, char* buffer, int size) {
    double five, fifteen;
    Platform_getLoadAverage(&this->values[0], &five, &fifteen);
-   if (this->values[0] > this->total) {
-      this->total = this->values[0];
-   }
+// no rescale
+//   if (this->values[0] > this->total) {
+//      this->total = this->values[0];
+//   }
    snprintf(buffer, size, "%.2f", this->values[0]);
 }
 
@@ -66,7 +79,8 @@ MeterClass LoadAverageMeter_class = {
    .name = "LoadAverage",
    .uiName = "Load average",
    .description = "Load averages: 15 minutes, 5 minutes, 1 minute",
-   .caption = "Load average: "
+   .caption = "Load average: ",
+   .init = LoadAverageMeter_init
 };
 
 MeterClass LoadMeter_class = {
@@ -82,5 +96,6 @@ MeterClass LoadMeter_class = {
    .name = "Load",
    .uiName = "Load",
    .description = "Load: average of ready processes in the last minute",
-   .caption = "Load: "
+   .caption = "Load: ",
+   .init = LoadMeter_init
 };
