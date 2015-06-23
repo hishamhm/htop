@@ -65,6 +65,7 @@ MeterClass* Platform_meterTypes[] = {
    &CPUMeter_class,
    &ClockMeter_class,
    &LoadAverageMeter_class,
+   &LoadAverage3Meter_class,
    &LoadMeter_class,
    &MemoryMeter_class,
    &SwapMeter_class,
