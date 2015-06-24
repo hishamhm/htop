@@ -177,24 +177,41 @@ void Header_reinit(Header* this) {
    }
 }
 
+/* --- rounding shifts [#cols][corr][col+1]  --- 
+ * bars width corrections
+ */
+static const int HeaderPaddingCorrection[4][4][4] = {
+   {{0}},
+   {{0,0}},                        // one columns
+   {{0,0,0},{0,0,1}},              // two columns
+   {{0,0,0,0},{0,0,1,1},{0,0,1,2}} // three columns
+};
+
+/* Header layout:
+ * --pad--width-- [--ipad--width--]_n --ipad--width--pad--
+ * widht = width + rounding correction
+ */
 void Header_draw(const Header* this) {
    int height = this->height;
-   int pad = this->pad;
+   int pad    = this->pad;
+   int ipad   = 2 * pad;
    attrset(CRT_colors[RESET_COLOR]);
    for (int y = 0; y < height; y++) {
       mvhline(y, 0, ' ', COLS);
    }
-   int width = COLS / this->nrColumns - (pad * this->nrColumns - 1) - 1;
+   int width = (COLS - 2 * pad - (this->nrColumns - 1) * ipad) / this->nrColumns;
+   int corr  =  COLS - 2 * pad - (this->nrColumns - 1) * ipad - this->nrColumns * width;
    int x = pad;
-   
+
    Header_forEachColumn(this, col) {
+      int wcorr = HeaderPaddingCorrection[this->nrColumns][corr][col+1] - HeaderPaddingCorrection[this->nrColumns][corr][col];
       Vector* meters = this->columns[col];
       for (int y = (pad / 2), i = 0; i < Vector_size(meters); i++) {
          Meter* meter = (Meter*) Vector_get(meters, i);
-         meter->draw(meter, x, y, width);
+         meter->draw(meter, x, y, width + wcorr + 1); // +1 <= bar width is w-1 !!!
          y += meter->h;
       }
-      x += width + pad;
+      x += width + ipad;
    }
 }
 
