@@ -4,6 +4,9 @@ htop
 # all object files
 *.o
 
+# all header file, we generate these on the fly
+*.h
+
 *.gcda
 */*.gcda
 *.gcno
