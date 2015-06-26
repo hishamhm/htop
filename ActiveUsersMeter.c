@@ -47,8 +47,18 @@ static void ActiveUsersMeter_setValues(Meter* this, char* buffer, int len) {
 
         /* Fo all ACTIVE processes */
         for( int i=0; i < this->pl->runningTasks; ++i ) {
-            /* Get the i^th process CPU load. */
-            Process* p = ProcessList_get( this->pl, i );
+
+            if( strnlen(buffer, len) == len ) {
+                /* Because if there is no null byte among the first n bytes of src,
+                 * the string strncpy-ied will be non null-terminated. */
+                buffer[len-1] = '\0';
+
+                /* No need to parse more users. */
+                break;
+
+            } else {
+                /* Get the i^th process CPU load. */
+                Process* p = ProcessList_get( this->pl, i );
 
                 /* If the user is not already showed. */
                 if( strstr( buffer, p->user) == NULL) {
@@ -56,6 +66,7 @@ static void ActiveUsersMeter_setValues(Meter* this, char* buffer, int len) {
                     strncpy(prev_users, buffer, len);
                     snprintf( buffer, len, "%s %s", prev_users, p->user );
                 }
+            } // if max length
         } // for i in active processes
 
         free(prev_users);
@@ -65,12 +76,12 @@ static void ActiveUsersMeter_setValues(Meter* this, char* buffer, int len) {
 MeterClass ActiveUsersMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete //,
+      .delete = Meter_delete
    },
-   .setValues = ActiveUsersMeter_setValues, 
+   .setValues = ActiveUsersMeter_setValues,
    .defaultMode = TEXT_METERMODE,
    .total = 100.0,
-   .attributes = ActiveUsersMeter_attributes, 
+   .attributes = ActiveUsersMeter_attributes,
    .name = "Users",
    .uiName = "Active users",
    .caption = "Active users:"
