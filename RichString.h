@@ -65,11 +65,15 @@ typedef struct RichString_ {
 
 #ifdef HAVE_LIBNCURSESW
 
+/*static*/ extern void RichString_writeFrom(RichString* this, int attrs, const char* data_c, int from, int len);
+
 extern void RichString_setAttrn(RichString* this, int attrs, int start, int finish);
 
 int RichString_findChar(RichString* this, char c, int start);
 
 #else
+
+/*static*/ extern void RichString_writeFrom(RichString* this, int attrs, const char* data_c, int from, int len);
 
 void RichString_setAttrn(RichString* this, int attrs, int start, int finish);
 
