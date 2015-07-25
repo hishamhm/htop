@@ -67,7 +67,9 @@ void ListItem_append(ListItem* this, const char* text) {
    int oldLen = strlen(this->value);
    int textLen = strlen(text);
    int newLen = strlen(this->value) + textLen;
-   this->value = realloc(this->value, newLen + 1);
+   const char* tmp_value = (const char*) realloc(this->value, newLen + 1);
+   if (tmp_value != NULL)
+      this->value = tmp_value;
    memcpy(this->value + oldLen, text, textLen);
    this->value[newLen] = '\0';
 }
