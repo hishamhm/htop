@@ -45,8 +45,8 @@ void Affinity_add(Affinity* this, int id) {
    if (this->used == this->size) {
       this->size *= 2;
       int* tmp_cpus = (int*) realloc(this->cpus, sizeof(int) * this->size);
-      if (tmp_cpus != NULL)
-         this->cpus = tmp_cpus;
+      assert(tmp_cpus != NULL);
+      this->cpus = tmp_cpus;
    }
    this->cpus[this->used] = id;
    this->used++;

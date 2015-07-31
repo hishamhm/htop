@@ -53,8 +53,8 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    if (err) cpus = 1;
    pl->cpuCount = MAX(cpus, 1);
    CPUData* tmp_cpus = (CPUData*) realloc(fpl->cpus, cpus * sizeof(CPUData));
-   if (tmp_cpus != NULL)
-      fpl->cpus = tmp_cpus;
+   assert(tmp_cpus != NULL);
+   fpl->cpus = tmp_cpus;
 
    for (int i = 0; i < cpus; i++) {
       fpl->cpus[i].totalTime = 1;

@@ -153,8 +153,8 @@ void ColumnsPanel_update(Panel* super) {
    int size = Panel_size(super);
    this->settings->changed = true;
    ProcessField* tmp_fields = (ProcessField*) realloc(this->settings->fields, sizeof(ProcessField) * (size+1));
-   if (tmp_fields != NULL)
-      this->settings->fields = tmp_fields;
+   assert(tmp_fields != NULL);
+   this->settings->fields = tmp_fields;
    this->settings->flags = 0;
    for (int i = 0; i < size; i++) {
       int key = ((ListItem*) Panel_get(super, i))->key;

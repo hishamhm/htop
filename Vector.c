@@ -180,8 +180,8 @@ static void Vector_checkArraySize(Vector* this) {
       //i = this->arraySize;
       this->arraySize = this->items + this->growthRate;
       Object** tmp_array = (Object**) realloc(this->array, sizeof(Object*) * this->arraySize);
-      if (tmp_array != NULL)
-         this->array = tmp_array;
+      assert(tmp_array != NULL);
+      this->array = tmp_array;
       //for (; i < this->arraySize; i++)
       //   this->array[i] = NULL;
    }
