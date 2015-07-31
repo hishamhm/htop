@@ -23,6 +23,7 @@ in the source distribution for its full text.
 
 #include "Object.h"
 
+#include <assert.h>
 #include <sys/types.h>
 
 #define PROCESS_FLAG_IO 0x0001

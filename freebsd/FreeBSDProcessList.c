@@ -52,7 +52,9 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    int err = sysctlbyname("hw.ncpu", &cpus, &sizeof_cpus, NULL, 0);
    if (err) cpus = 1;
    pl->cpuCount = MAX(cpus, 1);
-   fpl->cpus = realloc(fpl->cpus, cpus * sizeof(CPUData));
+   CPUData* tmp_cpus = (CPUData*) realloc(fpl->cpus, cpus * sizeof(CPUData));
+   assert(tmp_cpus != NULL);
+   fpl->cpus = tmp_cpus;
 
    for (int i = 0; i < cpus; i++) {
       fpl->cpus[i].totalTime = 1;

@@ -76,7 +76,9 @@ static void RichString_extendLen(RichString* this, int len) {
          free(this->chptr);
          this->chptr = this->chstr;
       } else {
-         this->chptr = realloc(this->chptr, charBytes(len+1));
+         CharType* tmp_chptr = (CharType*) realloc(this->chptr, charBytes(len+1));
+         assert(tmp_chptr != NULL);
+         this->chptr = tmp_chptr;
       }
    }
    RichString_setChar(this, len, 0);
