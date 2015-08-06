@@ -281,14 +281,22 @@ static inline void Process_writeCommand(Process* this, int attr, int baseattr, R
       int finish = RichString_size(str) - 1;
       if (this->basenameOffset != -1)
          finish = (start + this->basenameOffset) - 1;
-      int colon = RichString_findChar(str, ':', start);
-      if (colon != -1 && colon < finish) {
-         finish = colon;
+
+      if (Process_isKernelThread(this)) {
+         int slash = RichString_findChar(str, '/', start);
+         if (slash != -1 && slash < finish) {
+            finish = slash;
+         }
       } else {
-         for (int i = finish - start; i >= 0; i--) {
-            if (this->comm[i] == '/') {
-               start += i+1;
-               break;
+         int colon = RichString_findChar(str, ':', start);
+         if (colon != -1 && colon < finish) {
+            finish = colon;
+         } else {
+            for (int i = finish - start; i >= 0; i--) {
+               if (this->comm[i] == '/') {
+                  start += i+1;
+                  break;
+               }
             }
          }
       }
