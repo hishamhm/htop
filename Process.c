@@ -275,24 +275,18 @@ void Process_printTime(RichString* str, unsigned long long totalHundredths) {
 }
 
 static inline void Process_writeCommand(Process* this, int attr, int baseattr, RichString* str) {
+   int basenameLen = this->basenameEnd - this->basenameStart;
    int start = RichString_size(str);
-   RichString_append(str, attr, this->comm);
-   if (this->settings->highlightBaseName) {
-      int finish = RichString_size(str) - 1;
-      if (this->basenameOffset != -1)
-         finish = (start + this->basenameOffset) - 1;
-      int colon = RichString_findChar(str, ':', start);
-      if (colon != -1 && colon < finish) {
-         finish = colon;
-      } else {
-         for (int i = finish - start; i >= 0; i--) {
-            if (this->comm[i] == '/') {
-               start += i+1;
-               break;
-            }
-         }
-      }
-      RichString_setAttrn(str, baseattr, start, finish);
+
+   if (this->settings->hideProgramPath) {
+      RichString_append(str, attr, this->comm + this->basenameStart);
+   } else {
+      start += this->basenameStart;
+      RichString_append(str, attr, this->comm);
+   }
+
+   if (this->settings->highlightBaseName && basenameLen) {
+      RichString_setAttrn(str, baseattr, start, start + basenameLen);
    }
 }
 
@@ -474,7 +468,8 @@ void Process_init(Process* this, struct Settings_* settings) {
    this->showChildren = true;
    this->show = true;
    this->updated = false;
-   this->basenameOffset = -1;
+   this->basenameStart = 0;
+   this->basenameEnd = 0;
    if (Process_getuid == -1) Process_getuid = getuid();
 }
 
