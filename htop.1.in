@@ -236,8 +236,8 @@ plus twenty. Different for real-time processes.
 .TP
 .B NICE (NI)
 The nice value of a process, from 19 (low priority) to -20 (high priority). A
-high value means the process is being nice, letting others have a higher
-relative priority. Only root can lower the value.
+high value means the process is being nice, letting others have more CPU time.
+Limits in limits.conf(5) apply.
 .TP
 .B STARTTIME (START)
 The time the process was started.
