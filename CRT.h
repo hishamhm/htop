@@ -20,6 +20,10 @@ in the source distribution for its full text.
 #define Cyan COLOR_CYAN
 #define White COLOR_WHITE
 
+#define KEY_WHEELUP KEY_F(20)
+#define KEY_WHEELDOWN KEY_F(21)
+#define KEY_RECLICK KEY_F(22)
+
 //#link curses
 
 #include <stdbool.h>
@@ -114,13 +118,17 @@ void CRT_handleSIGSEGV(int sgn);
 
 extern const char *CRT_treeStrAscii[TREE_STR_COUNT];
 
+#ifdef HAVE_LIBNCURSESW
+
 extern const char *CRT_treeStrUtf8[TREE_STR_COUNT];
+
+extern bool CRT_utf8;
+
+#endif
 
 extern const char **CRT_treeStr;
 
 extern int CRT_delay;
-
-extern bool CRT_utf8;
 
 int* CRT_colors;
 
@@ -129,6 +137,8 @@ extern int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT];
 extern int CRT_cursorX;
 
 extern int CRT_scrollHAmount;
+
+extern int CRT_scrollWheelVAmount;
 
 char* CRT_termType;
 

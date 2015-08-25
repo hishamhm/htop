@@ -32,8 +32,8 @@ in the source distribution for its full text.
 #define RichString_size(this) ((this)->chlen)
 #define RichString_sizeVal(this) ((this).chlen)
 
-#define RichString_begin(this) RichString (this); (this).chlen = 0; (this).chptr = (this).chstr;
-#define RichString_beginAllocated(this) (this).chlen = 0; (this).chptr = (this).chstr;
+#define RichString_begin(this) RichString (this); memset(&this, 0, sizeof(RichString)); (this).chptr = (this).chstr;
+#define RichString_beginAllocated(this) memset(&this, 0, sizeof(RichString)); (this).chptr = (this).chstr;
 #define RichString_end(this) RichString_prune(&(this));
 
 #ifdef HAVE_LIBNCURSESW
@@ -79,11 +79,12 @@ static void RichString_extendLen(RichString* this, int len) {
          this->chptr = realloc(this->chptr, charBytes(len+1));
       }
    }
+
    RichString_setChar(this, len, 0);
    this->chlen = len;
 }
 
-#define RichString_setLen(this, len) do{ if(len < RICHSTRING_MAXLEN) { RichString_setChar(this,len,0); this->chlen=len; } else RichString_extendLen(this,len); }while(0)
+#define RichString_setLen(this, len) do{ if(len < RICHSTRING_MAXLEN && this->chlen < RICHSTRING_MAXLEN) { RichString_setChar(this,len,0); this->chlen=len; } else RichString_extendLen(this,len); }while(0)
 
 #ifdef HAVE_LIBNCURSESW
 
@@ -97,7 +98,7 @@ static inline void RichString_writeFrom(RichString* this, int attrs, const char*
    for (int i = from, j = 0; i < newLen; i++, j++) {
       CharType* c = &(this->chptr[i]);
       c->attr = attrs;
-      c->chars[0] = data[j];
+      c->chars[0] = (iswprint(data[j]) ? data[j] : '?');
       c->chars[1] = 0;
    }
    this->chptr[newLen].chars[0] = 0;
@@ -155,9 +156,8 @@ int RichString_findChar(RichString* this, char c, int start) {
 void RichString_prune(RichString* this) {
    if (this->chlen > RICHSTRING_MAXLEN)
       free(this->chptr);
+   memset(this, 0, sizeof(RichString));
    this->chptr = this->chstr;
-   this->chlen = 0;
-   RichString_setChar(this, 0, 0);
 }
 
 void RichString_setAttr(RichString* this, int attrs) {

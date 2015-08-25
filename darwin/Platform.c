@@ -1,5 +1,5 @@
 /*
-htop - unsupported/Platform.c
+htop - darwin/Platform.c
 (C) 2014 Hisham H. Muhammad
 (C) 2015 David C. Hunt
 Released under the GNU GPL, see the COPYING file
@@ -15,11 +15,14 @@ in the source distribution for its full text.
 #include "ClockMeter.h"
 #include "HostnameMeter.h"
 #include "UptimeMeter.h"
+#include "DarwinProcessList.h"
+
+#include <stdlib.h>
 
 /*{
 #include "Action.h"
 #include "BatteryMeter.h"
-#include "UnsupportedProcess.h"
+#include "DarwinProcess.h"
 }*/
 
 ProcessField Platform_defaultFields[] = { PID, USER, PRIORITY, NICE, M_SIZE, M_RESIDENT, STATE, PERCENT_CPU, PERCENT_MEM, TIME, COMM, 0 };
@@ -59,7 +62,6 @@ MeterClass* Platform_meterTypes[] = {
    &LoadAverageMeter_class,
    &LoadMeter_class,
    &MemoryMeter_class,
-   &SwapMeter_class,
    &TasksMeter_class,
    &BatteryMeter_class,
    &HostnameMeter_class,
@@ -82,52 +84,90 @@ int Platform_numberOfFields = 100;
 char* Process_pidFormat = "%7u ";
 
 int Platform_getUptime() {
-   return 0;
+   struct timeval bootTime, currTime;
+   int mib[2] = { CTL_KERN, KERN_BOOTTIME };
+   size_t size = sizeof(bootTime);
+
+   int err = sysctl(mib, 2, &bootTime, &size, NULL, 0);
+   if (err) {
+      return -1;
+   }
+   gettimeofday(&currTime, NULL);
+
+   return (int) difftime(currTime.tv_sec, bootTime.tv_sec);
 }
 
 void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
-   *one = 0;
-   *five = 0;
-   *fifteen = 0;
-}
+   double results[3];
 
-int Platform_getMaxPid() {
-   return 1;
-}
-
-void Process_setupColumnWidths() {
-   int maxPid = Platform_getMaxPid();
-   if (maxPid == -1) return;
-   if (maxPid > 99999) {
-      Process_fields[PID].title =     "    PID ";
-      Process_fields[PPID].title =    "   PPID ";
-      Process_fields[TPGID].title =   "  TPGID ";
-      Process_fields[TGID].title =    "   TGID ";
-      Process_fields[PGRP].title =    "   PGRP ";
-      Process_fields[SESSION].title = "   SESN ";
-      Process_pidFormat = "%7u ";
+   if(3 == getloadavg(results, 3)) {
+      *one = results[0];
+      *five = results[1];
+      *fifteen = results[2];
    } else {
-      Process_fields[PID].title =     "  PID ";
-      Process_fields[PPID].title =    " PPID ";
-      Process_fields[TPGID].title =   "TPGID ";
-      Process_fields[TGID].title =    " TGID ";
-      Process_fields[PGRP].title =    " PGRP ";
-      Process_fields[SESSION].title = " SESN ";
-      Process_pidFormat = "%5u ";
+      *one = 0;
+      *five = 0;
+      *fifteen = 0;
    }
 }
 
-double Platform_setCPUValues(Meter* this, int cpu) {
-	return 0.0;
+int Platform_getMaxPid() {
+   /* http://opensource.apple.com/source/xnu/xnu-2782.1.97/bsd/sys/proc_internal.hh */
+   return 99999;
 }
 
-void Platform_setMemoryValues(Meter* this) {
+ProcessPidColumn Process_pidColumns[] = {
+   { .id = PID, .label = "PID" },
+   { .id = PPID, .label = "PPID" },
+   { .id = TPGID, .label = "TPGID" },
+   { .id = TGID, .label = "TGID" },
+   { .id = PGRP, .label = "PGRP" },
+   { .id = SESSION, .label = "SESN" },
+   { .id = 0, .label = NULL },
+};
+
+double Platform_setCPUValues(Meter* mtr, int cpu) {
+   /* All just from CPUMeter.c */
+   static const int CPU_METER_NICE = 0;
+   static const int CPU_METER_NORMAL = 1;
+   static const int CPU_METER_KERNEL = 2;
+
+   DarwinProcessList *dpl = (DarwinProcessList *)mtr->pl;
+   processor_cpu_load_info_t prev = &dpl->prev_load[cpu-1];
+   processor_cpu_load_info_t curr = &dpl->curr_load[cpu-1];
+   double total = 0;
+
+   /* Take the sums */
+   for(size_t i = 0; i < CPU_STATE_MAX; ++i) {
+      total += (double)curr->cpu_ticks[i] - (double)prev->cpu_ticks[i];
+   }
+
+   mtr->values[CPU_METER_NICE]
+           = ((double)curr->cpu_ticks[CPU_STATE_NICE] - (double)prev->cpu_ticks[CPU_STATE_NICE])* 100.0 / total;
+   mtr->values[CPU_METER_NORMAL]
+           = ((double)curr->cpu_ticks[CPU_STATE_USER] - (double)prev->cpu_ticks[CPU_STATE_USER])* 100.0 / total;
+   mtr->values[CPU_METER_KERNEL]
+           = ((double)curr->cpu_ticks[CPU_STATE_SYSTEM] - (double)prev->cpu_ticks[CPU_STATE_SYSTEM])* 100.0 / total;
+
+   Meter_setItems(mtr, 3);
+
+   /* Convert to percent and return */
+   total = mtr->values[CPU_METER_NICE] + mtr->values[CPU_METER_NORMAL] + mtr->values[CPU_METER_KERNEL];
+
+   return MIN(100.0, MAX(0.0, total));
+}
+
+void Platform_setMemoryValues(Meter* mtr) {
+   DarwinProcessList *dpl = (DarwinProcessList *)mtr->pl;
+   vm_statistics64_t vm = &dpl->vm_stats;
+   double page_K = (double)vm_page_size / (double)1024;
+
+   mtr->total = dpl->host_info.max_mem / 1024;
+   mtr->values[0] = (double)(vm->active_count + vm->wire_count) * page_K;
+   mtr->values[1] = (double)vm->purgeable_count * page_K;
+   mtr->values[2] = (double)vm->inactive_count * page_K;
 }
 
 void Platform_setSwapValues(Meter* this) {
-}
-
-bool Process_isThread(Process* this) {
-   return false;
 }
 

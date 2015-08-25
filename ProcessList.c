@@ -9,7 +9,7 @@ in the source distribution for its full text.
 #include "Platform.h"
 
 #include "CRT.h"
-#include "String.h"
+#include "StringUtils.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -164,7 +164,7 @@ static void ProcessList_buildTree(ProcessList* this, pid_t pid, int level, int i
 
    for (int i = Vector_size(this->processes) - 1; i >= 0; i--) {
       Process* process = (Process*) (Vector_get(this->processes, i));
-      if (process->tgid == pid || (process->tgid == process->pid && process->ppid == pid)) {
+      if (process->show && (process->tgid == pid || (process->tgid == process->pid && process->ppid == pid))) {
          process = (Process*) (Vector_take(this->processes, i));
          Vector_add(children, process);
       }
@@ -273,7 +273,7 @@ void ProcessList_rebuildPanel(ProcessList* this) {
       if ( (!p->show)
          || (this->userId != (uid_t) -1 && (p->st_uid != this->userId))
          || (incFilter && !(String_contains_i(p->comm, incFilter)))
-         || (this->pidWhiteList && !Hashtable_get(this->pidWhiteList, p->pid)) )
+         || (this->pidWhiteList && !Hashtable_get(this->pidWhiteList, p->tgid)) )
          hidden = true;
 
       if (!hidden) {

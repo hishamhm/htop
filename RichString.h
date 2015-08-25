@@ -30,8 +30,8 @@ in the source distribution for its full text.
 #define RichString_size(this) ((this)->chlen)
 #define RichString_sizeVal(this) ((this).chlen)
 
-#define RichString_begin(this) RichString (this); (this).chlen = 0; (this).chptr = (this).chstr;
-#define RichString_beginAllocated(this) (this).chlen = 0; (this).chptr = (this).chstr;
+#define RichString_begin(this) RichString (this); memset(&this, 0, sizeof(RichString)); (this).chptr = (this).chstr;
+#define RichString_beginAllocated(this) memset(&this, 0, sizeof(RichString)); (this).chptr = (this).chstr;
 #define RichString_end(this) RichString_prune(&(this));
 
 #ifdef HAVE_LIBNCURSESW
@@ -61,7 +61,7 @@ typedef struct RichString_ {
 
 #define charBytes(n) (sizeof(CharType) * (n)) 
 
-#define RichString_setLen(this, len) do{ if(len < RICHSTRING_MAXLEN) { RichString_setChar(this,len,0); this->chlen=len; } else RichString_extendLen(this,len); }while(0)
+#define RichString_setLen(this, len) do{ if(len < RICHSTRING_MAXLEN && this->chlen < RICHSTRING_MAXLEN) { RichString_setChar(this,len,0); this->chlen=len; } else RichString_extendLen(this,len); }while(0)
 
 #ifdef HAVE_LIBNCURSESW
 

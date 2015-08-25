@@ -17,7 +17,7 @@ in the source distribution for its full text.
 #include "Process.h"
 #include "ScreenManager.h"
 #include "SignalsPanel.h"
-#include "String.h"
+#include "StringUtils.h"
 #include "TraceScreen.h"
 #include "Platform.h"
 
@@ -209,6 +209,11 @@ static Htop_Reaction actionToggleUserlandThreads(State* st) {
    st->settings->hideUserlandThreads = !st->settings->hideUserlandThreads;
    st->settings->hideThreads = st->settings->hideUserlandThreads;
    return HTOP_RECALCULATE | HTOP_SAVE_SETTINGS;
+}
+
+static Htop_Reaction actionToggleProgramPath(State* st) {
+   st->settings->showProgramPath = !st->settings->showProgramPath;
+   return HTOP_REFRESH | HTOP_SAVE_SETTINGS;
 }
 
 static Htop_Reaction actionToggleTreeView(State* st) {
@@ -501,6 +506,7 @@ void Action_setBindings(Htop_Action* keys) {
    keys['P'] = actionSortByCPU;
    keys['H'] = actionToggleUserlandThreads;
    keys['K'] = actionToggleKernelThreads;
+   keys['p'] = actionToggleProgramPath;
    keys['t'] = actionToggleTreeView;
    keys[KEY_F(5)] = actionToggleTreeView;
    keys[KEY_F(4)] = actionIncFilter;
@@ -525,6 +531,7 @@ void Action_setBindings(Htop_Action* keys) {
    keys['a'] = actionSetAffinity;
    keys[KEY_F(9)] = actionKill;
    keys['x'] = actionKill;
+   keys[KEY_RECLICK] = actionExpandOrCollapse;
    keys['+'] = actionExpandOrCollapse;
    keys['='] = actionExpandOrCollapse;
    keys['-'] = actionExpandOrCollapse;
