@@ -417,14 +417,14 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       int v1 = CLAMP(data->values[i] * pix, 1, pix);
       int v2 = CLAMP(data->values[i+1] * pix, 1, pix);
 
-      int colorIdx = GRAPH_1;
       for (int line = 0; line < GRAPH_HEIGHT; line++) {
+         int colorIdx = line % 2 ? GRAPH_2 : GRAPH_1;
+
          int line1 = CLAMP(v1 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line)), 0, GraphMeterMode_pixPerRow);
          int line2 = CLAMP(v2 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line)), 0, GraphMeterMode_pixPerRow);
 
          attrset(CRT_colors[colorIdx]);
          mvaddstr(y+line, x+k, GraphMeterMode_dots[line1 * (GraphMeterMode_pixPerRow + 1) + line2]);
-         colorIdx = GRAPH_2;
       }
    }
    attrset(CRT_colors[RESET_COLOR]);
