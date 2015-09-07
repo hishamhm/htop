@@ -621,6 +621,7 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
 
 static inline void LinuxProcessList_scanMemoryInfo(ProcessList* this) {
    unsigned long long int swapFree = 0;
+   unsigned long long int slab = 0;
 
    FILE* file = fopen(PROCMEMINFOFILE, "r");
    if (file == NULL) {
@@ -651,10 +652,13 @@ static inline void LinuxProcessList_scanMemoryInfo(ProcessList* this) {
             sscanf(buffer, "SwapTotal: %32llu kB", &this->totalSwap);
          if (String_startsWith(buffer, "SwapFree:"))
             sscanf(buffer, "SwapFree: %32llu kB", &swapFree);
+         if (String_startsWith(buffer, "Slab:"))
+            sscanf(buffer, "Slab: %32llu kB", &slab);
          break;
       }
    }
 
+   this->cachedMem += slab;
    this->usedMem = this->totalMem - this->freeMem;
    this->usedSwap = this->totalSwap - swapFree;
    fclose(file);
