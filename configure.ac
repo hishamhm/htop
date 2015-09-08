@@ -33,6 +33,9 @@ case "$target" in
 *freebsd*)
    my_htop_platform=freebsd
    ;;
+*darwin*)
+   my_htop_platform=darwin
+   ;;
 *)
    my_htop_platform=unsupported
    ;;
@@ -140,9 +143,14 @@ fi
 
 AC_ARG_ENABLE(unicode, [AC_HELP_STRING([--enable-unicode], [enable Unicode support])], ,enable_unicode="yes")
 if test "x$enable_unicode" = xyes; then
-   AC_CHECK_LIB([ncursesw], [refresh], [], [
-      missing_libraries="$missing_libraries libncursesw"
-      AC_MSG_ERROR([You may want to use --disable-unicode or install libncursesw.])
+   AC_CHECK_LIB([ncursesw6], [refresh], [
+      AC_DEFINE(HAVE_LIBNCURSESW, 1, [])
+      LIBS="-lncursesw6 $LIBS "
+   ], [
+      AC_CHECK_LIB([ncursesw], [refresh], [], [
+         missing_libraries="$missing_libraries libncursesw"
+         AC_MSG_ERROR([You may want to use --disable-unicode or install libncursesw.])
+      ])
    ])
    AC_CHECK_HEADERS([ncursesw/curses.h],[:],
       [AC_CHECK_HEADERS([ncurses/ncurses.h],[:],
@@ -203,6 +211,7 @@ AC_DEFINE_UNQUOTED(COPYRIGHT, "(C) 2004-$year Hisham Muhammad", [Copyright messa
 # ----------------------------------------------------------------------
 AM_CONDITIONAL([HTOP_LINUX], [test "$my_htop_platform" = linux])
 AM_CONDITIONAL([HTOP_FREEBSD], [test "$my_htop_platform" = freebsd])
+AM_CONDITIONAL([HTOP_DARWIN], [test "$my_htop_platform" = darwin])
 AM_CONDITIONAL([HTOP_UNSUPPORTED], [test "$my_htop_platform" = unsupported])
 AC_SUBST(my_htop_platform)
 AC_CONFIG_FILES([Makefile htop.1])

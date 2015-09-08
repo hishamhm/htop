@@ -30,12 +30,14 @@ typedef struct Settings_ {
    int colorScheme;
    int delay;
 
+   int cpuCount;
    int direction;
    ProcessField sortKey;
 
    bool countCPUsFromZero;
    bool detailedCPUTime;
    bool treeView;
+   bool showProgramPath;
    bool hideThreads;
    bool shadowOtherUsers;
    bool showThreadNames;

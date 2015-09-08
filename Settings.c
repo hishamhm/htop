@@ -8,7 +8,7 @@ in the source distribution for its full text.
 #include "Settings.h"
 #include "Platform.h"
 
-#include "String.h"
+#include "StringUtils.h"
 #include "Vector.h"
 #include "CRT.h"
 
@@ -39,12 +39,14 @@ typedef struct Settings_ {
    int colorScheme;
    int delay;
 
+   int cpuCount;
    int direction;
    ProcessField sortKey;
 
    bool countCPUsFromZero;
    bool detailedCPUTime;
    bool treeView;
+   bool showProgramPath;
    bool hideThreads;
    bool shadowOtherUsers;
    bool showThreadNames;
@@ -102,9 +104,9 @@ static void Settings_readMeterModes(Settings* this, char* line, int column) {
    this->columns[column].modes = modes;
 }
 
-static void Settings_defaultMeters(Settings* this, int cpuCount) {
+static void Settings_defaultMeters(Settings* this) {
    int sizes[] = { 3, 3 };
-   if (cpuCount > 4) {
+   if (this->cpuCount > 4) {
       sizes[1]++;
    }
    for (int i = 0; i < 2; i++) {
@@ -114,10 +116,10 @@ static void Settings_defaultMeters(Settings* this, int cpuCount) {
    }
    
    int r = 0;
-   if (cpuCount > 8) {
+   if (this->cpuCount > 8) {
       this->columns[0].names[0] = strdup("LeftCPUs2");
       this->columns[1].names[r++] = strdup("RightCPUs2");
-   } else if (cpuCount > 4) {
+   } else if (this->cpuCount > 4) {
       this->columns[0].names[0] = strdup("LeftCPUs");
       this->columns[1].names[r++] = strdup("RightCPUs");
    } else {
@@ -151,7 +153,7 @@ static void readFields(ProcessField* fields, int* flags, const char* line) {
    String_freeArray(ids);
 }
 
-static bool Settings_read(Settings* this, const char* fileName, int cpuCount) {
+static bool Settings_read(Settings* this, const char* fileName) {
    FILE* fd = fopen(fileName, "r");
    if (!fd)
       return false;
@@ -185,6 +187,8 @@ static bool Settings_read(Settings* this, const char* fileName, int cpuCount) {
          this->shadowOtherUsers = atoi(option[1]);
       } else if (String_eq(option[0], "show_thread_names")) {
          this->showThreadNames = atoi(option[1]);
+      } else if (String_eq(option[0], "show_program_path")) {
+         this->showProgramPath = atoi(option[1]);
       } else if (String_eq(option[0], "highlight_base_name")) {
          this->highlightBaseName = atoi(option[1]);
       } else if (String_eq(option[0], "highlight_megabytes")) {
@@ -226,7 +230,7 @@ static bool Settings_read(Settings* this, const char* fileName, int cpuCount) {
    }
    fclose(fd);
    if (!readMeters) {
-      Settings_defaultMeters(this, cpuCount);
+      Settings_defaultMeters(this);
    }
    return true;
 }
@@ -271,6 +275,7 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "hide_userland_threads=%d\n", (int) this->hideUserlandThreads);
    fprintf(fd, "shadow_other_users=%d\n", (int) this->shadowOtherUsers);
    fprintf(fd, "show_thread_names=%d\n", (int) this->showThreadNames);
+   fprintf(fd, "show_program_path=%d\n", (int) this->showProgramPath);
    fprintf(fd, "highlight_base_name=%d\n", (int) this->highlightBaseName);
    fprintf(fd, "highlight_megabytes=%d\n", (int) this->highlightMegabytes);
    fprintf(fd, "highlight_threads=%d\n", (int) this->highlightThreads);
@@ -307,6 +312,8 @@ Settings* Settings_new(int cpuCount) {
    this->detailedCPUTime = false;
    this->countCPUsFromZero = false;
    this->updateProcessNames = false;
+   this->cpuCount = cpuCount;
+   this->showProgramPath = true;
    
    this->fields = calloc(Platform_numberOfFields+1, sizeof(ProcessField));
    // TODO: turn 'fields' into a Vector,
@@ -354,7 +361,7 @@ Settings* Settings_new(int cpuCount) {
    this->colorScheme = 0;
    this->changed = false;
    this->delay = DEFAULT_DELAY;
-   bool ok = Settings_read(this, legacyDotfile ? legacyDotfile : this->filename, cpuCount);
+   bool ok = Settings_read(this, legacyDotfile ? legacyDotfile : this->filename);
    if (ok) {
       if (legacyDotfile) {
          // Transition to new location and delete old configuration file
@@ -365,10 +372,10 @@ Settings* Settings_new(int cpuCount) {
       this->changed = true;
       // TODO: how to get SYSCONFDIR correctly through Autoconf?
       char* systemSettings = String_cat(SYSCONFDIR, "/htoprc");
-      ok = Settings_read(this, systemSettings, cpuCount);
+      ok = Settings_read(this, systemSettings);
       free(systemSettings);
       if (!ok) {
-         Settings_defaultMeters(this, cpuCount);
+         Settings_defaultMeters(this);
          this->hideKernelThreads = true;
          this->highlightMegabytes = true;
          this->highlightThreads = false;

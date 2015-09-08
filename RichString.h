@@ -27,18 +27,22 @@ in the source distribution for its full text.
 #include <curses.h>
 #endif
 
+#ifdef HAVE_LIBNCURSESW
+#include <wctype.h>
+#endif
+
 #define RichString_size(this) ((this)->chlen)
 #define RichString_sizeVal(this) ((this).chlen)
 
-#define RichString_begin(this) RichString (this); (this).chlen = 0; (this).chptr = (this).chstr;
-#define RichString_beginAllocated(this) (this).chlen = 0; (this).chptr = (this).chstr;
+#define RichString_begin(this) RichString (this); memset(&this, 0, sizeof(RichString)); (this).chptr = (this).chstr;
+#define RichString_beginAllocated(this) memset(&this, 0, sizeof(RichString)); (this).chptr = (this).chstr;
 #define RichString_end(this) RichString_prune(&(this));
 
 #ifdef HAVE_LIBNCURSESW
 #define RichString_printVal(this, y, x) mvadd_wchstr(y, x, (this).chptr)
 #define RichString_printoffnVal(this, y, x, off, n) mvadd_wchnstr(y, x, (this).chptr + off, n)
 #define RichString_getCharVal(this, i) ((this).chptr[i].chars[0] & 255)
-#define RichString_setChar(this, at, ch) do{ (this)->chptr[(at)].chars[0] = ch; } while(0)
+#define RichString_setChar(this, at, ch) do{ (this)->chptr[(at)] = (CharType) { .chars = { ch, 0 } }; } while(0)
 #define CharType cchar_t
 #else
 #define RichString_printVal(this, y, x) mvaddchstr(y, x, (this).chptr)
@@ -61,7 +65,7 @@ typedef struct RichString_ {
 
 #define charBytes(n) (sizeof(CharType) * (n)) 
 
-#define RichString_setLen(this, len) do{ if(len < RICHSTRING_MAXLEN) { RichString_setChar(this,len,0); this->chlen=len; } else RichString_extendLen(this,len); }while(0)
+#define RichString_setLen(this, len) do{ if(len < RICHSTRING_MAXLEN && this->chlen < RICHSTRING_MAXLEN) { RichString_setChar(this,len,0); this->chlen=len; } else RichString_extendLen(this,len); }while(0)
 
 #ifdef HAVE_LIBNCURSESW
 

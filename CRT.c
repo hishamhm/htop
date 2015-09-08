@@ -7,7 +7,7 @@ in the source distribution for its full text.
 
 #include "CRT.h"
 
-#include "String.h"
+#include "StringUtils.h"
 #include "RichString.h"
 
 #include <stdio.h>
@@ -16,6 +16,7 @@ in the source distribution for its full text.
 #include <stdlib.h>
 #include <string.h>
 #include <locale.h>
+#include <langinfo.h>
 
 #define ColorPair(i,j) COLOR_PAIR((7-i)*8+j)
 
@@ -27,6 +28,10 @@ in the source distribution for its full text.
 #define Magenta COLOR_MAGENTA
 #define Cyan COLOR_CYAN
 #define White COLOR_WHITE
+
+#define KEY_WHEELUP KEY_F(20)
+#define KEY_WHEELDOWN KEY_F(21)
+#define KEY_RECLICK KEY_F(22)
 
 //#link curses
 
@@ -135,6 +140,8 @@ const char *CRT_treeStrAscii[TREE_STR_COUNT] = {
    "-", // TREE_STR_SHUT
 };
 
+#ifdef HAVE_LIBNCURSESW
+
 const char *CRT_treeStrUtf8[TREE_STR_COUNT] = {
    "\xe2\x94\x80", // TREE_STR_HORZ ─
    "\xe2\x94\x82", // TREE_STR_VERT │
@@ -145,13 +152,15 @@ const char *CRT_treeStrUtf8[TREE_STR_COUNT] = {
    "\xe2\x94\x80", // TREE_STR_SHUT ─
 };
 
+bool CRT_utf8 = false;
+
+#endif
+
 const char **CRT_treeStr = CRT_treeStrAscii;
 
 static bool CRT_hasColors;
 
 int CRT_delay = 0;
-
-bool CRT_utf8 = false;
 
 int* CRT_colors;
 
@@ -183,7 +192,7 @@ int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
       [PROCESS_R_STATE] = ColorPair(Green,Black),
       [PROCESS_D_STATE] = A_BOLD | ColorPair(Red,Black),
       [PROCESS_HIGH_PRIORITY] = ColorPair(Red,Black),
-      [PROCESS_LOW_PRIORITY] = ColorPair(Red,Black),
+      [PROCESS_LOW_PRIORITY] = ColorPair(Green,Black),
       [PROCESS_THREAD] = ColorPair(Green,Black),
       [PROCESS_THREAD_BASENAME] = A_BOLD | ColorPair(Green,Black),
       [BAR_BORDER] = A_BOLD,
@@ -307,7 +316,7 @@ int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
       [PROCESS_R_STATE] = ColorPair(Green,White),
       [PROCESS_D_STATE] = A_BOLD | ColorPair(Red,White),
       [PROCESS_HIGH_PRIORITY] = ColorPair(Red,White),
-      [PROCESS_LOW_PRIORITY] = ColorPair(Red,White),
+      [PROCESS_LOW_PRIORITY] = ColorPair(Green,White),
       [PROCESS_THREAD] = ColorPair(Blue,White),
       [PROCESS_THREAD_BASENAME] = A_BOLD | ColorPair(Blue,White),
       [BAR_BORDER] = ColorPair(Blue,White),
@@ -369,7 +378,7 @@ int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
       [PROCESS_R_STATE] = ColorPair(Green,Black),
       [PROCESS_D_STATE] = A_BOLD | ColorPair(Red,Black),
       [PROCESS_HIGH_PRIORITY] = ColorPair(Red,Black),
-      [PROCESS_LOW_PRIORITY] = ColorPair(Red,Black),
+      [PROCESS_LOW_PRIORITY] = ColorPair(Green,Black),
       [PROCESS_THREAD] = ColorPair(Blue,Black),
       [PROCESS_THREAD_BASENAME] = A_BOLD | ColorPair(Blue,Black),
       [BAR_BORDER] = ColorPair(Blue,Black),
@@ -431,7 +440,7 @@ int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
       [PROCESS_R_STATE] = ColorPair(Green,Blue),
       [PROCESS_D_STATE] = A_BOLD | ColorPair(Red,Blue),
       [PROCESS_HIGH_PRIORITY] = ColorPair(Red,Blue),
-      [PROCESS_LOW_PRIORITY] = ColorPair(Red,Blue),
+      [PROCESS_LOW_PRIORITY] = ColorPair(Green,Blue),
       [PROCESS_THREAD] = ColorPair(Green,Blue),
       [PROCESS_THREAD_BASENAME] = A_BOLD | ColorPair(Green,Blue),
       [BAR_BORDER] = A_BOLD | ColorPair(Yellow,Blue),
@@ -495,7 +504,7 @@ int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
       [PROCESS_R_STATE] = ColorPair(Green,Black),
       [PROCESS_D_STATE] = A_BOLD | ColorPair(Red,Black),
       [PROCESS_HIGH_PRIORITY] = ColorPair(Red,Black),
-      [PROCESS_LOW_PRIORITY] = ColorPair(Red,Black),
+      [PROCESS_LOW_PRIORITY] = ColorPair(Green,Black),
       [BAR_BORDER] = A_BOLD | ColorPair(Green,Black),
       [BAR_SHADOW] = ColorPair(Cyan,Black),
       [SWAP] = ColorPair(Red,Black),
@@ -535,6 +544,8 @@ int CRT_cursorX = 0;
 
 int CRT_scrollHAmount = 5;
 
+int CRT_scrollWheelVAmount = 10;
+
 char* CRT_termType;
 
 // TODO move color scheme to Settings, perhaps?
@@ -570,6 +581,7 @@ void CRT_init(int delay, int colorScheme) {
    nonl();
    intrflush(stdscr, false);
    keypad(stdscr, true);
+   mouseinterval(0);
    curs_set(0);
    if (has_colors()) {
       start_color();
@@ -606,23 +618,27 @@ void CRT_init(int delay, int colorScheme) {
       CRT_colorScheme = 1;
    CRT_setColors(CRT_colorScheme);
 
+   /* initialize locale */
+   setlocale(LC_CTYPE, "");
+
 #ifdef HAVE_LIBNCURSESW
-   char *locale = setlocale(LC_ALL, NULL);
-   if (locale == NULL || locale[0] == '\0')
-      locale = setlocale(LC_CTYPE, NULL);
-   if (locale != NULL &&
-       (strstr(locale, "UTF-8") ||
-        strstr(locale, "utf-8") ||
-        strstr(locale, "UTF8")  ||
-        strstr(locale, "utf8")))
+   if(strcmp(nl_langinfo(CODESET), "UTF-8") == 0)
       CRT_utf8 = true;
    else
       CRT_utf8 = false;
 #endif
 
-   CRT_treeStr = CRT_utf8 ? CRT_treeStrUtf8 : CRT_treeStrAscii;
+   CRT_treeStr =
+#ifdef HAVE_LIBNCURSESW
+	   CRT_utf8 ? CRT_treeStrUtf8 :
+#endif
+	   CRT_treeStrAscii;
 
-   mousemask(BUTTON1_CLICKED, NULL);
+#if NCURSES_MOUSE_VERSION > 1
+   mousemask(BUTTON1_RELEASED | BUTTON4_PRESSED | BUTTON5_PRESSED, NULL);
+#else
+   mousemask(BUTTON1_RELEASED, NULL);
+#endif
 }
 
 void CRT_done() {

@@ -1,50 +1,31 @@
 /*
-htop - FreeBSDProcess.c
-(C) 2015 Hisham H. Muhammad
+htop - darwin/Platform.c
+(C) 2014 Hisham H. Muhammad
+(C) 2015 David C. Hunt
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
-#include "Process.h"
-#include "ProcessList.h"
-#include "FreeBSDProcess.h"
 #include "Platform.h"
-#include "CRT.h"
+#include "CPUMeter.h"
+#include "MemoryMeter.h"
+#include "SwapMeter.h"
+#include "TasksMeter.h"
+#include "LoadAverageMeter.h"
+#include "ClockMeter.h"
+#include "HostnameMeter.h"
+#include "UptimeMeter.h"
+#include "DarwinProcessList.h"
 
 #include <stdlib.h>
-#include <unistd.h>
-#include <sys/syscall.h>
 
 /*{
-
-typedef enum FreeBSDProcessFields {
-   // Add platform-specific fields here, with ids >= 100
-   LAST_PROCESSFIELD = 100,
-} FreeBSDProcessField;
-
-typedef struct FreeBSDProcess_ {
-   Process super;
-} FreeBSDProcess;
-
-#ifndef Process_isKernelThread
-#define Process_isKernelThread(_process) (_process->pgrp == 0)
-#endif
-
-#ifndef Process_isUserlandThread
-#define Process_isUserlandThread(_process) (_process->pid != _process->tgid)
-#endif
-
+#include "Action.h"
+#include "BatteryMeter.h"
+#include "DarwinProcess.h"
 }*/
 
-ProcessClass FreeBSDProcess_class = {
-   .super = {
-      .extends = Class(Process),
-      .display = Process_display,
-      .delete = Process_delete,
-      .compare = FreeBSDProcess_compare
-   },
-   .writeField = (Process_WriteField) FreeBSDProcess_writeField,
-};
+ProcessField Platform_defaultFields[] = { PID, USER, PRIORITY, NICE, M_SIZE, M_RESIDENT, STATE, PERCENT_CPU, PERCENT_MEM, TIME, COMM, 0 };
 
 ProcessFieldData Process_fields[] = {
    [0] = { .name = "", .title = NULL, .description = NULL, .flags = 0, },
@@ -72,8 +53,68 @@ ProcessFieldData Process_fields[] = {
    [TIME] = { .name = "TIME", .title = "  TIME+  ", .description = "Total time the process has spent in user and system time", .flags = 0, },
    [NLWP] = { .name = "NLWP", .title = "NLWP ", .description = "Number of threads in the process", .flags = 0, },
    [TGID] = { .name = "TGID", .title = "   TGID ", .description = "Thread group ID (i.e. process ID)", .flags = 0, },
-   [LAST_PROCESSFIELD] = { .name = "*** report bug! ***", .title = NULL, .description = NULL, .flags = 0, },
+   [100] = { .name = "*** report bug! ***", .title = NULL, .description = NULL, .flags = 0, },
 };
+
+MeterClass* Platform_meterTypes[] = {
+   &CPUMeter_class,
+   &ClockMeter_class,
+   &LoadAverageMeter_class,
+   &LoadMeter_class,
+   &MemoryMeter_class,
+   &TasksMeter_class,
+   &BatteryMeter_class,
+   &HostnameMeter_class,
+   &UptimeMeter_class,
+   &AllCPUsMeter_class,
+   &AllCPUs2Meter_class,
+   &LeftCPUsMeter_class,
+   &RightCPUsMeter_class,
+   &LeftCPUs2Meter_class,
+   &RightCPUs2Meter_class,
+   &BlankMeter_class,
+   NULL
+};
+
+void Platform_setBindings(Htop_Action* keys) {
+   (void) keys;
+}
+
+int Platform_numberOfFields = 100;
+char* Process_pidFormat = "%7u ";
+
+int Platform_getUptime() {
+   struct timeval bootTime, currTime;
+   int mib[2] = { CTL_KERN, KERN_BOOTTIME };
+   size_t size = sizeof(bootTime);
+
+   int err = sysctl(mib, 2, &bootTime, &size, NULL, 0);
+   if (err) {
+      return -1;
+   }
+   gettimeofday(&currTime, NULL);
+
+   return (int) difftime(currTime.tv_sec, bootTime.tv_sec);
+}
+
+void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
+   double results[3];
+
+   if(3 == getloadavg(results, 3)) {
+      *one = results[0];
+      *five = results[1];
+      *fifteen = results[2];
+   } else {
+      *one = 0;
+      *five = 0;
+      *fifteen = 0;
+   }
+}
+
+int Platform_getMaxPid() {
+   /* http://opensource.apple.com/source/xnu/xnu-2782.1.97/bsd/sys/proc_internal.hh */
+   return 99999;
+}
 
 ProcessPidColumn Process_pidColumns[] = {
    { .id = PID, .label = "PID" },
@@ -85,50 +126,48 @@ ProcessPidColumn Process_pidColumns[] = {
    { .id = 0, .label = NULL },
 };
 
-FreeBSDProcess* FreeBSDProcess_new(Settings* settings) {
-   FreeBSDProcess* this = calloc(1, sizeof(FreeBSDProcess));
-   Object_setClass(this, Class(FreeBSDProcess));
-   Process_init(&this->super, settings);
-   return this;
-}
+double Platform_setCPUValues(Meter* mtr, int cpu) {
+   /* All just from CPUMeter.c */
+   static const int CPU_METER_NICE = 0;
+   static const int CPU_METER_NORMAL = 1;
+   static const int CPU_METER_KERNEL = 2;
 
-void Process_delete(Object* cast) {
-   FreeBSDProcess* this = (FreeBSDProcess*) cast;
-   Process_done((Process*)cast);
-   free(this);
-}
+   DarwinProcessList *dpl = (DarwinProcessList *)mtr->pl;
+   processor_cpu_load_info_t prev = &dpl->prev_load[cpu-1];
+   processor_cpu_load_info_t curr = &dpl->curr_load[cpu-1];
+   double total = 0;
 
-void FreeBSDProcess_writeField(Process* this, RichString* str, ProcessField field) {
-   //FreeBSDProcess* fp = (FreeBSDProcess*) this;
-   char buffer[256]; buffer[255] = '\0';
-   int attr = CRT_colors[DEFAULT_COLOR];
-   //int n = sizeof(buffer) - 1;
-   switch (field) {
-   // add FreeBSD-specific fields here
-   default:
-      Process_writeField(this, str, field);
-      return;
+   /* Take the sums */
+   for(size_t i = 0; i < CPU_STATE_MAX; ++i) {
+      total += (double)curr->cpu_ticks[i] - (double)prev->cpu_ticks[i];
    }
-   RichString_append(str, attr, buffer);
+
+   mtr->values[CPU_METER_NICE]
+           = ((double)curr->cpu_ticks[CPU_STATE_NICE] - (double)prev->cpu_ticks[CPU_STATE_NICE])* 100.0 / total;
+   mtr->values[CPU_METER_NORMAL]
+           = ((double)curr->cpu_ticks[CPU_STATE_USER] - (double)prev->cpu_ticks[CPU_STATE_USER])* 100.0 / total;
+   mtr->values[CPU_METER_KERNEL]
+           = ((double)curr->cpu_ticks[CPU_STATE_SYSTEM] - (double)prev->cpu_ticks[CPU_STATE_SYSTEM])* 100.0 / total;
+
+   Meter_setItems(mtr, 3);
+
+   /* Convert to percent and return */
+   total = mtr->values[CPU_METER_NICE] + mtr->values[CPU_METER_NORMAL] + mtr->values[CPU_METER_KERNEL];
+
+   return MIN(100.0, MAX(0.0, total));
 }
 
-long FreeBSDProcess_compare(const void* v1, const void* v2) {
-   FreeBSDProcess *p1, *p2;
-   Settings *settings = ((Process*)v1)->settings;
-   if (settings->direction == 1) {
-      p1 = (FreeBSDProcess*)v1;
-      p2 = (FreeBSDProcess*)v2;
-   } else {
-      p2 = (FreeBSDProcess*)v1;
-      p1 = (FreeBSDProcess*)v2;
-   }
-   switch (settings->sortKey) {
-   // add FreeBSD-specific fields here
-   default:
-      return Process_compare(v1, v2);
-   }
+void Platform_setMemoryValues(Meter* mtr) {
+   DarwinProcessList *dpl = (DarwinProcessList *)mtr->pl;
+   vm_statistics64_t vm = &dpl->vm_stats;
+   double page_K = (double)vm_page_size / (double)1024;
+
+   mtr->total = dpl->host_info.max_mem / 1024;
+   mtr->values[0] = (double)(vm->active_count + vm->wire_count) * page_K;
+   mtr->values[1] = (double)vm->purgeable_count * page_K;
+   mtr->values[2] = (double)vm->inactive_count * page_K;
 }
 
-bool Process_isThread(Process* this) {
-   return (Process_isKernelThread(this));
+void Platform_setSwapValues(Meter* this) {
 }
+

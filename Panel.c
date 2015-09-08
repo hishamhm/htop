@@ -10,7 +10,7 @@ in the source distribution for its full text.
 #include "CRT.h"
 #include "RichString.h"
 #include "ListItem.h"
-#include "String.h"
+#include "StringUtils.h"
 
 #include <math.h>
 #include <stdbool.h>
@@ -254,7 +254,10 @@ int Panel_size(Panel* this) {
 void Panel_setSelected(Panel* this, int selected) {
    assert (this != NULL);
 
-   selected = MIN(Vector_size(this->items) - 1, selected);
+   int size = Vector_size(this->items);
+   if (selected >= size) {
+      return;
+   }
    if (selected < 0)
       selected = 0;
    this->selected = selected;
@@ -412,6 +415,21 @@ bool Panel_onKey(Panel* this, int key) {
       this->scrollV += (this->h - 1);
       this->needsRedraw = true;
       break;
+   case KEY_WHEELUP:
+      this->selected -= CRT_scrollWheelVAmount;
+      this->scrollV -= CRT_scrollWheelVAmount;
+      this->needsRedraw = true;
+      break;
+   case KEY_WHEELDOWN:
+   {
+      this->selected += CRT_scrollWheelVAmount;
+      this->scrollV += CRT_scrollWheelVAmount;
+      if (this->scrollV > Vector_size(this->items) - this->h) {
+         this->scrollV = Vector_size(this->items) - this->h;
+      }
+      this->needsRedraw = true;
+      break;
+   }
    case KEY_HOME:
       this->selected = 0;
       break;
@@ -437,7 +455,7 @@ bool Panel_onKey(Panel* this, int key) {
 HandlerResult Panel_selectByTyping(Panel* this, int ch) {
    int size = Panel_size(this);
    if (!this->eventHandlerState)
-      this->eventHandlerState = calloc(100, 1);
+      this->eventHandlerState = calloc(100, sizeof(char));
    char* buffer = this->eventHandlerState;
 
    if (ch < 255 && isalnum(ch)) {

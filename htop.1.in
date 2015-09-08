@@ -151,6 +151,9 @@ Hide user threads: on systems that represent them differently than ordinary
 processes (such as recent NPTL-based systems), this can hide threads from
 userspace processes in the process list. (This is a toggle key.)
 .TP
+.B p
+Show full paths to running programs, where applicable. (This is a toggle key.)
+.TP
 .B Ctrl-L
 Refresh: redraw screen and recalculate values.
 .TP
@@ -234,7 +237,7 @@ plus twenty. Different for real-time processes.
 .B NICE (NI)
 The nice value of a process, from 19 (low priority) to -20 (high priority). A
 high value means the process is being nice, letting others have a higher
-relative priority. Only root can lower the value.
+relative priority. The usual OS permission restrictions for adjusting priority apply.
 .TP
 .B STARTTIME (START)
 The time the process was started.
@@ -353,8 +356,17 @@ You may override the location of the configuration file using the $HTOPRC
 environment variable (so you can have multiple configurations for different
 machines that share the same home directory, for example).
 
+.SH "MEMORY SIZES"
+.LP
+Memory sizes in htop are displayed as they are in tools from the GNU Coreutils
+(when ran with the --human-readable option). This means that sizes are printed
+in powers of 1024. (e.g., 1023M = 1072693248 Bytes)
+.LP
+The decision to use this convention was made in order to conserve screen space
+and make memory size representations consistent throughout htop.
+
 .SH "SEE ALSO"
-proc(5), top(1), free(1), ps(1), uptime(1)
+proc(5), top(1), free(1), ps(1), uptime(1), limits.conf(5)
 
 .SH "AUTHORS"
 .LP 

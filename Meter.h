@@ -107,6 +107,8 @@ extern MeterClass Meter_class;
 
 Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type);
 
+int Meter_humanUnit(char* buffer, unsigned long int value, int size);
+
 void Meter_delete(Object* cast);
 
 void Meter_setCaption(Meter* this, const char* caption);
@@ -121,7 +123,18 @@ ListItem* Meter_toListItem(Meter* this, bool moving);
 
 /* ---------- GraphMeterMode ---------- */
 
+#ifdef HAVE_LIBNCURSESW
+
+#define PIXPERROW_UTF8 4
+#endif
+
+#define PIXPERROW_ASCII 2
+
 /* ---------- LEDMeterMode ---------- */
+
+#ifdef HAVE_LIBNCURSESW
+
+#endif
 
 extern MeterMode* Meter_modes[];
 
