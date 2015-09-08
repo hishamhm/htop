@@ -63,14 +63,43 @@ int ActiveUsersMeter_attributes[] = {
  * Private functions
  **********************************************************************/
 
+/* Is the given user in the given char buffer?
+ * Return true only for strict matching of the whole user name.
+ * Rely on the fact that users are space-separated in the buffer. */ // TODO use a constant char instead of space
+static int name_in( const char* user, const char* buffer, int bufferlen ) {
+    assert(user != NULL);
+    if( buffer == NULL ) { return false; }
+
+    /* The user name is always prefixed by a space in the users buffer. */
+    char* name = malloc(sizeof(char)*bufferlen);
+    snprintf( name, bufferlen, " %s", user );
+
+    size_t namelen = strlen( name ); // FIXME use strnlen
+
+    char* pos = strstr(buffer, name);
+
+    if( pos == NULL ) {
+        /* Not even a " user*" match. */
+        return false;
+    } else {
+        /* Avoid " usersmthg" matches by checking for an end char.
+         * Thus only " user " or " user\0" will match. */
+        if( *(pos+namelen) == ' ' || *(pos+namelen) == '\0' ) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+
 
 /* Is the given user in one of the data buffers? */
-static int user_in( const char* user, char** strings, int maxItems ) {
+static int user_in( const char* user, char** strings, int maxItems, int bufferlen ) {
     assert(user != NULL);
     for( int i = 0; i < maxItems; ++i ) {
         /* if there is no string already existing, just skip.
          * If the user is found in a existing string, then it's a match. */
-        if(strings[i] != NULL && strstr( strings[i], user ) != NULL ) {
+        if(strings[i] != NULL && name_in( user, strings[i], bufferlen ) ) {
             return true;
         }
     }
@@ -84,19 +113,6 @@ static int user_in( const char* user, char** strings, int maxItems ) {
  * only the higher one, if this function is called in descending order)
  * and print those ones in the buffer. */
 static void active_users(struct ProcessList_* pl, const int min_cpu, const int max_cpu, char** strings, int maxItems, char* buffer, int len) {
-
-    /* Save settings. */
-    const int sortKey = pl->settings->sortKey;
-    const int direction = pl->settings->direction;
-
-    /* Sort by CPU%. */
-    pl->settings->sortKey = PERCENT_CPU;
-    pl->settings->direction = 1;
-    ProcessList_sort(pl);
-
-    /* Restore settings. */
-    pl->settings->sortKey = sortKey;
-    pl->settings->direction = direction;
 
     /* If no active process were to be found. */
     snprintf( buffer, len, "%s", "" );
@@ -113,17 +129,7 @@ static void active_users(struct ProcessList_* pl, const int min_cpu, const int m
             Process* p = ProcessList_get( pl, i );
             const float p_cpu = p->percent_cpu;
 
-            if( p_cpu > max_cpu ) {
-                /* Just skip higher values. */
-                continue;
-
-            } else if( p_cpu <= min_cpu ) {
-                /* Process list is sorted on CPU, if we go beyond the min,
-                 * there is no need to continue. */
-                break;
-
-            } else { /* min_cpu < p_cpu <= max_cpu */
-
+            if( min_cpu < p_cpu && p_cpu <= max_cpu ) {
                 // if( strnlen(buffer, len) == len ) { // FIXME unknown function? WTF
                 if( strlen(buffer) == (size_t)len ) {
                     /* Because if there is no null byte among the first n bytes of src,
@@ -136,10 +142,10 @@ static void active_users(struct ProcessList_* pl, const int min_cpu, const int m
                 } else {
 
                     /* If the user is not already showed,
-                     * either in the currently built buffer
-                     * or in the other buffers. */
-                    if( !user_in(p->user, strings, maxItems) && strstr( buffer, p->user) == NULL ) {
-                        /* Add him/her to the list */
+                     * either in the buffers held by "strings"
+                     * or in the currently built buffer (which may not be an item of "strings"). */
+                    if( !user_in(p->user, strings, maxItems, len) && !name_in(p->user, buffer, len) ) {
+                        /* Add him/her to the list. */
                         strncpy(prev_users, buffer, len);
                         snprintf( buffer, len, "%s %s", prev_users, p->user );
                     }
