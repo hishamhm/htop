@@ -70,6 +70,7 @@ struct Meter_ {
    int h;
    struct ProcessList_* pl;
    double* values;
+   char** strings;
    double total;
 };
 
@@ -91,6 +92,7 @@ typedef enum {
 typedef struct GraphData_ {
    struct timeval time;
    double values[METER_BUFFER_LEN];
+   char* strings[METER_BUFFER_LEN];
 } GraphData;
 
 
