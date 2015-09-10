@@ -159,9 +159,9 @@ static bool CRT_hasColors;
 
 int CRT_delay = 0;
 
-int* CRT_colors;
+unsigned int *CRT_colors;
 
-int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
+unsigned int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT] = {
    [COLORSCHEME_DEFAULT] = {
       [RESET_COLOR] = ColorPair(White,Black),
       [DEFAULT_COLOR] = ColorPair(White,Black),
