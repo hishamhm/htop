@@ -11,18 +11,22 @@ in the source distribution for its full text.
 */
 
 #include "Action.h"
+#include "MainPanel.h"
 #include "BatteryMeter.h"
 #include "DarwinProcess.h"
+#include "SignalsPanel.h"
 
 extern ProcessField Platform_defaultFields[];
 
-extern ProcessFieldData Process_fields[];
+extern int Platform_numberOfFields;
 
-extern MeterClass* Platform_meterTypes[];
+extern SignalItem Platform_signals[];
+
+extern unsigned int Platform_numberOfSignals;
 
 void Platform_setBindings(Htop_Action* keys);
 
-extern int Platform_numberOfFields;
+extern MeterClass* Platform_meterTypes[];
 
 int Platform_getUptime();
 
@@ -30,11 +34,10 @@ void Platform_getLoadAverage(double* one, double* five, double* fifteen);
 
 int Platform_getMaxPid();
 
-double Platform_setCPUValues(Meter* mtr, int cpu);
+double Platform_setCPUValues(Meter* this, int cpu);
 
-void Platform_setMemoryValues(Meter* mtr);
+void Platform_setMemoryValues(Meter* this);
 
 void Platform_setSwapValues(Meter* this);
-
 
 #endif
