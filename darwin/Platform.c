@@ -226,5 +226,6 @@ void Platform_setMemoryValues(Meter* mtr) {
 }
 
 void Platform_setSwapValues(Meter* this) {
+   (void) this;
 }
 
