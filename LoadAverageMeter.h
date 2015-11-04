@@ -17,6 +17,10 @@ extern int LoadMeter_attributes[];
 
 extern MeterClass LoadAverageMeter_class;
 
+extern MeterClass LoadAverage3Meter_class;
+
+extern MeterClass LoadAverage1Meter_class;
+
 extern MeterClass LoadMeter_class;
 
 #endif
