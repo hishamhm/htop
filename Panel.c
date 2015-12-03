@@ -377,10 +377,12 @@ bool Panel_onKey(Panel* this, int key) {
    switch (key) {
    case KEY_DOWN:
    case KEY_CTRLN:
+   case 'j':
       this->selected++;
       break;
    case KEY_UP:
    case KEY_CTRLP:
+   case 'k':
       this->selected--;
       break;
    #ifdef KEY_C_DOWN
@@ -431,9 +433,11 @@ bool Panel_onKey(Panel* this, int key) {
       break;
    }
    case KEY_HOME:
+   case 'g':
       this->selected = 0;
       break;
    case KEY_END:
+   case 'G':
       this->selected = size - 1;
       break;
    default:

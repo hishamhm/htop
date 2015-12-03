@@ -97,5 +97,6 @@ DisplayOptionsPanel* DisplayOptionsPanel_new(Settings* settings, ScreenManager* 
    Panel_add(super, (Object*) CheckItem_newByRef(strdup("Count CPUs from 0 instead of 1"), &(settings->countCPUsFromZero)));
    Panel_add(super, (Object*) CheckItem_newByRef(strdup("Update process names on every refresh"), &(settings->updateProcessNames)));
    Panel_add(super, (Object*) CheckItem_newByRef(strdup("Add guest time in CPU meter percentage"), &(settings->accountGuestInCPUMeter)));
+   Panel_add(super, (Object*) CheckItem_newByRef(strdup("Use VI keys (j/k/g/G) to move cursor"), &(settings->viKeys)));
    return this;
 }

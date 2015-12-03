@@ -23,7 +23,7 @@ extern SignalItem Platform_signals[];
 
 extern unsigned int Platform_numberOfSignals;
 
-void Platform_setBindings(Htop_Action* keys);
+void Platform_setBindings(Htop_Action* keys, Settings* settings);
 
 extern MeterClass* Platform_meterTypes[];
 

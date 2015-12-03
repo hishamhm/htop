@@ -58,6 +58,7 @@ typedef struct Settings_ {
    bool updateProcessNames;
    bool accountGuestInCPUMeter;
    bool headerMargin;
+   bool viKeys;
 
    bool changed;
 } Settings;
@@ -197,6 +198,8 @@ static bool Settings_read(Settings* this, const char* fileName) {
          this->highlightThreads = atoi(option[1]);
       } else if (String_eq(option[0], "header_margin")) {
          this->headerMargin = atoi(option[1]);
+      } else if (String_eq(option[0], "vi_keys")) {
+         this->viKeys = atoi(option[1]);
       } else if (String_eq(option[0], "expand_system_time")) {
          // Compatibility option.
          this->detailedCPUTime = atoi(option[1]);
@@ -281,6 +284,7 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "highlight_threads=%d\n", (int) this->highlightThreads);
    fprintf(fd, "tree_view=%d\n", (int) this->treeView);
    fprintf(fd, "header_margin=%d\n", (int) this->headerMargin);
+   fprintf(fd, "vi_keys=%d\n", (int) this->viKeys);
    fprintf(fd, "detailed_cpu_time=%d\n", (int) this->detailedCPUTime);
    fprintf(fd, "cpu_count_from_zero=%d\n", (int) this->countCPUsFromZero);
    fprintf(fd, "update_process_names=%d\n", (int) this->updateProcessNames);
@@ -314,6 +318,8 @@ Settings* Settings_new(int cpuCount) {
    this->updateProcessNames = false;
    this->cpuCount = cpuCount;
    this->showProgramPath = true;
+   this->headerMargin = false;
+   this->viKeys = false;
    
    this->fields = calloc(Platform_numberOfFields+1, sizeof(ProcessField));
    // TODO: turn 'fields' into a Vector,
@@ -380,6 +386,7 @@ Settings* Settings_new(int cpuCount) {
          this->highlightMegabytes = true;
          this->highlightThreads = false;
          this->headerMargin = true;
+         this->viKeys = false;
       }
    }
    free(legacyDotfile);

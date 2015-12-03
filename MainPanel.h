@@ -38,7 +38,7 @@ bool MainPanel_foreachProcess(MainPanel* this, MainPanel_ForeachProcessFn fn, in
 
 extern PanelClass MainPanel_class;
 
-MainPanel* MainPanel_new();
+MainPanel* MainPanel_new(Settings* settings);
 
 void MainPanel_setState(MainPanel* this, State* state);
 

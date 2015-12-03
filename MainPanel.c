@@ -94,7 +94,7 @@ static HandlerResult MainPanel_eventHandler(Panel* super, int ch) {
    } else if (ch != ERR && this->keys[ch]) {
       reaction |= (this->keys[ch])(this->state);
       result = HANDLED;
-   } else if (isdigit(ch)) {
+   } else if (isdigit(ch) && (ch != '0' || this->pidSearch)) {
       MainPanel_pidSearch(this, ch);
    } else {
       if (ch != ERR) {
@@ -127,7 +127,7 @@ static HandlerResult MainPanel_eventHandler(Panel* super, int ch) {
    }
    if (reaction & HTOP_REFRESH) {
       result |= REDRAW;
-   }      
+   }
    if (reaction & HTOP_RECALCULATE) {
       result |= RESCAN;
    }
@@ -136,6 +136,9 @@ static HandlerResult MainPanel_eventHandler(Panel* super, int ch) {
    }
    if (reaction & HTOP_QUIT) {
       return BREAK_LOOP;
+   }
+   if (reaction & HTOP_SET_BINDINGS) {
+       Action_setBindings(this->keys, this->state->settings);
    }
    if (!(reaction & HTOP_KEEP_FOLLOWING)) {
       this->state->pl->following = -1;
@@ -187,14 +190,14 @@ PanelClass MainPanel_class = {
    .eventHandler = MainPanel_eventHandler
 };
 
-MainPanel* MainPanel_new() {
+MainPanel* MainPanel_new(Settings* settings) {
    MainPanel* this = AllocThis(MainPanel);
    Panel_init((Panel*) this, 1, 1, 1, 1, Class(Process), false, FunctionBar_new(MainFunctions, NULL, NULL));
    this->keys = calloc(KEY_MAX, sizeof(Htop_Action));
    this->inc = IncSet_new(MainPanel_getFunctionBar(this));
 
-   Action_setBindings(this->keys);
-   Platform_setBindings(this->keys);
+   Action_setBindings(this->keys, settings);
+   Platform_setBindings(this->keys, settings);
 
    return this;
 }

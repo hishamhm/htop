@@ -47,6 +47,7 @@ typedef enum {
    HTOP_QUIT = 0x10,
    HTOP_REDRAW_BAR = 0x20,
    HTOP_UPDATE_PANELHDR = 0x41, // implies HTOP_REFRESH
+   HTOP_SET_BINDINGS = 0x80,
 } Htop_Reaction;
 
 typedef Htop_Reaction (*Htop_Action)();
@@ -339,7 +340,7 @@ static Htop_Reaction actionSetup(State* st) {
    int headerHeight = Header_calculateHeight(st->header);
    Panel_move(st->panel, 0, headerHeight);
    Panel_resize(st->panel, COLS, LINES-headerHeight-1);
-   return HTOP_REFRESH | HTOP_REDRAW_BAR | HTOP_UPDATE_PANELHDR;
+   return HTOP_REFRESH | HTOP_REDRAW_BAR | HTOP_UPDATE_PANELHDR | HTOP_SET_BINDINGS;
 }
 
 static Htop_Reaction actionLsof(State* st) {
@@ -375,6 +376,10 @@ static Htop_Reaction actionTag(State* st) {
 static Htop_Reaction actionRedraw() {
    clear();
    return HTOP_REFRESH | HTOP_REDRAW_BAR;
+}
+
+static Htop_Reaction noAction() {
+    return 0;
 }
 
 static struct { const char* key; const char* info; } helpLeft[] = {
@@ -499,7 +504,7 @@ static Htop_Reaction actionTagAllChildren(State* st) {
    return HTOP_OK;
 }
 
-void Action_setBindings(Htop_Action* keys) {
+void Action_setBindings(Htop_Action* keys, Settings* settings) {
    keys[KEY_RESIZE] = actionResize;
    keys['M'] = actionSortByMemory;
    keys['T'] = actionSortByTime;
@@ -529,7 +534,7 @@ void Action_setBindings(Htop_Action* keys) {
    keys['q'] = actionQuit;
    keys['a'] = actionSetAffinity;
    keys[KEY_F(9)] = actionKill;
-   keys['k'] = actionKill;
+   keys['k'] = settings->viKeys ? NULL : actionKill;
    keys[KEY_RECLICK] = actionExpandOrCollapse;
    keys['+'] = actionExpandOrCollapse;
    keys['='] = actionExpandOrCollapse;
@@ -548,5 +553,10 @@ void Action_setBindings(Htop_Action* keys) {
    keys['?'] = actionHelp;
    keys['U'] = actionUntagAll;
    keys['c'] = actionTagAllChildren;
+   if (!settings->viKeys) {
+      keys['j'] = noAction;
+      keys['g'] = noAction;
+      keys['G'] = noAction;
+   }
 }
 

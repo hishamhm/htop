@@ -117,8 +117,9 @@ MeterClass* Platform_meterTypes[] = {
    NULL
 };
 
-void Platform_setBindings(Htop_Action* keys) {
+void Platform_setBindings(Htop_Action* keys, Settings* settings) {
    (void) keys;
+   (void) settings;
 }
 
 int Platform_numberOfFields = 100;

@@ -26,6 +26,7 @@ typedef enum {
    HTOP_QUIT = 0x10,
    HTOP_REDRAW_BAR = 0x20,
    HTOP_UPDATE_PANELHDR = 0x41, // implies HTOP_REFRESH
+   HTOP_SET_BINDINGS = 0x80,
 } Htop_Reaction;
 
 typedef Htop_Reaction (*Htop_Action)();
@@ -49,7 +50,7 @@ Htop_Reaction Action_setSortKey(Settings* settings, ProcessField sortKey);
 
 // ----------------------------------------
 
-void Action_setBindings(Htop_Action* keys);
+void Action_setBindings(Htop_Action* keys, Settings* settings);
 
 
 #endif

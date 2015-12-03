@@ -76,8 +76,9 @@ SignalItem Platform_signals[] = {
 
 unsigned int Platform_numberOfSignals = sizeof(Platform_signals)/sizeof(SignalItem);
 
-void Platform_setBindings(Htop_Action* keys) {
+void Platform_setBindings(Htop_Action* keys, Settings* settings) {
    (void) keys;
+   (void) settings;
 }
 
 MeterClass* Platform_meterTypes[] = {

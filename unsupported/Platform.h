@@ -20,7 +20,7 @@ extern ProcessFieldData Process_fields[];
 
 extern MeterClass* Platform_meterTypes[];
 
-void Platform_setBindings(Htop_Action* keys);
+void Platform_setBindings(Htop_Action* keys, Settings* settings);
 
 extern int Platform_numberOfFields;
 extern char* Process_pidFormat;

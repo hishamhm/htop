@@ -97,8 +97,9 @@ static Htop_Reaction Platform_actionSetIOPriority(State* st) {
    return HTOP_REFRESH | HTOP_REDRAW_BAR | HTOP_UPDATE_PANELHDR;
 }
 
-void Platform_setBindings(Htop_Action* keys) {
+void Platform_setBindings(Htop_Action* keys, Settings* settings) {
    keys['i'] = Platform_actionSetIOPriority;
+   (void) settings;
 }
 
 MeterClass* Platform_meterTypes[] = {
