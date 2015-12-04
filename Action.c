@@ -534,7 +534,6 @@ void Action_setBindings(Htop_Action* keys, Settings* settings) {
    keys['q'] = actionQuit;
    keys['a'] = actionSetAffinity;
    keys[KEY_F(9)] = actionKill;
-   keys['k'] = settings->viKeys ? NULL : actionKill;
    keys[KEY_RECLICK] = actionExpandOrCollapse;
    keys['+'] = actionExpandOrCollapse;
    keys['='] = actionExpandOrCollapse;
@@ -555,8 +554,15 @@ void Action_setBindings(Htop_Action* keys, Settings* settings) {
    keys['c'] = actionTagAllChildren;
    if (!settings->viKeys) {
       keys['j'] = noAction;
+      keys['k'] = actionKill;
       keys['g'] = noAction;
       keys['G'] = noAction;
+   }
+   else {
+      keys['j'] = NULL;
+      keys['k'] = NULL;
+      keys['g'] = NULL;
+      keys['G'] = NULL;
    }
 }
 
