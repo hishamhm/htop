@@ -180,6 +180,8 @@ int main(int argc, char** argv) {
    }
 #endif
    
+   printf("\033]0;htop\7");
+
    Process_setupColumnWidths();
    
    UsersTable* ut = UsersTable_new();
