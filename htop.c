@@ -180,8 +180,6 @@ int main(int argc, char** argv) {
    }
 #endif
    
-   printf("\033]0;htop\7");
-
    Process_setupColumnWidths();
    
    UsersTable* ut = UsersTable_new();
@@ -189,6 +187,10 @@ int main(int argc, char** argv) {
    
    Settings* settings = Settings_new(pl->cpuCount);
    pl->settings = settings;
+
+   if (settings->setWindowTitle){
+      printf("\033]0;htop\7");
+   }
 
    Header* header = Header_new(pl, settings, 2);
 

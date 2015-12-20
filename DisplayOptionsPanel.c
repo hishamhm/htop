@@ -84,6 +84,7 @@ DisplayOptionsPanel* DisplayOptionsPanel_new(Settings* settings, ScreenManager* 
 
    Panel_setHeader(super, "Display options");
    Panel_add(super, (Object*) CheckItem_newByRef(strdup("Tree view"), &(settings->treeView)));
+   Panel_add(super, (Object*) CheckItem_newByRef(strdup("Set Window Title"),   &(settings->setWindowTitle)));
    Panel_add(super, (Object*) CheckItem_newByRef(strdup("Shadow other users' processes"), &(settings->shadowOtherUsers)));
    Panel_add(super, (Object*) CheckItem_newByRef(strdup("Hide kernel threads"), &(settings->hideKernelThreads)));
    Panel_add(super, (Object*) CheckItem_newByRef(strdup("Hide userland threads"), &(settings->hideUserlandThreads)));
