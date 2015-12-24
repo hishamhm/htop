@@ -13,6 +13,8 @@ in the source distribution for its full text.
 
 #define GRAPH_DELAY (DEFAULT_DELAY/2)
 
+#define GRAPH_HEIGHT 4 /* Unit: rows (lines) */
+
 #include "ListItem.h"
 
 #include <sys/time.h>
@@ -91,6 +93,9 @@ typedef enum {
 typedef struct GraphData_ {
    struct timeval time;
    double values[METER_BUFFER_LEN];
+   int colors[METER_BUFFER_LEN][GRAPH_HEIGHT];
+   double *prevItemSums;
+   double *currentItemSums;
 } GraphData;
 
 
@@ -127,8 +132,6 @@ ListItem* Meter_toListItem(Meter* this, bool moving);
 #endif
 
 #define PIXPERROW_ASCII 2
-#define GRAPH_HEIGHT 4 /* Unit: rows (lines) */
-
 
 /* ---------- LEDMeterMode ---------- */
 
