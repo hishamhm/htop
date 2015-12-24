@@ -425,7 +425,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       currentItemSums[0] = this->values[0];
       for (int i = 0; i < items; i++) {
          prevItemSums[i] = currentItemSums[i];
-         currentItemSums[i] = ((i > 0) ? currentItemSums[i-1] : 0) + this->values[i];
+         currentItemSums[i] = ((i > 0) ? currentItemSums[i-1] : 0.0) + this->values[i];
       }
       data->values[nValues - 1] = currentItemSums[items - 1] / this->total;
 
@@ -439,8 +439,8 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
              double lowerBound = this->total * (GRAPH_HEIGHT - 1 - line) / GRAPH_HEIGHT;
              area = MAX(lowerBound, MIN(currentItemSums[i], upperBound)) +
                     MAX(lowerBound, MIN(prevItemSums[i], upperBound));
-             area -= MAX(lowerBound, MIN(((i > 0) ? currentItemSums[i-1] : 0), upperBound)) +
-                     MAX(lowerBound, MIN(((i > 0) ? prevItemSums[i-1] : 0), upperBound));
+             area -= MAX(lowerBound, MIN(((i > 0) ? currentItemSums[i-1] : 0.0), upperBound)) +
+                     MAX(lowerBound, MIN(((i > 0) ? prevItemSums[i-1] : 0.0), upperBound));
              if (area > maxArea) {
                 maxArea = area;
                 dominantColor = CRT_colors[Meter_attributes(this)[i]];
