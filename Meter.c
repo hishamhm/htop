@@ -358,6 +358,8 @@ static const char* GraphMeterMode_dotsAscii[] = {
    /*20*/":", /*21*/":", /*22*/":"
 };
 
+#define GRAPH_HEIGHT 4 /* Unit: rows (lines) */
+
 static const char** GraphMeterMode_dots;
 static int GraphMeterMode_pixPerRow;
 
@@ -405,14 +407,14 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
    }
    
    for (int i = nValues - (w*2) + 2, k = 0; i < nValues; i+=2, k++) {
-      const double dot = (1.0 / (GraphMeterMode_pixPerRow * 4));
-      int v1 = MIN(GraphMeterMode_pixPerRow * 4, MAX(1, data->values[i] / dot));
-      int v2 = MIN(GraphMeterMode_pixPerRow * 4, MAX(1, data->values[i+1] / dot));
+      const double dot = (1.0 / (GraphMeterMode_pixPerRow * GRAPH_HEIGHT));
+      int v1 = MIN(GraphMeterMode_pixPerRow * GRAPH_HEIGHT, MAX(1, data->values[i] / dot));
+      int v2 = MIN(GraphMeterMode_pixPerRow * GRAPH_HEIGHT, MAX(1, data->values[i+1] / dot));
 
       int colorIdx = GRAPH_1;
-      for (int line = 0; line < 4; line++) {
-         int line1 = MIN(GraphMeterMode_pixPerRow, MAX(0, v1 - (GraphMeterMode_pixPerRow * (3 - line))));
-         int line2 = MIN(GraphMeterMode_pixPerRow, MAX(0, v2 - (GraphMeterMode_pixPerRow * (3 - line))));
+      for (int line = 0; line < GRAPH_HEIGHT; line++) {
+         int line1 = MIN(GraphMeterMode_pixPerRow, MAX(0, v1 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line))));
+         int line2 = MIN(GraphMeterMode_pixPerRow, MAX(0, v2 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line))));
 
          attrset(CRT_colors[colorIdx]);
          mvaddstr(y+line, x+k, GraphMeterMode_dots[line1 * (GraphMeterMode_pixPerRow + 1) + line2]);
@@ -500,7 +502,7 @@ static MeterMode TextMeterMode = {
 
 static MeterMode GraphMeterMode = {
    .uiName = "Graph",
-   .h = 4,
+   .h = GRAPH_HEIGHT,
    .draw = GraphMeterMode_draw,
 };
 

@@ -127,6 +127,8 @@ ListItem* Meter_toListItem(Meter* this, bool moving);
 #endif
 
 #define PIXPERROW_ASCII 2
+#define GRAPH_HEIGHT 4 /* Unit: rows (lines) */
+
 
 /* ---------- LEDMeterMode ---------- */
 
