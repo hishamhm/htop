@@ -374,7 +374,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       GraphData* data = (GraphData*) this->drawData;
       for (int i = 0; i < nValues; i++) {
          for (int line = 0; line < GRAPH_HEIGHT; line++) {
-            data->colors[i][line] = CRT_colors[BAR_SHADOW];
+            data->colors[i][line] = BAR_SHADOW;
          }
       }
    }
@@ -431,7 +431,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
 
       // Determine the dominant color of the cell in graph
       for (int line = 0; line < GRAPH_HEIGHT; line++) {
-         int dominantColor = CRT_colors[BAR_SHADOW];
+         int dominantColor = BAR_SHADOW;
          double maxArea = 0.0;
          for (int i = 0; i < items; i++) {
              double area;
@@ -443,7 +443,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
                      MAX(lowerBound, MIN(((i > 0) ? prevItemSums[i-1] : 0.0), upperBound));
              if (area > maxArea) {
                 maxArea = area;
-                dominantColor = CRT_colors[Meter_attributes(this)[i]];
+                dominantColor = Meter_attributes(this)[i];
              }
          }
          data->colors[nValues - 1][line] = dominantColor;
@@ -459,7 +459,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
          int line1 = MIN(GraphMeterMode_pixPerRow, MAX(0, v1 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line))));
          int line2 = MIN(GraphMeterMode_pixPerRow, MAX(0, v2 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line))));
          
-         attrset(data->colors[i+1][line]);
+         attrset(CRT_colors[data->colors[i+1][line]]);
          mvaddstr(y+line, x+k, GraphMeterMode_dots[line1 * (GraphMeterMode_pixPerRow + 1) + line2]);
       }
    }
