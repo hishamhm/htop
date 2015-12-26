@@ -451,9 +451,9 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
    }
    
    for (int i = nValues - (w*2) + 2, k = 0; i < nValues; i+=2, k++) {
-      const double dot = (1.0 / (GraphMeterMode_pixPerRow * GRAPH_HEIGHT));
-      int v1 = MIN(GraphMeterMode_pixPerRow * GRAPH_HEIGHT, MAX(1, data->values[i] / dot));
-      int v2 = MIN(GraphMeterMode_pixPerRow * GRAPH_HEIGHT, MAX(1, data->values[i+1] / dot));
+      int pix = GraphMeterMode_pixPerRow * GRAPH_HEIGHT;
+      int v1 = MIN(pix, MAX(1, data->values[i] * pix));
+      int v2 = MIN(pix, MAX(1, data->values[i+1] * pix));
 
       for (int line = 0; line < GRAPH_HEIGHT; line++) {
          int line1 = MIN(GraphMeterMode_pixPerRow, MAX(0, v1 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line))));
