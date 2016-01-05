@@ -70,6 +70,7 @@ typedef struct MeterClass_ {
 #define Meter_defaultMode(this_)       As_Meter(this_)->defaultMode
 #define Meter_getItems(this_)          As_Meter(this_)->curItems
 #define Meter_setItems(this_, n_)      As_Meter(this_)->curItems = (n_)
+#define Meter_getMaxItems(this_)       As_Meter(this_)->maxItems
 #define Meter_attributes(this_)        As_Meter(this_)->attributes
 #define Meter_name(this_)              As_Meter(this_)->name
 #define Meter_uiName(this_)            As_Meter(this_)->uiName
@@ -372,6 +373,10 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
    if (!this->drawData) {
       this->drawData = calloc(1, sizeof(GraphData));
       GraphData* data = (GraphData*) this->drawData;
+      if (!data->prevItemSums)
+         data->prevItemSums = calloc(Meter_getMaxItems(this), sizeof(*data->prevItemSums));
+      if (!data->currentItemSums)
+         data->currentItemSums = calloc(Meter_getMaxItems(this), sizeof(*data->currentItemSums));
       for (int i = 0; i < nValues; i++) {
          for (int line = 0; line < GRAPH_HEIGHT; line++) {
             data->colors[i][line] = BAR_SHADOW;
@@ -413,12 +418,6 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
 
       int items = Meter_getItems(this);
 
-      if (!data->prevItemSums) {
-         data->prevItemSums = calloc(items, sizeof(*data->prevItemSums));
-      }
-      if (!data->currentItemSums) {
-         data->currentItemSums = calloc(items, sizeof(*data->currentItemSums));
-      }
       double *prevItemSums = data->prevItemSums;
       double *currentItemSums = data->currentItemSums;
       
