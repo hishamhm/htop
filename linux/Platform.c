@@ -216,16 +216,22 @@ char* Platform_getProcessEnv(pid_t pid) {
    char *env = NULL;
    if (fd) {
       size_t capacity = 4096, size = 0, bytes;
-      env = malloc(capacity);
-      while (env && (bytes = fread(env+size, 1, capacity-size, fd)) > 0) {
+      if ((env = malloc(capacity)) == NULL) {
+         CRT_fatalError("malloc failed");
+      }
+      while ((bytes = fread(env+size, 1, capacity-size, fd)) > 0) {
          size += bytes;
          capacity *= 2;
-         env = realloc(env, capacity);
+         if ((env = realloc(env, capacity)) == NULL) {
+            CRT_fatalError("realloc failed");
+         }
       }
       fclose(fd);
       if (size < 2 || env[size-1] || env[size-2]) {
          if (size + 2 < capacity) {
-            env = realloc(env, capacity+2);
+            if ((env = realloc(env, capacity+2)) == NULL) {
+               CRT_fatalError("realloc failed");
+            }
          }
          env[size] = 0;
          env[size+1] = 0;
