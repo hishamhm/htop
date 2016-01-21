@@ -13,6 +13,8 @@ in the source distribution for its full text.
 
 #define GRAPH_DELAY (DEFAULT_DELAY/2)
 
+#define GRAPH_HEIGHT 4 /* Unit: rows (lines) */
+
 #include "ListItem.h"
 
 #include <sys/time.h>
@@ -55,6 +57,7 @@ typedef struct MeterClass_ {
 #define Meter_defaultMode(this_)       As_Meter(this_)->defaultMode
 #define Meter_getItems(this_)          As_Meter(this_)->curItems
 #define Meter_setItems(this_, n_)      As_Meter(this_)->curItems = (n_)
+#define Meter_getMaxItems(this_)       As_Meter(this_)->maxItems
 #define Meter_attributes(this_)        As_Meter(this_)->attributes
 #define Meter_name(this_)              As_Meter(this_)->name
 #define Meter_uiName(this_)            As_Meter(this_)->uiName
@@ -91,6 +94,9 @@ typedef enum {
 typedef struct GraphData_ {
    struct timeval time;
    double values[METER_BUFFER_LEN];
+   int colors[METER_BUFFER_LEN][GRAPH_HEIGHT];
+   double *prevItemSums;
+   double *currentItemSums;
 } GraphData;
 
 
