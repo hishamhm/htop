@@ -108,8 +108,8 @@ typedef struct GraphData_ {
    struct timeval time;
    double values[METER_BUFFER_LEN];
    int colors[METER_BUFFER_LEN][GRAPH_HEIGHT];
-   double *prevItemSums;
-   double *currentItemSums;
+   double *prevItems;
+   double *currentItems;
 } GraphData;
 
 }*/
@@ -119,6 +119,9 @@ typedef struct GraphData_ {
 #endif
 #ifndef MAX
 #define MAX(a,b) ((a)>(b)?(a):(b))
+#endif
+#ifndef CLAMP
+#define CLAMP(x, low, high)  (((x) > (high)) ? (high) : (((x) < (low)) ? (low) : (x)))
 #endif
 
 MeterClass Meter_class = {
@@ -373,10 +376,10 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
    if (!this->drawData) {
       this->drawData = calloc(1, sizeof(GraphData));
       GraphData* data = (GraphData*) this->drawData;
-      if (!data->prevItemSums)
-         data->prevItemSums = calloc(Meter_getMaxItems(this), sizeof(*data->prevItemSums));
-      if (!data->currentItemSums)
-         data->currentItemSums = calloc(Meter_getMaxItems(this), sizeof(*data->currentItemSums));
+      if (!data->prevItems)
+         data->prevItems = calloc(Meter_getMaxItems(this), sizeof(*data->prevItems));
+      if (!data->currentItems)
+         data->currentItems = calloc(Meter_getMaxItems(this), sizeof(*data->currentItems));
       for (int i = 0; i < nValues; i++) {
          for (int line = 0; line < GRAPH_HEIGHT; line++) {
             data->colors[i][line] = BAR_SHADOW;
@@ -418,36 +421,69 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
 
       int items = Meter_getItems(this);
 
-      double *prevItemSums = data->prevItemSums;
-      double *currentItemSums = data->currentItemSums;
+      double *prevItems = data->prevItems;
+      double *currentItems = data->currentItems;
       
+      data->values[nValues - 1] = 0.0;
       for (int i = 0; i < items; i++) {
-         prevItemSums[i] = currentItemSums[i];
-         currentItemSums[i] = ((i > 0) ? currentItemSums[i-1] : 0.0) + this->values[i];
+         prevItems[i] = currentItems[i];
+         currentItems[i] = this->values[i];
+         data->values[nValues - 1] += this->values[i];
       }
-      data->values[nValues - 1] = currentItemSums[items - 1] / this->total;
+      data->values[nValues - 1] /= this->total;
 
-      // Determine the dominant color of the cell in graph
-      for (int line = 0; line < GRAPH_HEIGHT; line++) {
-         int dominantColor = BAR_SHADOW;
-         double maxArea = 0.0;
-         for (int i = 0; i < items; i++) {
-             double area;
-             double upperBound = this->total * (GRAPH_HEIGHT - line) / GRAPH_HEIGHT;
-             double lowerBound = this->total * (GRAPH_HEIGHT - 1 - line) / GRAPH_HEIGHT;
-             area = MAX(lowerBound, MIN(currentItemSums[i], upperBound)) +
-                    MAX(lowerBound, MIN(prevItemSums[i], upperBound));
-             area -= MAX(lowerBound, MIN(((i > 0) ? currentItemSums[i-1] : 0.0), upperBound)) +
-                     MAX(lowerBound, MIN(((i > 0) ? prevItemSums[i-1] : 0.0), upperBound));
-             if (area > maxArea) {
-                maxArea = area;
-                dominantColor = Meter_attributes(this)[i];
-             }
+      double cellAmount = (this->total * 2) / GRAPH_HEIGHT;
+      int    currCell = GRAPH_HEIGHT - 1;
+      int    currCellColor = BAR_SHADOW;
+      double currCellAvailable = cellAmount;
+      double currCellDominant = 0.0;
+      for (int i = 0; i < items; i++) {
+         int    itemColor    = Meter_attributes(this)[i];
+         double itemAmount   = prevItems[i] + currentItems[i];
+         // How much I can contribute to the current bucket
+         double itemFillCurr = CLAMP(itemAmount, itemAmount, currCellAvailable);
+         // If I'm winning I take over the bucket color...
+         if (itemFillCurr > currCellDominant) {
+            currCellDominant = itemFillCurr;
+            currCellColor = itemColor;
          }
-         data->colors[nValues - 1][line] = dominantColor;
+         currCellAvailable -= itemFillCurr;
+         // If I filled the bucket, time to give it to the winner:
+         if (currCellAvailable == 0.0) {
+            data->colors[nValues - 1][currCell] = currCellColor;
+            // on to the next bucket
+            currCell--;
+            currCellColor = BAR_SHADOW;
+            currCellAvailable = cellAmount;
+            currCellDominant = 0.0;
+            // Do I have anything else for more buckets?
+            itemAmount -= itemFillCurr;
+            if (itemAmount > 0.0) {
+               // Anything to fill entire buckets?
+               int fullCells = itemAmount / cellAmount;
+               if (fullCells > 0) {
+                  for (int c = 0; c < fullCells; c++) {
+                     data->colors[nValues - 1][currCell - c] = itemColor;
+                  }
+                  currCell -= fullCells;
+               }
+               // If there's anything left, I'm the first in the next open bucket.
+               double restAmount = itemAmount - (fullCells * cellAmount);
+               if (restAmount > 0.0) {
+                  currCellColor = itemColor;
+                  currCellAvailable = cellAmount - restAmount;
+                  currCellDominant = restAmount;
+               }
+            }
+         }
       }
+      for (int c = currCell; c >= 0; c--) {
+         data->colors[nValues - 1][c] = currCellColor;
+         currCellColor = BAR_SHADOW;
+      }
+
    }
-   
+      
    for (int i = nValues - (w*2) + 2, k = 0; i < nValues; i+=2, k++) {
       int pix = GraphMeterMode_pixPerRow * GRAPH_HEIGHT;
       int v1 = MIN(pix, MAX(1, data->values[i] * pix));
