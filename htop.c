@@ -188,6 +188,10 @@ int main(int argc, char** argv) {
    Settings* settings = Settings_new(pl->cpuCount);
    pl->settings = settings;
 
+   if (settings->setWindowTitle){
+      printf("\033]0;htop\7");
+   }
+
    Header* header = Header_new(pl, settings, 2);
 
    Header_populateFromSettings(header);
