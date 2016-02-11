@@ -189,6 +189,8 @@ bool Process_changePriorityBy(Process* this, size_t delta);
 
 void Process_sendSignal(Process* this, size_t sgn);
 
+void Process_sendGroupSignal(Process* this, size_t sgn);
+
 long Process_pidCompare(const void* v1, const void* v2);
 
 long Process_compare(const void* v1, const void* v2);

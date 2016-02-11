@@ -30,7 +30,7 @@ Comparison between 'htop' and classic 'top'
   kill a process, in 'top' you do.
 * In 'htop' you don't need to type the process number or
   the priority value to renice a process, in 'top' you do.
-* In 'htop' you can kill multiple processes at once.
+* In 'htop' you can kill multiple processes or process groups at once.
 * 'top' is older, hence, more tested.
 
 Compilation instructions
