@@ -37,7 +37,8 @@ void MainPanel_updateTreeFunctions(MainPanel* this, bool mode) {
    FunctionBar* bar = MainPanel_getFunctionBar(this);
    if (mode) {
       FunctionBar_setLabel(bar, KEY_F(5), "Sorted");
-      FunctionBar_setLabel(bar, KEY_F(6), "Collap");
+      FunctionBar_setLabel(bar, KEY_F(6), "Collapse");
+      FunctionBar_setLabel(bar, KEY_F(12), "Toggle Expand");
    } else {
       FunctionBar_setLabel(bar, KEY_F(5), "Tree  ");
       FunctionBar_setLabel(bar, KEY_F(6), "SortBy");
