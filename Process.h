@@ -68,6 +68,7 @@ typedef struct Process_ {
    pid_t ppid;
    pid_t tgid;
    char* comm;
+   int commLen;
    int indent;
 
    int basenameOffset;
@@ -157,6 +158,8 @@ typedef struct ProcessClass_ {
 #define ONE_DECIMAL_K 1000L
 #define ONE_DECIMAL_M (ONE_DECIMAL_K * ONE_DECIMAL_K)
 #define ONE_DECIMAL_G (ONE_DECIMAL_M * ONE_DECIMAL_K)
+
+extern char Process_pidFormat[20];
 
 void Process_setupColumnWidths();
 

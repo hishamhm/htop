@@ -12,6 +12,7 @@ in the source distribution for its full text.
 #include "AffinityPanel.h"
 #include "CategoriesPanel.h"
 #include "CRT.h"
+#include "EnvScreen.h"
 #include "MainPanel.h"
 #include "OpenFilesScreen.h"
 #include "Process.h"
@@ -345,9 +346,9 @@ static Htop_Reaction actionSetup(State* st) {
 static Htop_Reaction actionLsof(State* st) {
    Process* p = (Process*) Panel_getSelected(st->panel);
    if (!p) return HTOP_OK;
-   OpenFilesScreen* ts = OpenFilesScreen_new(p);
-   OpenFilesScreen_run(ts);
-   OpenFilesScreen_delete(ts);
+   OpenFilesScreen* ofs = OpenFilesScreen_new(p);
+   InfoScreen_run((InfoScreen*)ofs);
+   OpenFilesScreen_delete((Object*)ofs);
    clear();
    CRT_enableDelay();
    return HTOP_REFRESH | HTOP_REDRAW_BAR;
@@ -357,8 +358,11 @@ static Htop_Reaction actionStrace(State* st) {
    Process* p = (Process*) Panel_getSelected(st->panel);
    if (!p) return HTOP_OK;
    TraceScreen* ts = TraceScreen_new(p);
-   TraceScreen_run(ts);
-   TraceScreen_delete(ts);
+   bool ok = TraceScreen_forkTracer(ts);
+   if (ok) {
+      InfoScreen_run((InfoScreen*)ts);
+   }
+   TraceScreen_delete((Object*)ts);
    clear();
    CRT_enableDelay();
    return HTOP_REFRESH | HTOP_REDRAW_BAR;
@@ -384,7 +388,7 @@ static struct { const char* key; const char* info; } helpLeft[] = {
    { .key = "   F4 \\: ",.info = "incremental name filtering" },
    { .key = "   F5 t: ", .info = "tree view" },
    { .key = "      u: ", .info = "show processes of a single user" },
-   { .key = "      H: ", .info = "hide/show user threads" },
+   { .key = "      H: ", .info = "hide/show user process threads" },
    { .key = "      K: ", .info = "hide/show kernel threads" },
    { .key = "      F: ", .info = "cursor follows process" },
    { .key = " F6 + -: ", .info = "expand/collapse tree" },
@@ -404,6 +408,7 @@ static struct { const char* key; const char* info; } helpRight[] = {
 #if (HAVE_LIBHWLOC || HAVE_NATIVE_AFFINITY)
    { .key = "      a: ", .info = "set CPU affinity" },
 #endif
+   { .key = "      e: ", .info = "show process environment" },
    { .key = "      i: ", .info = "set IO prority" },
    { .key = "      L: ", .info = "list open files with lsof" },
    { .key = "      s: ", .info = "trace syscalls with strace" },
@@ -465,7 +470,7 @@ static Htop_Reaction actionHelp(State* st) {
    attrset(CRT_colors[DEFAULT_COLOR]);
    mvaddstr(6,0, "Type and layout of header meters are configurable in the setup screen.");
    if (CRT_colorScheme == COLORSCHEME_MONOCHROME) {
-      mvaddstr(7, 0, "In monochrome, meters are displayed through different chars, in order: |#*@$%&");
+      mvaddstr(7, 0, "In monochrome, meters display as different chars, in order: |#*@$%&.");
    }
    mvaddstr( 8, 0, " Status: R: running; S: sleeping; T: traced/stopped; Z: zombie; D: disk sleep");
    for (int i = 0; helpLeft[i].info; i++) { mvaddstr(9+i, 9,  helpLeft[i].info); }
@@ -473,6 +478,10 @@ static Htop_Reaction actionHelp(State* st) {
    attrset(CRT_colors[HELP_BOLD]);
    for (int i = 0; helpLeft[i].key;  i++) { mvaddstr(9+i, 0,  helpLeft[i].key); }
    for (int i = 0; helpRight[i].key; i++) { mvaddstr(9+i, 40, helpRight[i].key); }
+   attrset(CRT_colors[PROCESS_THREAD]);
+   mvaddstr(15, 32, "threads");
+   mvaddstr(16, 26, "threads");
+   attrset(CRT_colors[DEFAULT_COLOR]);
 
    attrset(CRT_colors[HELP_BOLD]);
    mvaddstr(23,0, "Press any key to return.");
@@ -498,6 +507,18 @@ static Htop_Reaction actionTagAllChildren(State* st) {
    tagAllChildren(st->panel, p);
    return HTOP_OK;
 }
+
+static Htop_Reaction actionShowEnvScreen(State* st) {
+   Process* p = (Process*) Panel_getSelected(st->panel);
+   if (!p) return HTOP_OK;
+   EnvScreen* es = EnvScreen_new(p);
+   InfoScreen_run((InfoScreen*)es);
+   EnvScreen_delete((Object*)es);
+   clear();
+   CRT_enableDelay();
+   return HTOP_REFRESH | HTOP_REDRAW_BAR;
+}
+
 
 void Action_setBindings(Htop_Action* keys) {
    keys[KEY_RESIZE] = actionResize;
@@ -548,5 +569,6 @@ void Action_setBindings(Htop_Action* keys) {
    keys['?'] = actionHelp;
    keys['U'] = actionUntagAll;
    keys['c'] = actionTagAllChildren;
+   keys['e'] = actionShowEnvScreen;
 }
 

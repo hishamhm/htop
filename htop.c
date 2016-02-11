@@ -44,7 +44,7 @@ static void printHelpFlag() {
          "-s --sort-key=COLUMN        Sort by COLUMN (try --sort-key=help for a list)\n"
          "-u --user=USERNAME          Show only processes of a given user\n"
          "-p --pid=PID,[,PID,PID...]  Show only the given PIDs\n"
-         "-v --version          Print version info\n"
+         "-v --version                Print version info\n"
          "\n"
          "Long options may be passed with a single dash.\n\n"
          "Press F1 inside htop for online help.\n"
@@ -109,7 +109,6 @@ static CommandLineSettings parseArguments(int argc, char** argv) {
             flags.sortKey = ColumnsPanel_fieldNameToIndex(optarg);
             if (flags.sortKey == -1) {
                fprintf(stderr, "Error: invalid column \"%s\".\n", optarg);
-               exit(1);
             }
             break;
          case 'd':
@@ -118,28 +117,26 @@ static CommandLineSettings parseArguments(int argc, char** argv) {
                if (flags.delay > 100) flags.delay = 100;
             } else {
                fprintf(stderr, "Error: invalid delay value \"%s\".\n", optarg);
-               exit(1);
             }
             break;
          case 'u':
             if (!Action_setUserOnly(optarg, &(flags.userId))) {
                fprintf(stderr, "Error: invalid user \"%s\".\n", optarg);
-               exit(1);
             }
             break;
          case 'C':
             flags.useColors = false;
             break;
          case 'p': {
-            char* argCopy = strdup(optarg);
+            char* argCopy = xStrdup(optarg);
             char* saveptr;
             char* pid = strtok_r(argCopy, ",", &saveptr);
 
-            if( !flags.pidWhiteList ) {
+            if(!flags.pidWhiteList) {
                flags.pidWhiteList = Hashtable_new(8, false);
             }
 
-            while( pid ) {
+            while(pid) {
                 unsigned int num_pid = atoi(pid);
                 Hashtable_put(flags.pidWhiteList, num_pid, (void *) 1);
                 pid = strtok_r(NULL, ",", &saveptr);
@@ -179,8 +176,7 @@ int main(int argc, char** argv) {
 
 #ifdef HAVE_PROC
    if (access(PROCDIR, R_OK) != 0) {
-      fprintf(stderr, "Error: could not read procfs (compiled to look in %s).\n", PROCDIR);
-      exit(1);
+      fprintf("Error: could not read procfs (compiled to look in %s).\n", PROCDIR);
    }
 #endif
    

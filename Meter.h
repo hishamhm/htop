@@ -13,6 +13,8 @@ in the source distribution for its full text.
 
 #define GRAPH_DELAY (DEFAULT_DELAY/2)
 
+#define GRAPH_HEIGHT 4 /* Unit: rows (lines) */
+
 #include "ListItem.h"
 
 #include <sys/time.h>
@@ -99,6 +101,9 @@ typedef struct GraphData_ {
 #endif
 #ifndef MAX
 #define MAX(a,b) ((a)>(b)?(a):(b))
+#endif
+#ifndef CLAMP
+#define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
 #endif
 
 extern MeterClass Meter_class;

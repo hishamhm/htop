@@ -9,6 +9,7 @@ in the source distribution for its full text.
 
 #include <stdlib.h>
 #include <assert.h>
+#include "CRT.h"
 
 /*{
 #include "Panel.h"
@@ -35,7 +36,7 @@ static const char* MetersKeys[] = {"Space", "Enter", "Del", "Esc"};
 static int MetersEvents[] = {' ', 13, KEY_DC, 27};
 
 static const char* MetersMovingFunctions[] = {"Up    ", "Down  ", "Left  ", "Right ",  "Confirm", "Delete", "Done  ", NULL};
-static const char* MetersMovingKeys[] = {"Up", "Dn", "Lt", "Rt", "Arrows", "Enter", "Del", "Esc"};
+static const char* MetersMovingKeys[] = {"Up", "Dn", "Lt", "Rt", "Enter", "Del", "Esc"};
 static int MetersMovingEvents[] = {KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, 13, KEY_DC, 27};
 static FunctionBar* Meters_movingBar = NULL;
 
@@ -51,8 +52,10 @@ void MetersPanel_setMoving(MetersPanel* this, bool moving) {
    this->moving = moving;
    ((ListItem*)Panel_getSelected(super))->moving = moving;
    if (!moving) {
+      Panel_setSelectionColor(super, CRT_colors[PANEL_SELECTION_FOCUS]);
       Panel_setDefaultBar(super);
    } else {
+      Panel_setSelectionColor(super, CRT_colors[PANEL_SELECTION_FOLLOW]);
       super->currentBar = Meters_movingBar;
    }
 }
@@ -171,6 +174,7 @@ static HandlerResult MetersPanel_eventHandler(Panel* super, int ch) {
             Vector_remove(this->meters, selected);
             Panel_remove(super, selected);
          }
+         MetersPanel_setMoving(this, false);
          result = HANDLED;
          break;
       }

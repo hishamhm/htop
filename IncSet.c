@@ -76,7 +76,7 @@ static inline void IncMode_done(IncMode* mode) {
 }
 
 IncSet* IncSet_new(FunctionBar* bar) {
-   IncSet* this = calloc(1, sizeof(IncSet));
+   IncSet* this = xCalloc(1, sizeof(IncSet));
    IncMode_initSearch(&(this->modes[INC_SEARCH]));
    IncMode_initFilter(&(this->modes[INC_FILTER]));
    this->active = NULL;
@@ -169,6 +169,8 @@ bool IncSet_handleKey(IncSet* this, int ch, Panel* panel, IncMode_GetPanelValue 
             IncMode_reset(mode);
          }
       }
+   } else if (ch == KEY_RESIZE) {
+     Panel_resize(panel, COLS, LINES-panel->y-1);
    } else {
       if (mode->isFilter) {
          filterChanged = true;

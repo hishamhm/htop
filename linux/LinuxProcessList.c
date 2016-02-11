@@ -78,10 +78,18 @@ typedef struct LinuxProcessList_ {
 #define PROCMEMINFOFILE PROCDIR "/meminfo"
 #endif
 
+#ifndef PROC_LINE_LENGTH
+#define PROC_LINE_LENGTH 512
+#endif
+
 }*/
+
+#ifndef CLAMP
+#define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
+#endif
    
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId) {
-   LinuxProcessList* this = calloc(1, sizeof(LinuxProcessList));
+   LinuxProcessList* this = xCalloc(1, sizeof(LinuxProcessList));
    ProcessList* pl = &(this->super);
    ProcessList_init(pl, Class(LinuxProcess), usersTable, pidWhiteList, userId);
 
@@ -90,17 +98,17 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    if (file == NULL) {
       CRT_fatalError("Cannot open " PROCSTATFILE);
    }
-   char buffer[256];
+   char buffer[PROC_LINE_LENGTH + 1];
    int cpus = -1;
    do {
       cpus++;
-      char * s = fgets(buffer, 255, file);
+      char * s = fgets(buffer, PROC_LINE_LENGTH, file);
       (void) s;
    } while (String_startsWith(buffer, "cpu"));
    fclose(file);
 
    pl->cpuCount = MAX(cpus - 1, 1);
-   this->cpus = calloc(cpus, sizeof(CPUData));
+   this->cpus = xCalloc(cpus, sizeof(CPUData));
 
    for (int i = 0; i < cpus; i++) {
       this->cpus[i].totalTime = 1;
@@ -141,7 +149,7 @@ static inline unsigned long long LinuxProcess_adjustTime(unsigned long long t) {
    return (unsigned long long) t * jiffytime * 100;
 }
 
-static bool LinuxProcessList_readStatFile(Process *process, const char* dirname, const char* name, char* command) {
+static bool LinuxProcessList_readStatFile(Process *process, const char* dirname, const char* name, char* command, int* commLen) {
    LinuxProcess* lp = (LinuxProcess*) process;
    char filename[MAX_NAME+1];
    snprintf(filename, MAX_NAME, "%s/%s/stat", dirname, name);
@@ -167,6 +175,7 @@ static bool LinuxProcessList_readStatFile(Process *process, const char* dirname,
    int commsize = end - location;
    memcpy(command, location, commsize);
    command[commsize] = '\0';
+   *commLen = commsize;
    location = end + 2;
 
    process->state = location[0];
@@ -306,8 +315,8 @@ static bool LinuxProcessList_readStatmFile(LinuxProcess* process, const char* di
    int fd = open(filename, O_RDONLY);
    if (fd == -1)
       return false;
-   char buf[256];
-   ssize_t rres = xread(fd, buf, 255);
+   char buf[PROC_LINE_LENGTH + 1];
+   ssize_t rres = xread(fd, buf, PROC_LINE_LENGTH);
    close(fd);
    if (rres < 1) return false;
 
@@ -358,16 +367,16 @@ static void LinuxProcessList_readCGroupFile(LinuxProcess* process, const char* d
    snprintf(filename, MAX_NAME, "%s/%s/cgroup", dirname, name);
    FILE* file = fopen(filename, "r");
    if (!file) {
-      process->cgroup = strdup("");
+      process->cgroup = xStrdup("");
       return;
    }
-   char output[256];
+   char output[PROC_LINE_LENGTH + 1];
    output[0] = '\0';
    char* at = output;
-   int left = 255;
+   int left = PROC_LINE_LENGTH;
    while (!feof(file) && left > 0) {
-      char buffer[256];
-      char *ok = fgets(buffer, 255, file);
+      char buffer[PROC_LINE_LENGTH + 1];
+      char *ok = fgets(buffer, PROC_LINE_LENGTH, file);
       if (!ok) break;
       char* group = strchr(buffer, ':');
       if (!group) break;
@@ -381,7 +390,7 @@ static void LinuxProcessList_readCGroupFile(LinuxProcess* process, const char* d
    }
    fclose(file);
    free(process->cgroup);
-   process->cgroup = strdup(output);
+   process->cgroup = xStrdup(output);
 }
 
 #endif
@@ -394,9 +403,9 @@ static void LinuxProcessList_readVServerData(LinuxProcess* process, const char* 
    FILE* file = fopen(filename, "r");
    if (!file)
       return;
-   char buffer[256];
+   char buffer[PROC_LINE_LENGTH + 1];
    process->vxid = 0;
-   while (fgets(buffer, 255, file)) {
+   while (fgets(buffer, PROC_LINE_LENGTH, file)) {
       if (String_startsWith(buffer, "VxID:")) {
          int vxid;
          int ok = sscanf(buffer, "VxID:\t%32d", &vxid);
@@ -425,8 +434,8 @@ static void LinuxProcessList_readOomData(LinuxProcess* process, const char* dirn
    FILE* file = fopen(filename, "r");
    if (!file)
       return;
-   char buffer[256];
-   if (fgets(buffer, 255, file)) {
+   char buffer[PROC_LINE_LENGTH + 1];
+   if (fgets(buffer, PROC_LINE_LENGTH, file)) {
       unsigned int oom;
       int ok = sscanf(buffer, "%32u", &oom);
       if (ok >= 1) {
@@ -434,6 +443,16 @@ static void LinuxProcessList_readOomData(LinuxProcess* process, const char* dirn
       }
    }
    fclose(file);
+}
+
+static void setCommand(Process* process, const char* command, int len) {
+   if (process->comm && process->commLen <= len) {
+      strncpy(process->comm, command, len + 1);
+   } else {
+      free(process->comm);
+      process->comm = xStrdup(command);
+   }
+   process->commLen = len;
 }
 
 static bool LinuxProcessList_readCmdlineFile(Process* process, const char* dirname, const char* name) {
@@ -463,9 +482,8 @@ static bool LinuxProcessList_readCmdlineFile(Process* process, const char* dirna
       tokenEnd = amtRead;
    }
    command[amtRead] = '\0';
-   free(process->comm);
-   process->comm = strdup(command);
    process->basenameOffset = tokenEnd;
+   setCommand(process, command, amtRead);
 
    return true;
 }
@@ -531,12 +549,13 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
 
       char command[MAX_NAME+1];
       unsigned long long int lasttimes = (lp->utime + lp->stime);
-      if (! LinuxProcessList_readStatFile(proc, dirname, name, command))
+      int commLen = 0;
+      if (! LinuxProcessList_readStatFile(proc, dirname, name, command, &commLen))
          goto errorReadingProcess;
       if (settings->flags & PROCESS_FLAG_LINUX_IOPRIO)
          LinuxProcess_updateIOPriority(lp);
       float percent_cpu = (lp->utime + lp->stime - lasttimes) / period * 100.0;
-      proc->percent_cpu = MAX(MIN(percent_cpu, cpus*100.0), 0.0);
+      proc->percent_cpu = CLAMP(percent_cpu, 0.0, cpus * 100.0);
       if (isnan(proc->percent_cpu)) proc->percent_cpu = 0.0;
       proc->percent_mem = (proc->m_resident * PAGE_SIZE_KB) / (double)(pl->totalMem) * 100.0;
 
@@ -581,14 +600,12 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
          LinuxProcessList_readOomData(lp, dirname, name);
 
       if (proc->state == 'Z') {
-         free(proc->comm);
          proc->basenameOffset = -1;
-         proc->comm = strdup(command);
+         setCommand(proc, command, commLen);
       } else if (Process_isThread(proc)) {
          if (settings->showThreadNames || Process_isKernelThread(proc) || proc->state == 'Z') {
-            free(proc->comm);
             proc->basenameOffset = -1;
-            proc->comm = strdup(command);
+            setCommand(proc, command, commLen);
          } else if (settings->showThreadNames) {
             if (! LinuxProcessList_readCmdlineFile(proc, dirname, name))
                goto errorReadingProcess;
@@ -621,6 +638,8 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
 
 static inline void LinuxProcessList_scanMemoryInfo(ProcessList* this) {
    unsigned long long int swapFree = 0;
+   unsigned long long int shmem = 0;
+   unsigned long long int sreclaimable = 0;
 
    FILE* file = fopen(PROCMEMINFOFILE, "r");
    if (file == NULL) {
@@ -629,33 +648,39 @@ static inline void LinuxProcessList_scanMemoryInfo(ProcessList* this) {
    char buffer[128];
    while (fgets(buffer, 128, file)) {
 
+      #define tryRead(label, variable) (String_startsWith(buffer, label) && sscanf(buffer + strlen(label), " %32llu kB", variable))
       switch (buffer[0]) {
       case 'M':
-         if (String_startsWith(buffer, "MemTotal:"))
-            sscanf(buffer, "MemTotal: %32llu kB", &this->totalMem);
-         else if (String_startsWith(buffer, "MemFree:"))
-            sscanf(buffer, "MemFree: %32llu kB", &this->freeMem);
-         else if (String_startsWith(buffer, "MemShared:"))
-            sscanf(buffer, "MemShared: %32llu kB", &this->sharedMem);
+         if (tryRead("MemTotal:", &this->totalMem)) {}
+         else if (tryRead("MemFree:", &this->freeMem)) {}
+         else if (tryRead("MemShared:", &this->sharedMem)) {}
          break;
       case 'B':
-         if (String_startsWith(buffer, "Buffers:"))
-            sscanf(buffer, "Buffers: %32llu kB", &this->buffersMem);
+         if (tryRead("Buffers:", &this->buffersMem)) {}
          break;
       case 'C':
-         if (String_startsWith(buffer, "Cached:"))
-            sscanf(buffer, "Cached: %32llu kB", &this->cachedMem);
+         if (tryRead("Cached:", &this->cachedMem)) {}
          break;
       case 'S':
-         if (String_startsWith(buffer, "SwapTotal:"))
-            sscanf(buffer, "SwapTotal: %32llu kB", &this->totalSwap);
-         if (String_startsWith(buffer, "SwapFree:"))
-            sscanf(buffer, "SwapFree: %32llu kB", &swapFree);
+         switch (buffer[1]) {
+         case 'w':
+            if (tryRead("SwapTotal:", &this->totalSwap)) {}
+            else if (tryRead("SwapFree:", &swapFree)) {}
+            break;
+         case 'h':
+            if (tryRead("Shmem:", &shmem)) {}
+            break;
+         case 'R':
+            if (tryRead("SReclaimable:", &sreclaimable)) {}
+            break;
+         }
          break;
       }
+      #undef tryRead
    }
 
    this->usedMem = this->totalMem - this->freeMem;
+   this->cachedMem = this->cachedMem + sreclaimable - shmem;
    this->usedSwap = this->totalSwap - swapFree;
    fclose(file);
 }
@@ -669,14 +694,14 @@ static inline double LinuxProcessList_scanCPUTime(LinuxProcessList* this) {
    int cpus = this->super.cpuCount;
    assert(cpus > 0);
    for (int i = 0; i <= cpus; i++) {
-      char buffer[256];
+      char buffer[PROC_LINE_LENGTH + 1];
       unsigned long long int usertime, nicetime, systemtime, idletime;
       unsigned long long int ioWait, irq, softIrq, steal, guest, guestnice;
       ioWait = irq = softIrq = steal = guest = guestnice = 0;
       // Depending on your kernel version,
       // 5, 7, 8 or 9 of these fields will be set.
       // The rest will remain at zero.
-      char* ok = fgets(buffer, 255, file);
+      char* ok = fgets(buffer, PROC_LINE_LENGTH, file);
       if (!ok) buffer[0] = '\0';
       if (i == 0)
          sscanf(buffer,   "cpu  %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu",         &usertime, &nicetime, &systemtime, &idletime, &ioWait, &irq, &softIrq, &steal, &guest, &guestnice);
@@ -695,8 +720,6 @@ static inline double LinuxProcessList_scanCPUTime(LinuxProcessList* this) {
       unsigned long long int virtalltime = guest + guestnice;
       unsigned long long int totaltime = usertime + nicetime + systemalltime + idlealltime + steal + virtalltime;
       CPUData* cpuData = &(this->cpus[i]);
-      assert (usertime >= cpuData->userTime);
-      assert (nicetime >= cpuData->niceTime);
       assert (systemtime >= cpuData->systemTime);
       assert (idletime >= cpuData->idleTime);
       assert (totaltime >= cpuData->totalTime);
@@ -707,8 +730,11 @@ static inline double LinuxProcessList_scanCPUTime(LinuxProcessList* this) {
       assert (softIrq >= cpuData->softIrqTime);
       assert (steal >= cpuData->stealTime);
       assert (virtalltime >= cpuData->guestTime);
-      cpuData->userPeriod = usertime - cpuData->userTime;
-      cpuData->nicePeriod = nicetime - cpuData->niceTime;
+      // Since we do a subtraction (usertime - guest) and cputime64_to_clock_t()
+      // used in /proc/stat rounds down numbers, it can lead to a case where the
+      // integer overflow.
+      cpuData->userPeriod = (usertime > cpuData->userTime) ? usertime - cpuData->userTime : 0;
+      cpuData->nicePeriod = (nicetime > cpuData->niceTime) ? nicetime - cpuData->niceTime : 0;
       cpuData->systemPeriod = systemtime - cpuData->systemTime;
       cpuData->systemAllPeriod = systemalltime - cpuData->systemAllTime;
       cpuData->idleAllPeriod = idlealltime - cpuData->idleAllTime;
@@ -732,7 +758,8 @@ static inline double LinuxProcessList_scanCPUTime(LinuxProcessList* this) {
       cpuData->guestTime = virtalltime;
       cpuData->totalTime = totaltime;
    }
-   double period = (double)this->cpus[0].totalPeriod / cpus; fclose(file);
+   double period = (double)this->cpus[0].totalPeriod / cpus;
+   fclose(file);
    return period;
 }
 

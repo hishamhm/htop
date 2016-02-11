@@ -6,6 +6,7 @@ in the source distribution for its full text.
 */
 
 #include "RichString.h"
+#include "XAlloc.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -62,16 +63,12 @@ typedef struct RichString_ {
 
 }*/
 
-#ifndef MIN
-#define MIN(a,b) ((a)<(b)?(a):(b))
-#endif
-
 #define charBytes(n) (sizeof(CharType) * (n)) 
 
 static void RichString_extendLen(RichString* this, int len) {
    if (this->chlen <= RICHSTRING_MAXLEN) {
       if (len > RICHSTRING_MAXLEN) {
-         this->chptr = malloc(charBytes(len + 1));
+         this->chptr = xMalloc(charBytes(len + 1));
          memcpy(this->chptr, this->chstr, charBytes(this->chlen));
       }
    } else {
@@ -80,7 +77,7 @@ static void RichString_extendLen(RichString* this, int len) {
          free(this->chptr);
          this->chptr = this->chstr;
       } else {
-         this->chptr = realloc(this->chptr, charBytes(len + 1));
+         this->chptr = xRealloc(this->chptr, charBytes(len + 1));
       }
    }
 
@@ -100,8 +97,7 @@ static inline void RichString_writeFrom(RichString* this, int attrs, const char*
    int newLen = from + len;
    RichString_setLen(this, newLen);
    for (int i = from, j = 0; i < newLen; i++, j++) {
-      CharType* c = &(this->chptr[i]);
-      *c = (CharType) { .attr = attrs, .chars = { (iswprint(data[j]) ? data[j] : '?') } };
+      this->chptr[i] = (CharType) { .attr = attrs & 0xffffff, .chars = { (iswprint(data[j]) ? data[j] : '?') } };
    }
 }
 

@@ -8,6 +8,7 @@ in the source distribution for its full text.
 #include "ProcessList.h"
 #include "DarwinProcess.h"
 #include "DarwinProcessList.h"
+#include "CRT.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -16,6 +17,7 @@ in the source distribution for its full text.
 #include <libproc.h>
 #include <sys/mman.h>
 #include <utmpx.h>
+#include <err.h>
 
 /*{
 #include "ProcessList.h"
@@ -26,7 +28,7 @@ typedef struct DarwinProcessList_ {
    ProcessList super;
 
    host_basic_info_data_t host_info;
-   vm_statistics64_data_t vm_stats;
+   vm_statistics_data_t vm_stats;
    processor_cpu_load_info_t prev_load;
    processor_cpu_load_info_t curr_load;
    uint64_t kernel_threads;
@@ -40,16 +42,14 @@ void ProcessList_getHostInfo(host_basic_info_data_t *p) {
    mach_msg_type_number_t info_size = HOST_BASIC_INFO_COUNT;
 
    if(0 != host_info(mach_host_self(), HOST_BASIC_INFO, (host_info_t)p, &info_size)) {
-       fprintf(stderr, "Unable to retrieve host info\n");
-       exit(2);
+       CRT_fatalError("Unable to retrieve host info\n");
    }
 }
 
 void ProcessList_freeCPULoadInfo(processor_cpu_load_info_t *p) {
    if(NULL != p && NULL != *p) {
        if(0 != munmap(*p, vm_page_size)) {
-           fprintf(stderr, "Unable to free old CPU load information\n");
-           exit(8);
+           CRT_fatalError("Unable to free old CPU load information\n");
        }
    }
 
@@ -62,20 +62,17 @@ unsigned ProcessList_allocateCPULoadInfo(processor_cpu_load_info_t *p) {
 
    // TODO Improving the accuracy of the load counts woule help a lot.
    if(0 != host_processor_info(mach_host_self(), PROCESSOR_CPU_LOAD_INFO, &cpu_count, (processor_info_array_t *)p, &info_size)) {
-       fprintf(stderr, "Unable to retrieve CPU info\n");
-       exit(4);
+       CRT_fatalError("Unable to retrieve CPU info\n");
    }
 
    return cpu_count;
 }
 
-void ProcessList_getVMStats(vm_statistics64_t p) {
-    mach_msg_type_number_t info_size = HOST_VM_INFO64_COUNT;
+void ProcessList_getVMStats(vm_statistics_t p) {
+    mach_msg_type_number_t info_size = HOST_VM_INFO_COUNT;
 
-    if(0 != host_statistics64(mach_host_self(), HOST_VM_INFO64, (host_info_t)p, &info_size)) {
-       fprintf(stderr, "Unable to retrieve VM statistics\n");
-       exit(9);
-    }
+    if (host_statistics(mach_host_self(), HOST_VM_INFO, (host_info_t)p, &info_size) != 0)
+       CRT_fatalError("Unable to retrieve VM statistics\n");
 }
 
 struct kinfo_proc *ProcessList_getKInfoProcs(size_t *count) {
@@ -87,21 +84,15 @@ struct kinfo_proc *ProcessList_getKInfoProcs(size_t *count) {
     * process entry or two.
     */
    *count = 0;
-   if(0 > sysctl(mib, 4, NULL, count, NULL, 0)) {
-      fprintf(stderr, "Unable to get size of kproc_infos");
-      exit(5);
-   }
+   if (sysctl(mib, 4, NULL, count, NULL, 0) < 0)
+      CRT_fatalError("Unable to get size of kproc_infos");
 
-   processes = (struct kinfo_proc *)malloc(*count);
-   if(NULL == processes) {
-      fprintf(stderr, "Out of memory for kproc_infos\n");
-      exit(6);
-   }
+   processes = xMalloc(*count);
+   if (processes == NULL)
+      CRT_fatalError("Out of memory for kproc_infos");
 
-   if(0 > sysctl(mib, 4, processes, count, NULL, 0)) {
-      fprintf(stderr, "Unable to get kinfo_procs\n");
-      exit(7);
-   }
+   if (sysctl(mib, 4, processes, count, NULL, 0) < 0)
+      CRT_fatalError("Unable to get kinfo_procs");
 
    *count = *count / sizeof(struct kinfo_proc);
 
@@ -110,7 +101,7 @@ struct kinfo_proc *ProcessList_getKInfoProcs(size_t *count) {
 
 
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId) {
-   DarwinProcessList* this = calloc(1, sizeof(DarwinProcessList));
+   DarwinProcessList* this = xCalloc(1, sizeof(DarwinProcessList));
 
    ProcessList_init(&this->super, Class(Process), usersTable, pidWhiteList, userId);
 

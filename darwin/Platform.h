@@ -11,10 +11,20 @@ in the source distribution for its full text.
 */
 
 #include "Action.h"
+#include "SignalsPanel.h"
+#include "CPUMeter.h"
 #include "BatteryMeter.h"
 #include "DarwinProcess.h"
 
+#ifndef CLAMP
+#define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
+#endif
+
 extern ProcessField Platform_defaultFields[];
+
+extern SignalItem Platform_signals[];
+
+extern unsigned int Platform_numberOfSignals;
 
 extern ProcessFieldData Process_fields[];
 
@@ -30,11 +40,14 @@ void Platform_getLoadAverage(double* one, double* five, double* fifteen);
 
 int Platform_getMaxPid();
 
+extern ProcessPidColumn Process_pidColumns[];
+
 double Platform_setCPUValues(Meter* mtr, int cpu);
 
 void Platform_setMemoryValues(Meter* mtr);
 
-void Platform_setSwapValues(Meter* this);
+void Platform_setSwapValues(Meter* mtr);
 
+char* Platform_getProcessEnv(pid_t pid);
 
 #endif

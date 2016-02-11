@@ -21,11 +21,55 @@ in the source distribution for its full text.
 
 /*{
 #include "Action.h"
+#include "SignalsPanel.h"
+#include "CPUMeter.h"
 #include "BatteryMeter.h"
 #include "DarwinProcess.h"
 }*/
 
+#ifndef CLAMP
+#define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
+#endif
+
 ProcessField Platform_defaultFields[] = { PID, USER, PRIORITY, NICE, M_SIZE, M_RESIDENT, STATE, PERCENT_CPU, PERCENT_MEM, TIME, COMM, 0 };
+
+SignalItem Platform_signals[] = {
+   { .name = " 0 Cancel",    .number =  0 },
+   { .name = " 1 SIGHUP",    .number =  1 },
+   { .name = " 2 SIGINT",    .number =  2 },
+   { .name = " 3 SIGQUIT",   .number =  3 },
+   { .name = " 4 SIGILL",    .number =  4 },
+   { .name = " 5 SIGTRAP",   .number =  5 },
+   { .name = " 6 SIGABRT",   .number =  6 },
+   { .name = " 6 SIGIOT",    .number =  6 },
+   { .name = " 7 SIGEMT",    .number =  7 },
+   { .name = " 8 SIGFPE",    .number =  8 },
+   { .name = " 9 SIGKILL",   .number =  9 },
+   { .name = "10 SIGBUS",    .number = 10 },
+   { .name = "11 SIGSEGV",   .number = 11 },
+   { .name = "12 SIGSYS",    .number = 12 },
+   { .name = "13 SIGPIPE",   .number = 13 },
+   { .name = "14 SIGALRM",   .number = 14 },
+   { .name = "15 SIGTERM",   .number = 15 },
+   { .name = "16 SIGURG",    .number = 16 },
+   { .name = "17 SIGSTOP",   .number = 17 },
+   { .name = "18 SIGTSTP",   .number = 18 },
+   { .name = "19 SIGCONT",   .number = 19 },
+   { .name = "20 SIGCHLD",   .number = 20 },
+   { .name = "21 SIGTTIN",   .number = 21 },
+   { .name = "22 SIGTTOU",   .number = 22 },
+   { .name = "23 SIGIO",     .number = 23 },
+   { .name = "24 SIGXCPU",   .number = 24 },
+   { .name = "25 SIGXFSZ",   .number = 25 },
+   { .name = "26 SIGVTALRM", .number = 26 },
+   { .name = "27 SIGPROF",   .number = 27 },
+   { .name = "28 SIGWINCH",  .number = 28 },
+   { .name = "29 SIGINFO",   .number = 29 },
+   { .name = "30 SIGUSR1",   .number = 30 },
+   { .name = "31 SIGUSR2",   .number = 31 },
+};
+
+unsigned int Platform_numberOfSignals = sizeof(Platform_signals)/sizeof(SignalItem);
 
 ProcessFieldData Process_fields[] = {
    [0] = { .name = "", .title = NULL, .description = NULL, .flags = 0, },
@@ -62,6 +106,7 @@ MeterClass* Platform_meterTypes[] = {
    &LoadAverageMeter_class,
    &LoadMeter_class,
    &MemoryMeter_class,
+   &SwapMeter_class,
    &TasksMeter_class,
    &BatteryMeter_class,
    &HostnameMeter_class,
@@ -125,11 +170,30 @@ ProcessPidColumn Process_pidColumns[] = {
    { .id = 0, .label = NULL },
 };
 
+static double Platform_setCPUAverageValues(Meter* mtr) {
+   DarwinProcessList *dpl = (DarwinProcessList *)mtr->pl;
+   int cpus = dpl->super.cpuCount;
+   double sumNice = 0.0;
+   double sumNormal = 0.0;
+   double sumKernel = 0.0;
+   double sumPercent = 0.0;
+   for (int i = 1; i <= cpus; i++) {
+      sumPercent += Platform_setCPUValues(mtr, i);
+      sumNice    += mtr->values[CPU_METER_NICE];
+      sumNormal  += mtr->values[CPU_METER_NORMAL];
+      sumKernel  += mtr->values[CPU_METER_KERNEL];
+   }
+   mtr->values[CPU_METER_NICE]   = sumNice   / cpus;
+   mtr->values[CPU_METER_NORMAL] = sumNormal / cpus;
+   mtr->values[CPU_METER_KERNEL] = sumKernel / cpus;
+   return sumPercent / cpus;
+}
+
 double Platform_setCPUValues(Meter* mtr, int cpu) {
-   /* All just from CPUMeter.c */
-   static const int CPU_METER_NICE = 0;
-   static const int CPU_METER_NORMAL = 1;
-   static const int CPU_METER_KERNEL = 2;
+
+   if (cpu == 0) {
+      return Platform_setCPUAverageValues(mtr);
+   }
 
    DarwinProcessList *dpl = (DarwinProcessList *)mtr->pl;
    processor_cpu_load_info_t prev = &dpl->prev_load[cpu-1];
@@ -153,12 +217,12 @@ double Platform_setCPUValues(Meter* mtr, int cpu) {
    /* Convert to percent and return */
    total = mtr->values[CPU_METER_NICE] + mtr->values[CPU_METER_NORMAL] + mtr->values[CPU_METER_KERNEL];
 
-   return MIN(100.0, MAX(0.0, total));
+   return CLAMP(total, 0.0, 100.0);
 }
 
 void Platform_setMemoryValues(Meter* mtr) {
    DarwinProcessList *dpl = (DarwinProcessList *)mtr->pl;
-   vm_statistics64_t vm = &dpl->vm_stats;
+   vm_statistics_t vm = &dpl->vm_stats;
    double page_K = (double)vm_page_size / (double)1024;
 
    mtr->total = dpl->host_info.max_mem / 1024;
@@ -167,6 +231,65 @@ void Platform_setMemoryValues(Meter* mtr) {
    mtr->values[2] = (double)vm->inactive_count * page_K;
 }
 
-void Platform_setSwapValues(Meter* this) {
+void Platform_setSwapValues(Meter* mtr) {
+  int mib[2] = {CTL_VM, VM_SWAPUSAGE};
+  struct xsw_usage swapused;
+  size_t swlen = sizeof(swapused);
+  sysctl(mib, 2, &swapused, &swlen, NULL, 0);
+
+  mtr->total = swapused.xsu_total / 1024;
+  mtr->values[0] = swapused.xsu_used / 1024;
 }
 
+char* Platform_getProcessEnv(pid_t pid) {
+   char* env = NULL;
+
+   int argmax;
+   size_t bufsz = sizeof(argmax);
+
+   int mib[3];
+   mib[0] = CTL_KERN;
+   mib[1] = KERN_ARGMAX;
+   if (sysctl(mib, 2, &argmax, &bufsz, 0, 0) == 0) {
+      char* buf = xMalloc(argmax);
+      if (buf) {
+         mib[0] = CTL_KERN;
+         mib[1] = KERN_PROCARGS2;
+         mib[2] = pid;
+         size_t bufsz = argmax;
+         if (sysctl(mib, 3, buf, &bufsz, 0, 0) == 0) {
+            if (bufsz > sizeof(int)) {
+               char *p = buf, *endp = buf + bufsz;
+               int argc = *(int*)p;
+               p += sizeof(int);
+
+               // skip exe
+               p = strchr(p, 0)+1;
+
+               // skip padding
+               while(!*p && p < endp)
+                  ++p;
+
+               // skip argv
+               for (; argc-- && p < endp; p = strrchr(p, 0)+1)
+                  ;
+
+               // skip padding
+               while(!*p && p < endp)
+                  ++p;
+
+               size_t size = endp - p;
+               env = xMalloc(size+2);
+               if (env) {
+                  memcpy(env, p, size);
+                  env[size] = 0;
+                  env[size+1] = 0;
+               }
+            }
+         }
+         free(buf);
+      }
+   }
+
+   return env;
+}

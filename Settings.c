@@ -96,7 +96,7 @@ static void Settings_readMeterModes(Settings* this, char* line, int column) {
       len++;
    }
    this->columns[column].len = len;
-   int* modes = calloc(len, sizeof(int));
+   int* modes = xCalloc(len, sizeof(int));
    for (int i = 0; i < len; i++) {
       modes[i] = atoi(ids[i]);
    }
@@ -110,27 +110,37 @@ static void Settings_defaultMeters(Settings* this) {
       sizes[1]++;
    }
    for (int i = 0; i < 2; i++) {
-      this->columns[i].names = calloc(sizes[i] + 1, sizeof(char*));
-      this->columns[i].modes = calloc(sizes[i], sizeof(int));
+      this->columns[i].names = xCalloc(sizes[i] + 1, sizeof(char*));
+      this->columns[i].modes = xCalloc(sizes[i], sizeof(int));
       this->columns[i].len = sizes[i];
    }
    
    int r = 0;
    if (this->cpuCount > 8) {
-      this->columns[0].names[0] = strdup("LeftCPUs2");
-      this->columns[1].names[r++] = strdup("RightCPUs2");
+      this->columns[0].names[0] = xStrdup("LeftCPUs2");
+      this->columns[0].modes[0] = BAR_METERMODE;
+      this->columns[1].names[r] = xStrdup("RightCPUs2");
+      this->columns[1].modes[r++] = BAR_METERMODE;
    } else if (this->cpuCount > 4) {
-      this->columns[0].names[0] = strdup("LeftCPUs");
-      this->columns[1].names[r++] = strdup("RightCPUs");
+      this->columns[0].names[0] = xStrdup("LeftCPUs");
+      this->columns[0].modes[0] = BAR_METERMODE;
+      this->columns[1].names[r] = xStrdup("RightCPUs");
+      this->columns[1].modes[r++] = BAR_METERMODE;
    } else {
-      this->columns[0].names[0] = strdup("AllCPUs");
+      this->columns[0].names[0] = xStrdup("AllCPUs");
+      this->columns[0].modes[0] = BAR_METERMODE;
    }
-   this->columns[0].names[1] = strdup("Memory");
-   this->columns[0].names[2] = strdup("Swap");
+   this->columns[0].names[1] = xStrdup("Memory");
+   this->columns[0].modes[1] = BAR_METERMODE;
+   this->columns[0].names[2] = xStrdup("Swap");
+   this->columns[0].modes[2] = BAR_METERMODE;
    
-   this->columns[1].names[r++] = strdup("Tasks");
-   this->columns[1].names[r++] = strdup("LoadAverage");
-   this->columns[1].names[r++] = strdup("Uptime");
+   this->columns[1].names[r] = xStrdup("Tasks");
+   this->columns[1].modes[r++] = TEXT_METERMODE;
+   this->columns[1].names[r] = xStrdup("LoadAverage");
+   this->columns[1].modes[r++] = TEXT_METERMODE;
+   this->columns[1].names[r] = xStrdup("Uptime");
+   this->columns[1].modes[r++] = TEXT_METERMODE;
 }
 
 static void readFields(ProcessField* fields, int* flags, const char* line) {
@@ -154,7 +164,12 @@ static void readFields(ProcessField* fields, int* flags, const char* line) {
 }
 
 static bool Settings_read(Settings* this, const char* fileName) {
-   FILE* fd = fopen(fileName, "r");
+   FILE* fd;
+   uid_t euid = geteuid();
+
+   seteuid(getuid());
+   fd = fopen(fileName, "r");
+   seteuid(euid);
    if (!fd)
       return false;
    
@@ -260,7 +275,11 @@ static void writeMeterModes(Settings* this, FILE* fd, int column) {
 
 bool Settings_write(Settings* this) {
    FILE* fd;
+   uid_t euid = geteuid();
+
+   seteuid(getuid());
    fd = fopen(this->filename, "w");
+   seteuid(euid);
    if (fd == NULL) {
       return false;
    }
@@ -297,7 +316,7 @@ bool Settings_write(Settings* this) {
 
 Settings* Settings_new(int cpuCount) {
   
-   Settings* this = calloc(1, sizeof(Settings));
+   Settings* this = xCalloc(1, sizeof(Settings));
 
    this->sortKey = PERCENT_CPU;
    this->direction = 1;
@@ -314,8 +333,9 @@ Settings* Settings_new(int cpuCount) {
    this->updateProcessNames = false;
    this->cpuCount = cpuCount;
    this->showProgramPath = true;
+   this->highlightThreads = true;
    
-   this->fields = calloc(Platform_numberOfFields+1, sizeof(ProcessField));
+   this->fields = xCalloc(Platform_numberOfFields+1, sizeof(ProcessField));
    // TODO: turn 'fields' into a Vector,
    // (and ProcessFields into proper objects).
    this->flags = 0;
@@ -328,7 +348,7 @@ Settings* Settings_new(int cpuCount) {
    char* legacyDotfile = NULL;
    char* rcfile = getenv("HTOPRC");
    if (rcfile) {
-      this->filename = strdup(rcfile);
+      this->filename = xStrdup(rcfile);
    } else {
       const char* home = getenv("HOME");
       if (!home) home = "";
@@ -337,7 +357,7 @@ Settings* Settings_new(int cpuCount) {
       char* htopDir = NULL;
       if (xdgConfigHome) {
          this->filename = String_cat(xdgConfigHome, "/htop/htoprc");
-         configDir = strdup(xdgConfigHome);
+         configDir = xStrdup(xdgConfigHome);
          htopDir = String_cat(xdgConfigHome, "/htop");
       } else {
          this->filename = String_cat(home, "/.config/htop/htoprc");
@@ -345,6 +365,8 @@ Settings* Settings_new(int cpuCount) {
          htopDir = String_cat(home, "/.config/htop");
       }
       legacyDotfile = String_cat(home, "/.htoprc");
+      uid_t euid = geteuid();
+      seteuid(getuid());
       (void) mkdir(configDir, 0700);
       (void) mkdir(htopDir, 0700);
       free(htopDir);
@@ -357,6 +379,7 @@ Settings* Settings_new(int cpuCount) {
          free(legacyDotfile);
          legacyDotfile = NULL;
       }
+      seteuid(euid);
    }
    this->colorScheme = 0;
    this->changed = false;
@@ -378,7 +401,7 @@ Settings* Settings_new(int cpuCount) {
          Settings_defaultMeters(this);
          this->hideKernelThreads = true;
          this->highlightMegabytes = true;
-         this->highlightThreads = false;
+         this->highlightThreads = true;
          this->headerMargin = true;
       }
    }

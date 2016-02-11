@@ -13,10 +13,19 @@ in the source distribution for its full text.
 #include "MainPanel.h"
 #include "BatteryMeter.h"
 #include "LinuxProcess.h"
+#include "SignalsPanel.h"
+
+#ifndef CLAMP
+#define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
+#endif
 
 extern ProcessField Platform_defaultFields[];
 
 extern int Platform_numberOfFields;
+
+extern SignalItem Platform_signals[];
+
+extern unsigned int Platform_numberOfSignals;
 
 void Platform_setBindings(Htop_Action* keys);
 
@@ -33,5 +42,7 @@ double Platform_setCPUValues(Meter* this, int cpu);
 void Platform_setMemoryValues(Meter* this);
 
 void Platform_setSwapValues(Meter* this);
+
+char* Platform_getProcessEnv(pid_t pid);
 
 #endif

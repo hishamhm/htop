@@ -91,7 +91,7 @@ static HandlerResult MainPanel_eventHandler(Panel* super, int ch) {
       result = HANDLED;
    } else if (ch == 27) {
       return HANDLED;
-   } else if (ch != ERR && this->keys[ch]) {
+   } else if (ch != ERR && ch > 0 && ch < KEY_MAX && this->keys[ch]) {
       reaction |= (this->keys[ch])(this->state);
       result = HANDLED;
    } else if (isdigit(ch)) {
@@ -190,7 +190,7 @@ PanelClass MainPanel_class = {
 MainPanel* MainPanel_new() {
    MainPanel* this = AllocThis(MainPanel);
    Panel_init((Panel*) this, 1, 1, 1, 1, Class(Process), false, FunctionBar_new(MainFunctions, NULL, NULL));
-   this->keys = calloc(KEY_MAX, sizeof(Htop_Action));
+   this->keys = xCalloc(KEY_MAX, sizeof(Htop_Action));
    this->inc = IncSet_new(MainPanel_getFunctionBar(this));
 
    Action_setBindings(this->keys);

@@ -46,7 +46,7 @@ typedef struct ScreenManager_ {
 
 ScreenManager* ScreenManager_new(int x1, int y1, int x2, int y2, Orientation orientation, const Header* header, const Settings* settings, bool owner) {
    ScreenManager* this;
-   this = malloc(sizeof(ScreenManager));
+   this = xMalloc(sizeof(ScreenManager));
    this->x1 = x1;
    this->y1 = y1;
    this->x2 = x2;
@@ -243,6 +243,29 @@ void ScreenManager_run(ScreenManager* this, Panel** lastFocus, int* lastKey) {
             closeTimeout = 0;
          redraw = false;
          continue;
+      }
+      else if (ch == 27) {
+         int ch2 = getch();
+         if (ch2 != ERR) {
+            switch(ch2)
+            {
+            case 'h':
+               ch = KEY_LEFT;
+               break;
+            case 'j':
+               ch = KEY_DOWN;
+               break;
+            case 'k':
+               ch = KEY_UP;
+               break;
+            case 'l':
+               ch = KEY_RIGHT;
+               break;
+            default:
+               ungetch(ch2);
+               break;
+            }
+         }
       }
       redraw = true;
       if (Panel_eventHandlerFn(panelFocus)) {

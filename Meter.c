@@ -25,6 +25,8 @@ in the source distribution for its full text.
 
 #define GRAPH_DELAY (DEFAULT_DELAY/2)
 
+#define GRAPH_HEIGHT 4 /* Unit: rows (lines) */
+
 /*{
 #include "ListItem.h"
 
@@ -114,6 +116,9 @@ typedef struct GraphData_ {
 #ifndef MAX
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #endif
+#ifndef CLAMP
+#define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
+#endif
 
 MeterClass Meter_class = {
    .super = {
@@ -122,7 +127,7 @@ MeterClass Meter_class = {
 };
 
 Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type) {
-   Meter* this = calloc(1, sizeof(Meter));
+   Meter* this = xCalloc(1, sizeof(Meter));
    Object_setClass(this, type);
    this->h = 1;
    this->param = param;
@@ -132,9 +137,9 @@ Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type) {
       maxItems = 1;
    }
    type->curItems = maxItems;
-   this->values = calloc(maxItems, sizeof(double));
+   this->values = xCalloc(maxItems, sizeof(double));
    this->total = type->total;
-   this->caption = strdup(type->caption);
+   this->caption = xStrdup(type->caption);
    if (Meter_initFn(this))
       Meter_init(this);
    Meter_setMode(this, type->defaultMode);
@@ -188,7 +193,7 @@ void Meter_delete(Object* cast) {
 
 void Meter_setCaption(Meter* this, const char* caption) {
    free(this->caption);
-   this->caption = strdup(caption);
+   this->caption = xStrdup(caption);
 }
 
 static inline void Meter_displayBuffer(Meter* this, char* buffer, RichString* out) {
@@ -251,7 +256,6 @@ static void TextMeterMode_draw(Meter* this, int x, int y, int w) {
    mvaddstr(y, x, this->caption);
    int captionLen = strlen(this->caption);
    x += captionLen;
-   mvhline(y, x, ' ', CRT_colors[DEFAULT_COLOR]);
    attrset(CRT_colors[RESET_COLOR]);
    RichString_begin(out);
    Meter_displayBuffer(this, buffer, &out);
@@ -261,7 +265,7 @@ static void TextMeterMode_draw(Meter* this, int x, int y, int w) {
 
 /* ---------- BarMeterMode ---------- */
 
-static char BarMeterMode_characters[] = "|#*@$%&";
+static char BarMeterMode_characters[] = "|#*@$%&.";
 
 static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
    char buffer[METER_BUFFER_LEN];
@@ -298,8 +302,7 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
    int items = Meter_getItems(this);
    for (int i = 0; i < items; i++) {
       double value = this->values[i];
-      value = MAX(value, 0);
-      value = MIN(value, this->total);
+      value = CLAMP(value, 0.0, this->total);
       if (value > 0) {
          blockSizes[i] = ceil((value/this->total) * w);
       } else {
@@ -307,7 +310,7 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
       }
       int nextOffset = offset + blockSizes[i];
       // (Control against invalid values)
-      nextOffset = MIN(MAX(nextOffset, 0), w);
+      nextOffset = CLAMP(nextOffset, 0, w);
       for (int j = offset; j < nextOffset; j++)
          if (bar[j] == ' ') {
             if (CRT_colorScheme == COLORSCHEME_MONOCHROME) {
@@ -325,8 +328,7 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
       attrset(CRT_colors[Meter_attributes(this)[i]]);
       mvaddnstr(y, x + offset, bar + offset, blockSizes[i]);
       offset += blockSizes[i];
-      offset = MAX(offset, 0);
-      offset = MIN(offset, w);
+      offset = CLAMP(offset, 0, w);
    }
    if (offset < w) {
       attrset(CRT_colors[BAR_SHADOW]);
@@ -364,7 +366,7 @@ static int GraphMeterMode_pixPerRow;
 
 static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
 
-   if (!this->drawData) this->drawData = calloc(1, sizeof(GraphData));
+   if (!this->drawData) this->drawData = xCalloc(1, sizeof(GraphData));
     GraphData* data = (GraphData*) this->drawData;
    const int nValues = METER_BUFFER_LEN;
 
@@ -405,15 +407,20 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       data->values[nValues - 1] = value;
    }
    
-   for (int i = nValues - (w*2) + 2, k = 0; i < nValues; i+=2, k++) {
-      const double dot = (1.0 / (GraphMeterMode_pixPerRow * 4));
-      int v1 = MIN(GraphMeterMode_pixPerRow * 4, MAX(1, data->values[i] / dot));
-      int v2 = MIN(GraphMeterMode_pixPerRow * 4, MAX(1, data->values[i+1] / dot));
+   int i = nValues - (w*2) + 2, k = 0;
+   if (i < 0) {
+      k = -i/2;
+      i = 0;
+   }
+   for (; i < nValues; i+=2, k++) {
+      int pix = GraphMeterMode_pixPerRow * GRAPH_HEIGHT;
+      int v1 = CLAMP(data->values[i] * pix, 1, pix);
+      int v2 = CLAMP(data->values[i+1] * pix, 1, pix);
 
       int colorIdx = GRAPH_1;
-      for (int line = 0; line < 4; line++) {
-         int line1 = MIN(GraphMeterMode_pixPerRow, MAX(0, v1 - (GraphMeterMode_pixPerRow * (3 - line))));
-         int line2 = MIN(GraphMeterMode_pixPerRow, MAX(0, v2 - (GraphMeterMode_pixPerRow * (3 - line))));
+      for (int line = 0; line < GRAPH_HEIGHT; line++) {
+         int line1 = CLAMP(v1 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line)), 0, GraphMeterMode_pixPerRow);
+         int line2 = CLAMP(v2 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line)), 0, GraphMeterMode_pixPerRow);
 
          attrset(CRT_colors[colorIdx]);
          mvaddstr(y+line, x+k, GraphMeterMode_dots[line1 * (GraphMeterMode_pixPerRow + 1) + line2]);
@@ -501,7 +508,7 @@ static MeterMode TextMeterMode = {
 
 static MeterMode GraphMeterMode = {
    .uiName = "Graph",
-   .h = 4,
+   .h = GRAPH_HEIGHT,
    .draw = GraphMeterMode_draw,
 };
 

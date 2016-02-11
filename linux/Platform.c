@@ -25,19 +25,66 @@ in the source distribution for its full text.
 
 #include <math.h>
 #include <assert.h>
+#include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 /*{
 #include "Action.h"
 #include "MainPanel.h"
 #include "BatteryMeter.h"
 #include "LinuxProcess.h"
+#include "SignalsPanel.h"
 }*/
+
+#ifndef CLAMP
+#define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
+#endif
 
 ProcessField Platform_defaultFields[] = { PID, USER, PRIORITY, NICE, M_SIZE, M_RESIDENT, M_SHARE, STATE, PERCENT_CPU, PERCENT_MEM, TIME, COMM, 0 };
 
 //static ProcessField defaultIoFields[] = { PID, IO_PRIORITY, USER, IO_READ_RATE, IO_WRITE_RATE, IO_RATE, COMM, 0 };
 
 int Platform_numberOfFields = LAST_PROCESSFIELD;
+
+SignalItem Platform_signals[] = {
+   { .name = " 0 Cancel",    .number = 0 },
+   { .name = " 1 SIGHUP",    .number = 1 },
+   { .name = " 2 SIGINT",    .number = 2 },
+   { .name = " 3 SIGQUIT",   .number = 3 },
+   { .name = " 4 SIGILL",    .number = 4 },
+   { .name = " 5 SIGTRAP",   .number = 5 },
+   { .name = " 6 SIGABRT",   .number = 6 },
+   { .name = " 6 SIGIOT",    .number = 6 },
+   { .name = " 7 SIGBUS",    .number = 7 },
+   { .name = " 8 SIGFPE",    .number = 8 },
+   { .name = " 9 SIGKILL",   .number = 9 },
+   { .name = "10 SIGUSR1",   .number = 10 },
+   { .name = "11 SIGSEGV",   .number = 11 },
+   { .name = "12 SIGUSR2",   .number = 12 },
+   { .name = "13 SIGPIPE",   .number = 13 },
+   { .name = "14 SIGALRM",   .number = 14 },
+   { .name = "15 SIGTERM",   .number = 15 },
+   { .name = "16 SIGSTKFLT", .number = 16 },
+   { .name = "17 SIGCHLD",   .number = 17 },
+   { .name = "18 SIGCONT",   .number = 18 },
+   { .name = "19 SIGSTOP",   .number = 19 },
+   { .name = "20 SIGTSTP",   .number = 20 },
+   { .name = "21 SIGTTIN",   .number = 21 },
+   { .name = "22 SIGTTOU",   .number = 22 },
+   { .name = "23 SIGURG",    .number = 23 },
+   { .name = "24 SIGXCPU",   .number = 24 },
+   { .name = "25 SIGXFSZ",   .number = 25 },
+   { .name = "26 SIGVTALRM", .number = 26 },
+   { .name = "27 SIGPROF",   .number = 27 },
+   { .name = "28 SIGWINCH",  .number = 28 },
+   { .name = "29 SIGIO",     .number = 29 },
+   { .name = "29 SIGPOLL",   .number = 29 },
+   { .name = "30 SIGPWR",    .number = 30 },
+   { .name = "31 SIGSYS",    .number = 31 },
+};
+
+unsigned int Platform_numberOfSignals = sizeof(Platform_signals)/sizeof(SignalItem);
 
 static Htop_Reaction Platform_actionSetIOPriority(State* st) {
    Panel* panel = st->panel;
@@ -122,28 +169,28 @@ double Platform_setCPUValues(Meter* this, int cpu) {
    double total = (double) ( cpuData->totalPeriod == 0 ? 1 : cpuData->totalPeriod);
    double percent;
    double* v = this->values;
-   v[0] = cpuData->nicePeriod / total * 100.0;
-   v[1] = cpuData->userPeriod / total * 100.0;
+   v[CPU_METER_NICE] = cpuData->nicePeriod / total * 100.0;
+   v[CPU_METER_NORMAL] = cpuData->userPeriod / total * 100.0;
    if (this->pl->settings->detailedCPUTime) {
-      v[2] = cpuData->systemPeriod / total * 100.0;
-      v[3] = cpuData->irqPeriod / total * 100.0;
-      v[4] = cpuData->softIrqPeriod / total * 100.0;
-      v[5] = cpuData->stealPeriod / total * 100.0;
-      v[6] = cpuData->guestPeriod / total * 100.0;
-      v[7] = cpuData->ioWaitPeriod / total * 100.0;
+      v[CPU_METER_KERNEL]  = cpuData->systemPeriod / total * 100.0;
+      v[CPU_METER_IRQ]     = cpuData->irqPeriod / total * 100.0;
+      v[CPU_METER_SOFTIRQ] = cpuData->softIrqPeriod / total * 100.0;
+      v[CPU_METER_STEAL]   = cpuData->stealPeriod / total * 100.0;
+      v[CPU_METER_GUEST]   = cpuData->guestPeriod / total * 100.0;
+      v[CPU_METER_IOWAIT]  = cpuData->ioWaitPeriod / total * 100.0;
       Meter_setItems(this, 8);
       if (this->pl->settings->accountGuestInCPUMeter) {
          percent = v[0]+v[1]+v[2]+v[3]+v[4]+v[5]+v[6];
       } else {
          percent = v[0]+v[1]+v[2]+v[3]+v[4];
-      }       
+      }
    } else {
       v[2] = cpuData->systemAllPeriod / total * 100.0;
       v[3] = (cpuData->stealPeriod + cpuData->guestPeriod) / total * 100.0;
       Meter_setItems(this, 4);
       percent = v[0]+v[1]+v[2]+v[3];
    }
-   percent = MIN(100.0, MAX(0.0, percent));      
+   percent = CLAMP(percent, 0.0, 100.0);
    if (isnan(percent)) percent = 0.0;
    return percent;
 }
@@ -164,4 +211,29 @@ void Platform_setSwapValues(Meter* this) {
    ProcessList* pl = (ProcessList*) this->pl;
    this->total = pl->totalSwap;
    this->values[0] = pl->usedSwap;
+}
+
+char* Platform_getProcessEnv(pid_t pid) {
+   char procname[32+1];
+   snprintf(procname, 32, "/proc/%d/environ", pid);
+   FILE* fd = fopen(procname, "r");
+   char *env = NULL;
+   if (fd) {
+      size_t capacity = 4096, size = 0, bytes;
+      env = xMalloc(capacity);
+      while (env && (bytes = fread(env+size, 1, capacity-size, fd)) > 0) {
+         size += bytes;
+         capacity *= 2;
+         env = xRealloc(env, capacity);
+      }
+      fclose(fd);
+      if (size < 2 || env[size-1] || env[size-2]) {
+         if (size + 2 < capacity) {
+            env = xRealloc(env, capacity+2);
+         }
+         env[size] = 0;
+         env[size+1] = 0;
+      }
+   }
+   return env;
 }
