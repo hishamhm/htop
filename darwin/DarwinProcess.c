@@ -286,7 +286,7 @@ void DarwinProcess_setFromKInfoProc(Process *proc, struct kinfo_proc *ps, time_t
       /* The command is from the old Mac htop */
       char *slash;
 
-      proc->comm = DarwinProcess_getCmdLine(ps, false);
+      proc->comm = DarwinProcess_getCmdLine(ps, true);
       slash = strrchr(proc->comm, '/');
       proc->basenameOffset = (NULL != slash) ? (slash - proc->comm) : 0;
    }
