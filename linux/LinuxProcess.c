@@ -14,6 +14,7 @@ in the source distribution for its full text.
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <sys/resource.h>
 #include <sys/syscall.h>
 
 /*{
@@ -268,13 +269,13 @@ io_priority = (cpu_nice + 20) / 5. -- From ionice(1) man page
 #define LinuxProcess_effectiveIOPriority(p_) (IOPriority_class(p_->ioPriority) == IOPRIO_CLASS_NONE ? IOPriority_tuple(IOPRIO_CLASS_BE, (p_->super.nice + 20) / 5) : p_->ioPriority)
 
 IOPriority LinuxProcess_updateIOPriority(LinuxProcess* this) {
-   IOPriority ioprio = syscall(SYS_ioprio_get, IOPRIO_WHO_PROCESS, this->super.pid);
+   IOPriority ioprio = getpriority(this->super.pid, IOPRIO_WHO_PROCESS);
    this->ioPriority = ioprio;
    return ioprio;
 }
 
 bool LinuxProcess_setIOPriority(LinuxProcess* this, IOPriority ioprio) {
-   syscall(SYS_ioprio_set, IOPRIO_WHO_PROCESS, this->super.pid, ioprio);
+   setpriority(this->super.pid, IOPRIO_WHO_PROCESS, ioprio);
    return (LinuxProcess_updateIOPriority(this) == ioprio);
 }
 
