@@ -7,6 +7,7 @@ in the source distribution for its full text.
 
 #include "IncSet.h"
 #include "StringUtils.h"
+#include "Filter.h"
 #include "Panel.h"
 #include "ListItem.h"
 #include "CRT.h"
@@ -97,14 +98,16 @@ static void updateWeakPanel(IncSet* this, Panel* panel, Vector* lines) {
    if (this->filtering) {
       int n = 0;
       const char* incFilter = this->modes[INC_FILTER].buffer;
+      Filter* filter = Filter_new(incFilter);
       for (int i = 0; i < Vector_size(lines); i++) {
          ListItem* line = (ListItem*)Vector_get(lines, i);
-         if (String_contains_i(line->value, incFilter)) {
+         if (Filter_test(filter, line->value)) {
             Panel_add(panel, (Object*)line);
             if (selected == (Object*)line) Panel_setSelected(panel, n);
             n++;
          }
       }
+      Filter_delete(filter);
    } else {
       for (int i = 0; i < Vector_size(lines); i++) {
          Object* line = Vector_get(lines, i);
@@ -117,13 +120,15 @@ static void updateWeakPanel(IncSet* this, Panel* panel, Vector* lines) {
 static void search(IncMode* mode, Panel* panel, IncMode_GetPanelValue getPanelValue) {
    int size = Panel_size(panel);
    bool found = false;
+   Filter* filter = Filter_new(mode->buffer);
    for (int i = 0; i < size; i++) {
-      if (String_contains_i(getPanelValue(panel, i), mode->buffer)) {
+      if (Filter_test(filter, getPanelValue(panel, i))) {
          Panel_setSelected(panel, i);
          found = true;
          break;
       }
    }
+   Filter_delete(filter);
    if (found)
       FunctionBar_draw(mode->bar, mode->buffer);
    else
@@ -141,15 +146,17 @@ bool IncSet_handleKey(IncSet* this, int ch, Panel* panel, IncMode_GetPanelValue 
       if (size == 0) return true;
       int here = Panel_getSelectedIndex(panel);
       int i = here;
+      Filter* filter = Filter_new(mode->buffer);
       for(;;) {
          i++;
          if (i == size) i = 0;
          if (i == here) break;
-         if (String_contains_i(getPanelValue(panel, i), mode->buffer)) {
+	 if (Filter_test(filter, getPanelValue(panel, i))) {
             Panel_setSelected(panel, i);
             break;
          }
       }
+      Filter_delete(filter);
       doSearch = false;
    } else if (ch < 255 && isprint((char)ch) && (mode->index < INCMODE_MAX)) {
       mode->buffer[mode->index] = ch;
