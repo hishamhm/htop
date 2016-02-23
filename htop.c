@@ -25,6 +25,8 @@ in the source distribution for its full text.
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <errno.h>
+#include <limits.h>
 
 //#link m
 
@@ -51,6 +53,25 @@ static void printHelpFlag() {
          "See 'man htop' for more information.\n",
          stdout);
    exit(0);
+}
+
+static bool parsePID(char *pid_str, unsigned int *result) {
+   char *endptr;
+   unsigned long tmp_result;
+
+   if (pid_str[0] == '-')
+      return false;
+
+   errno = 0;
+   tmp_result = strtoul(pid_str, &endptr, 10);
+   if (*endptr != '\0' || errno != 0)
+      return false;
+
+   if (tmp_result > UINT_MAX)
+      return false;
+
+   *result = (unsigned int) tmp_result;
+   return true;
 }
 
 // ----------------------------------------
@@ -137,9 +158,15 @@ static CommandLineSettings parseArguments(int argc, char** argv) {
             }
 
             while(pid) {
-                unsigned int num_pid = atoi(pid);
-                Hashtable_put(flags.pidWhiteList, num_pid, (void *) 1);
-                pid = strtok_r(NULL, ",", &saveptr);
+               unsigned int num_pid;
+
+               if (!parsePID(pid, &num_pid)) {
+                  fprintf(stderr, "Error: invalid PID \"%s\".\n", pid);
+                  exit(1);
+               }
+
+               Hashtable_put(flags.pidWhiteList, num_pid, (void *) 1);
+               pid = strtok_r(NULL, ",", &saveptr);
             }
             free(argCopy);
 
