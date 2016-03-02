@@ -35,7 +35,10 @@ int BatteryMeter_attributes[] = {
 static void BatteryMeter_updateValues(Meter * this, char *buffer, int len) {
    ACPresence isOnAC;
    double percent;
-   
+   const char *unknownText = "%.1f%%",
+      *onAcText = "%.1f%%(A/C)",
+      *onBatteryText = "%.1f%%(bat)";
+
    Battery_getData(&percent, &isOnAC);
 
    if (percent == -1) {
@@ -45,17 +48,7 @@ static void BatteryMeter_updateValues(Meter * this, char *buffer, int len) {
    }
 
    this->values[0] = percent;
-
-   const char *onAcText, *onBatteryText, *unknownText;
-
-   unknownText = "%.1f%%";
-   if (this->mode == TEXT_METERMODE) {
-      onAcText = "%.1f%% (Running on A/C)";
-      onBatteryText = "%.1f%% (Running on battery)";
-   } else {
-      onAcText = "%.1f%%(A/C)";
-      onBatteryText = "%.1f%%(bat)";
-   }
+   this->values[1] = isOnAC;
 
    if (isOnAC == AC_PRESENT) {
       xSnprintf(buffer, len, onAcText, percent);
@@ -68,10 +61,44 @@ static void BatteryMeter_updateValues(Meter * this, char *buffer, int len) {
    return;
 }
 
+static void BatteryMeter_display(Object* cast, RichString* out) {
+   ACPresence isOnAC;
+   double percent;
+   char buffer[28];
+   size_t len = sizeof(buffer);
+   const char *unknownText = "%.1f%%",
+      *onAcText = "%.1f%% (Running on A/C)",
+      *onBatteryText = "%.1f%% (Running on battery)";
+   int color = CRT_colors[BATTERY];
+
+   Meter* this = (Meter*)cast;
+
+   percent = this->values[0];
+   isOnAC = this->values[1];
+
+   RichString_prune(out);
+
+   if (isOnAC == AC_PRESENT) {
+      xSnprintf(buffer, len, onAcText, percent);
+   } else if (isOnAC == AC_ABSENT) {
+      if (percent <= 5) {
+         color = CRT_colors[BATTERY_CRIT];
+      } else if (percent <= 10 ) {
+         color = CRT_colors[BATTERY_WARN];
+      }
+      xSnprintf(buffer, len, onBatteryText, percent);
+   } else {
+      xSnprintf(buffer, len, unknownText, percent);
+   }
+
+   RichString_append(out, color, buffer);
+}
+
 MeterClass BatteryMeter_class = {
    .super = {
       .extends = Class(Meter),
-      .delete = Meter_delete
+      .delete = Meter_delete,
+      .display = BatteryMeter_display
    },
    .updateValues = BatteryMeter_updateValues,
    .defaultMode = TEXT_METERMODE,
