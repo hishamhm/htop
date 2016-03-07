@@ -12,9 +12,11 @@ in the source distribution for its full text.
 #include "LinuxProcessList.h"
 #include "Battery.h"
 
+#include "StringUtils.h"
 #include "Meter.h"
 #include "CPUMeter.h"
 #include "MemoryMeter.h"
+#include "KernelVersion.h"
 #include "SwapMeter.h"
 #include "TasksMeter.h"
 #include "LoadAverageMeter.h"
@@ -28,6 +30,7 @@ in the source distribution for its full text.
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*{
 #include "Action.h"
@@ -126,6 +129,7 @@ MeterClass* Platform_meterTypes[] = {
    &LeftCPUs2Meter_class,
    &RightCPUs2Meter_class,
    &BlankMeter_class,
+   &KernelVersionMeter_class,
    NULL
 };
 
@@ -236,4 +240,19 @@ char* Platform_getProcessEnv(pid_t pid) {
       }
    }
    return env;
+}
+
+void Platform_getKernelVersion(char *KernelVersion) {
+    char unix[32] = {0,};
+    char hostname[32] = {0,};
+    char version[32] = {0,};
+    char *kernelversion;
+    FILE* fd = fopen(PROCDIR "/version", "r");
+    if (fd) {
+        int n = fscanf(fd, "%s %s %s", unix, hostname, version);
+        (void) n;
+        kernelversion = String_cat(unix, " ");
+        kernelversion = String_cat(kernelversion, version);
+        strncpy(KernelVersion, kernelversion, strlen(kernelversion));
+    }
 }
