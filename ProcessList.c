@@ -10,6 +10,7 @@ in the source distribution for its full text.
 
 #include "CRT.h"
 #include "StringUtils.h"
+#include "Filter.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -275,13 +276,14 @@ void ProcessList_rebuildPanel(ProcessList* this) {
    Panel_prune(this->panel);
    int size = ProcessList_size(this);
    int idx = 0;
+   Filter* filter = incFilter ? Filter_new(incFilter) : 0;
    for (int i = 0; i < size; i++) {
       bool hidden = false;
       Process* p = ProcessList_get(this, i);
 
       if ( (!p->show)
          || (this->userId != (uid_t) -1 && (p->st_uid != this->userId))
-         || (incFilter && !(String_contains_i(p->comm, incFilter)))
+         || (incFilter && !(Filter_test(filter, p->comm)))
          || (this->pidWhiteList && !Hashtable_get(this->pidWhiteList, p->tgid)) )
          hidden = true;
 
@@ -294,6 +296,7 @@ void ProcessList_rebuildPanel(ProcessList* this) {
          idx++;
       }
    }
+   Filter_delete(filter);
 }
 
 Process* ProcessList_getProcess(ProcessList* this, pid_t pid, bool* preExisting, Process_New constructor) {
