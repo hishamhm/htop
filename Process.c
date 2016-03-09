@@ -158,7 +158,7 @@ void Process_delete(Object* cast);
 bool Process_isThread(Process* this);
 extern ProcessFieldData Process_fields[];
 extern ProcessPidColumn Process_pidColumns[];
-extern char Process_pidFormat[20];
+extern char Process_pidFormat[21];
 
 typedef Process*(*Process_New)(struct Settings_*);
 typedef void (*Process_WriteField)(Process*, RichString*, ProcessField);
@@ -182,17 +182,26 @@ static int Process_getuid = -1;
 #define ONE_DECIMAL_M (ONE_DECIMAL_K * ONE_DECIMAL_K)
 #define ONE_DECIMAL_G (ONE_DECIMAL_M * ONE_DECIMAL_K)
 
-char Process_pidFormat[20] = "%7d ";
+char Process_pidFormat[21] = "%7d ";
 
 static char Process_titleBuffer[20][20];
 
 void Process_setupColumnWidths() {
-   int maxPid = Platform_getMaxPid();
-   if (maxPid == -1) return;
-   int digits = ceil(log10(maxPid));
-   assert(digits < 20);
+   int digits;
+
+   switch (sizeof(pid_t)) {
+   case 4:
+	   /* pid_t is signed, so we err on the side of caution */
+	   digits = 11;
+	   break;
+   case 8:
+	   digits = 20;
+	   break;
+   default:
+	   errx(1, "sizeof(pid_t) is bizarre - neither 4 nor 8");
+   }
+
    for (int i = 0; Process_pidColumns[i].label; i++) {
-      assert(i < 20);
       sprintf(Process_titleBuffer[i], "%*s ", digits, Process_pidColumns[i].label);
       Process_fields[Process_pidColumns[i].id].title = Process_titleBuffer[i];
    }

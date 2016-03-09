@@ -138,7 +138,7 @@ void Process_delete(Object* cast);
 bool Process_isThread(Process* this);
 extern ProcessFieldData Process_fields[];
 extern ProcessPidColumn Process_pidColumns[];
-extern char Process_pidFormat[20];
+extern char Process_pidFormat[21];
 
 typedef Process*(*Process_New)(struct Settings_*);
 typedef void (*Process_WriteField)(Process*, RichString*, ProcessField);
@@ -159,7 +159,7 @@ typedef struct ProcessClass_ {
 #define ONE_DECIMAL_M (ONE_DECIMAL_K * ONE_DECIMAL_K)
 #define ONE_DECIMAL_G (ONE_DECIMAL_M * ONE_DECIMAL_K)
 
-extern char Process_pidFormat[20];
+extern char Process_pidFormat[21];
 
 void Process_setupColumnWidths();
 

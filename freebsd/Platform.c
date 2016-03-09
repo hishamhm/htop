@@ -138,16 +138,6 @@ void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
    *fifteen = (double) loadAverage.ldavg[2] / loadAverage.fscale;
 }
 
-int Platform_getMaxPid() {
-   int maxPid;
-   size_t size = sizeof(maxPid);
-   int err = sysctlbyname("kern.pid_max", &maxPid, &size, NULL, 0);
-   if (err) {
-      return 99999;
-   }
-   return maxPid;
-}
-
 double Platform_setCPUValues(Meter* this, int cpu) {
    FreeBSDProcessList* fpl = (FreeBSDProcessList*) this->pl;
    int cpus = this->pl->cpuCount;
