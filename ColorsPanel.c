@@ -44,6 +44,7 @@ static const char* ColorSchemeNames[] = {
    "MC",
    "Black Night",
    "Broken Gray",
+   "Solarized",
    NULL
 };
 

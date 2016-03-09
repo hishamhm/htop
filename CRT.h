@@ -47,7 +47,8 @@ typedef enum ColorSchemes_ {
    COLORSCHEME_MIDNIGHT = 4,
    COLORSCHEME_BLACKNIGHT = 5,
    COLORSCHEME_BROKENGRAY = 6,
-   LAST_COLORSCHEME = 7,
+   COLORSCHEME_SOLARIZED = 7,
+   LAST_COLORSCHEME = 8,
 } ColorSchemes;
 
 typedef enum ColorElements_ {
