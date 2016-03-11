@@ -268,13 +268,20 @@ io_priority = (cpu_nice + 20) / 5. -- From ionice(1) man page
 #define LinuxProcess_effectiveIOPriority(p_) (IOPriority_class(p_->ioPriority) == IOPRIO_CLASS_NONE ? IOPriority_tuple(IOPRIO_CLASS_BE, (p_->super.nice + 20) / 5) : p_->ioPriority)
 
 IOPriority LinuxProcess_updateIOPriority(LinuxProcess* this) {
-   IOPriority ioprio = syscall(SYS_ioprio_get, IOPRIO_WHO_PROCESS, this->super.pid);
+   IOPriority ioprio = 0;
+// Other OSes masquerading as Linux (NetBSD?) don't have this syscall
+#ifdef SYS_ioprio_get
+   ioprio = syscall(SYS_ioprio_get, IOPRIO_WHO_PROCESS, this->super.pid);
+#endif
    this->ioPriority = ioprio;
    return ioprio;
 }
 
 bool LinuxProcess_setIOPriority(LinuxProcess* this, IOPriority ioprio) {
+// Other OSes masquerading as Linux (NetBSD?) don't have this syscall
+#ifdef SYS_ioprio_set
    syscall(SYS_ioprio_set, IOPRIO_WHO_PROCESS, this->super.pid, ioprio);
+#endif
    return (LinuxProcess_updateIOPriority(this) == ioprio);
 }
 
@@ -306,7 +313,12 @@ void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field)
    case CNCLWB: Process_colorNumber(str, lp->io_cancelled_write_bytes, coloring); return;
    case IO_READ_RATE:  Process_outputRate(str, buffer, n, lp->io_rate_read_bps, coloring); return;
    case IO_WRITE_RATE: Process_outputRate(str, buffer, n, lp->io_rate_write_bps, coloring); return;
-   case IO_RATE: Process_outputRate(str, buffer, n, lp->io_rate_read_bps + lp->io_rate_write_bps, coloring); return;
+   case IO_RATE: {
+      double totalRate = (lp->io_rate_read_bps != -1)
+                       ? (lp->io_rate_read_bps + lp->io_rate_write_bps)
+                       : -1;
+      Process_outputRate(str, buffer, n, totalRate, coloring); return;
+   }
    #endif
    #ifdef HAVE_OPENVZ
    case CTID: snprintf(buffer, n, "%7u ", lp->ctid); break;

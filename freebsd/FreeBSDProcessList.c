@@ -14,7 +14,9 @@ in the source distribution for its full text.
 #include <sys/types.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
+#include <err.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <string.h>
 
 /*{
@@ -84,13 +86,12 @@ static int MIB_kern_cp_time[2];
 static int MIB_kern_cp_times[2];
 static int kernelFScale;
 
-
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId) {
+   size_t len;
+   char errbuf[_POSIX2_LINE_MAX];
    FreeBSDProcessList* fpl = xCalloc(1, sizeof(FreeBSDProcessList));
    ProcessList* pl = (ProcessList*) fpl;
    ProcessList_init(pl, Class(FreeBSDProcess), usersTable, pidWhiteList, userId);
-
-   size_t len;
 
    // physical memory in system: hw.physmem
    // physical page size: hw.pagesize
@@ -178,8 +179,10 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
       kernelFScale = 2048;
    }
 
-   fpl->kd = kvm_open(NULL, "/dev/null", NULL, 0, NULL);
-   assert(fpl->kd);
+   fpl->kd = kvm_openfiles(NULL, "/dev/null", NULL, 0, errbuf);
+   if (fpl->kd == NULL) {
+      errx(1, "kvm_open: %s", errbuf);
+   }
 
    return pl;
 }
@@ -212,9 +215,6 @@ static inline void FreeBSDProcessList_scanCPUTime(ProcessList* pl) {
    unsigned long     *cp_time_n; // old clicks state
    unsigned long     *cp_time_o; // current clicks state
 
-   unsigned long long total_o = 0;
-   unsigned long long total_n = 0;
-   unsigned long long total_d = 0;
    unsigned long cp_time_d[CPUSTATES];
    double        cp_time_p[CPUSTATES];
 
@@ -251,6 +251,9 @@ static inline void FreeBSDProcessList_scanCPUTime(ProcessList* pl) {
       }
 
       // diff old vs new
+      unsigned long long total_o = 0;
+      unsigned long long total_n = 0;
+      unsigned long long total_d = 0;
       for (int s = 0; s < CPUSTATES; s++) {
         cp_time_d[s] = cp_time_n[s] - cp_time_o[s];
         total_o += cp_time_o[s];
@@ -479,17 +482,17 @@ void ProcessList_goThroughEntries(ProcessList* this) {
       // from FreeBSD source /src/usr.bin/top/machine.c
       proc->m_size = kproc->ki_size / 1024 / pageSizeKb;
       proc->m_resident = kproc->ki_rssize;
+      proc->percent_mem = (proc->m_resident * PAGE_SIZE_KB) / (double)(this->totalMem) * 100.0;
       proc->nlwp = kproc->ki_numthreads;
       proc->time = (kproc->ki_runtime + 5000) / 10000;
 
       proc->percent_cpu = 100.0 * ((double)kproc->ki_pctcpu / (double)kernelFScale);
+      proc->percent_mem = 100.0 * (proc->m_resident * PAGE_SIZE_KB) / (double)(this->totalMem);
+
       if (proc->percent_cpu > 0.1) {
          // system idle process should own all CPU time left regardless of CPU count
          if ( strcmp("idle", kproc->ki_comm) == 0 ) {
             isIdleProcess = true;
-         } else {
-            if (cpus > 1)
-               proc->percent_cpu = proc->percent_cpu / (double) cpus;
          }
       }
       if (isIdleProcess == false && proc->percent_cpu >= 99.8) {

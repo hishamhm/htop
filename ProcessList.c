@@ -22,6 +22,10 @@ in the source distribution for its full text.
 #include "Process.h"
 #include "Settings.h"
 
+#ifdef HAVE_LIBHWLOC
+#include <hwloc.h>
+#endif
+
 #ifndef MAX_NAME
 #define MAX_NAME 128
 #endif
@@ -104,6 +108,11 @@ ProcessList* ProcessList_init(ProcessList* this, ObjectClass* klass, UsersTable*
 }
 
 void ProcessList_done(ProcessList* this) {
+#ifdef HAVE_LIBHWLOC
+   if (this->topologyOk) {
+      hwloc_topology_destroy(this->topology);
+   }
+#endif
    Hashtable_delete(this->processTable);
    Vector_delete(this->processes);
    Vector_delete(this->processes2);
@@ -307,6 +316,7 @@ void ProcessList_scan(ProcessList* this) {
    for (int i = 0; i < Vector_size(this->processes); i++) {
       Process* p = (Process*) Vector_get(this->processes, i);
       p->updated = false;
+      p->show = true;
    }
 
    this->totalTasks = 0;

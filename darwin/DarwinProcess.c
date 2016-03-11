@@ -13,6 +13,8 @@ in the source distribution for its full text.
 #include <string.h>
 #include <stdio.h>
 
+#include <mach/mach.h>
+
 /*{
 #include "Settings.h"
 #include "DarwinProcessList.h"
@@ -69,7 +71,7 @@ void DarwinProcess_setStartTime(Process *proc, struct extern_proc *ep, time_t no
    strftime(proc->starttime_show, 7, ((proc->starttime_ctime > now - 86400) ? "%R " : "%b%d "), &date);
 }
 
-char *DarwinProcess_getCmdLine(struct kinfo_proc* k, int show_args ) {
+char *DarwinProcess_getCmdLine(struct kinfo_proc* k, int* basenameOffset) {
    /* This function is from the old Mac version of htop. Originally from ps? */
    int mib[3], argmax, nargs, c = 0;
    size_t size;
@@ -167,13 +169,7 @@ char *DarwinProcess_getCmdLine(struct kinfo_proc* k, int show_args ) {
    /* Save where the argv[0] string starts. */
    sp = cp;
 
-   /*
-    * Iterate through the '\0'-terminated strings and convert '\0' to ' '
-    * until a string is found that has a '=' character in it (or there are
-    * no more strings in procargs).  There is no way to deterministically
-    * know where the command arguments end and the environment strings
-    * start, which is why the '=' character is searched for as a heuristic.
-    */
+   *basenameOffset = 0;
    for ( np = NULL; c < nargs && cp < &procargs[size]; cp++ ) {
       if ( *cp == '\0' ) {
          c++;
@@ -183,49 +179,11 @@ char *DarwinProcess_getCmdLine(struct kinfo_proc* k, int show_args ) {
          }
         /* Note location of current '\0'. */
         np = cp;
-
-        if ( !show_args ) {
-           /*
-            * Don't convert '\0' characters to ' '.
-            * However, we needed to know that the
-            * command name was terminated, which we
-            * now know.
-            */
-           break;
+        if (*basenameOffset == 0) {
+           *basenameOffset = cp - sp;
         }
      }
-  }
-#if 0
-   /*
-    * If eflg is non-zero, continue converting '\0' characters to ' '
-    * characters until no more strings that look like environment settings
-    * follow.
-    */
-   if ( ( eflg != 0 )
-         && ( ( getuid(  ) == 0 )
-              || ( k->kp_eproc.e_pcred.p_ruid == getuid(  ) ) ) ) {
-      for ( ; cp < &procargs[size]; cp++ ) {
-         if ( *cp == '\0' ) {
-            if ( np != NULL ) {
-               if ( &np[1] == cp ) {
-                  /*
-                   * Two '\0' characters in a row.
-                   * This should normally only
-                   * happen after all the strings
-                   * have been seen, but in any
-                   * case, stop parsing.
-                   */
-                  break;
-               }
-               /* Convert previous '\0'. */
-               *np = ' ';
-            }
-            /* Note location of current '\0'. */
-            np = cp;
-         }
-      }
    }
-#endif
 
    /*
     * sp points to the beginning of the arguments/environment string, and
@@ -234,6 +192,9 @@ char *DarwinProcess_getCmdLine(struct kinfo_proc* k, int show_args ) {
    if ( np == NULL || np == sp ) {
       /* Empty or unterminated string. */
       goto ERROR_B;
+   }
+   if (*basenameOffset == 0) {
+      *basenameOffset = np - sp;
    }
 
    /* Make a copy of the string. */
@@ -248,7 +209,8 @@ ERROR_B:
    free( procargs );
 ERROR_A:
    retval = xStrdup(k->kp_proc.p_comm);
-
+   *basenameOffset = strlen(retval);
+   
    return retval;
 }
 
@@ -275,35 +237,22 @@ void DarwinProcess_setFromKInfoProc(Process *proc, struct kinfo_proc *ps, time_t
       proc->ppid = ps->kp_eproc.e_ppid;
       proc->pgrp = ps->kp_eproc.e_pgid;
       proc->session = 0; /* TODO Get the session id */
-      proc->tgid = ps->kp_eproc.e_tpgid;
+      proc->tpgid = ps->kp_eproc.e_tpgid;
+      proc->tgid = proc->pid;
       proc->st_uid = ps->kp_eproc.e_ucred.cr_uid;
       /* e_tdev = (major << 24) | (minor & 0xffffff) */
       /* e_tdev == -1 for "no device" */
       proc->tty_nr = ps->kp_eproc.e_tdev & 0xff; /* TODO tty_nr is unsigned */
 
       DarwinProcess_setStartTime(proc, ep, now);
-
-      /* The command is from the old Mac htop */
-      char *slash;
-
-      proc->comm = DarwinProcess_getCmdLine(ps, false);
-      slash = strrchr(proc->comm, '/');
-      proc->basenameOffset = (NULL != slash) ? (slash - proc->comm) : 0;
+      proc->comm = DarwinProcess_getCmdLine(ps, &(proc->basenameOffset));
    }
 
    /* Mutable information */
    proc->nice = ep->p_nice;
    proc->priority = ep->p_priority;
 
-   /* Set the state */
-   switch(ep->p_stat) {
-   case SIDL:   proc->state = 'I'; break;
-   case SRUN:   proc->state = 'R'; break;
-   case SSLEEP: proc->state = 'S'; break;
-   case SSTOP:  proc->state = 'T'; break;
-   case SZOMB:  proc->state = 'Z'; break;
-   default:     proc->state = '?'; break;
-   }
+   proc->state = (ep->p_stat == SZOMB) ? 'Z' : '?';
 
    /* Make sure the updated flag is set */
    proc->updated = true;
@@ -341,4 +290,65 @@ void DarwinProcess_setFromLibprocPidinfo(DarwinProcess *proc, DarwinProcessList 
       dpl->super.totalTasks += pti.pti_threadnum;
       dpl->super.runningTasks += pti.pti_numrunning;
    }
+}
+
+/*
+ * Scan threads for process state information.
+ * Based on: http://stackoverflow.com/questions/6788274/ios-mac-cpu-usage-for-thread
+ * and       https://github.com/max-horvath/htop-osx/blob/e86692e869e30b0bc7264b3675d2a4014866ef46/ProcessList.c
+ */
+void DarwinProcess_scanThreads(DarwinProcess *dp) {
+   Process* proc = (Process*) dp;
+   kern_return_t ret;
+   
+   if (proc->state == 'Z') {
+      return;
+   }
+
+   task_t port;
+   ret = task_for_pid(mach_task_self(), proc->pid, &port);
+   if (ret != KERN_SUCCESS) {
+      return;
+   }
+   
+   task_info_data_t tinfo;
+   mach_msg_type_number_t task_info_count = TASK_INFO_MAX;
+   ret = task_info(port, TASK_BASIC_INFO, (task_info_t) tinfo, &task_info_count);
+   if (ret != KERN_SUCCESS) {
+      return;
+   }
+   
+   thread_array_t thread_list;
+   mach_msg_type_number_t thread_count;
+   ret = task_threads(port, &thread_list, &thread_count);
+   if (ret != KERN_SUCCESS) {
+      mach_port_deallocate(mach_task_self(), port);
+      return;
+   }
+   
+   integer_t run_state = 999;
+   for (unsigned int i = 0; i < thread_count; i++) {
+      thread_info_data_t thinfo;
+      mach_msg_type_number_t thread_info_count = THREAD_BASIC_INFO_COUNT;
+      ret = thread_info(thread_list[i], THREAD_BASIC_INFO, (thread_info_t)thinfo, &thread_info_count);
+      if (ret == KERN_SUCCESS) {
+         thread_basic_info_t basic_info_th = (thread_basic_info_t) thinfo;
+         if (basic_info_th->run_state < run_state) {
+            run_state = basic_info_th->run_state;
+         }
+         mach_port_deallocate(mach_task_self(), thread_list[i]);
+      }
+   }
+   vm_deallocate(mach_task_self(), (vm_address_t) thread_list, sizeof(thread_port_array_t) * thread_count);
+   mach_port_deallocate(mach_task_self(), port);
+
+   char state = '?';
+   switch (run_state) {
+      case TH_STATE_RUNNING: state = 'R'; break;
+      case TH_STATE_STOPPED: state = 'S'; break;
+      case TH_STATE_WAITING: state = 'W'; break;
+      case TH_STATE_UNINTERRUPTIBLE: state = 'U'; break;
+      case TH_STATE_HALTED: state = 'H'; break;
+   }
+   proc->state = state;
 }

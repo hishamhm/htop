@@ -271,7 +271,7 @@ static Htop_Reaction actionQuit() {
 static Htop_Reaction actionSetAffinity(State* st) {
    if (st->pl->cpuCount == 1)
       return HTOP_OK;
-#if (HAVE_LIBHWLOC || HAVE_NATIVE_AFFINITY)
+#if (HAVE_LIBHWLOC || HAVE_LINUX_AFFINITY)
    Panel* panel = st->panel;
    
    Process* p = (Process*) Panel_getSelected(panel);
@@ -387,6 +387,7 @@ static struct { const char* key; const char* info; } helpLeft[] = {
    { .key = "   F3 /: ", .info = "incremental name search" },
    { .key = "   F4 \\: ",.info = "incremental name filtering" },
    { .key = "   F5 t: ", .info = "tree view" },
+   { .key = "      p: ", .info = "toggle program path" },
    { .key = "      u: ", .info = "show processes of a single user" },
    { .key = "      H: ", .info = "hide/show user process threads" },
    { .key = "      K: ", .info = "hide/show kernel threads" },
@@ -405,11 +406,11 @@ static struct { const char* key; const char* info; } helpRight[] = {
    { .key = "   F9 x: ", .info = "kill process/tagged processes" },
    { .key = "   F7 ]: ", .info = "higher priority (root only)" },
    { .key = "   F8 [: ", .info = "lower priority (+ nice)" },
-#if (HAVE_LIBHWLOC || HAVE_NATIVE_AFFINITY)
+#if (HAVE_LIBHWLOC || HAVE_LINUX_AFFINITY)
    { .key = "      a: ", .info = "set CPU affinity" },
 #endif
    { .key = "      e: ", .info = "show process environment" },
-   { .key = "      i: ", .info = "set IO prority" },
+   { .key = "      i: ", .info = "set IO priority" },
    { .key = "      L: ", .info = "list open files with lsof" },
    { .key = "      s: ", .info = "trace syscalls with strace" },
    { .key = "         ", .info = "" },
@@ -479,8 +480,8 @@ static Htop_Reaction actionHelp(State* st) {
    for (int i = 0; helpLeft[i].key;  i++) { mvaddstr(9+i, 0,  helpLeft[i].key); }
    for (int i = 0; helpRight[i].key; i++) { mvaddstr(9+i, 40, helpRight[i].key); }
    attrset(CRT_colors[PROCESS_THREAD]);
-   mvaddstr(15, 32, "threads");
-   mvaddstr(16, 26, "threads");
+   mvaddstr(16, 32, "threads");
+   mvaddstr(17, 26, "threads");
    attrset(CRT_colors[DEFAULT_COLOR]);
 
    attrset(CRT_colors[HELP_BOLD]);
