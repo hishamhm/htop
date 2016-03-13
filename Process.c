@@ -278,7 +278,7 @@ void Process_printTime(RichString* str, unsigned long long totalHundredths) {
    unsigned long long totalSeconds = totalHundredths / 100;
 
    unsigned long long hours = totalSeconds / 3600;
-   int minutes = (totalSeconds / 60) % 60;
+   int minutes = totalSeconds / 60;
    int seconds = totalSeconds % 60;
    int hundredths = totalHundredths - (totalSeconds * 100);
    char buffer[11];
