@@ -44,7 +44,7 @@ typedef struct CPUData_ {
    unsigned long long int softIrqTime;
    unsigned long long int stealTime;
    unsigned long long int guestTime;
-   
+
    unsigned long long int totalPeriod;
    unsigned long long int userPeriod;
    unsigned long long int systemPeriod;
@@ -87,7 +87,7 @@ typedef struct LinuxProcessList_ {
 #ifndef CLAMP
 #define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
 #endif
-   
+
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId) {
    LinuxProcessList* this = xCalloc(1, sizeof(LinuxProcessList));
    ProcessList* pl = &(this->super);
@@ -171,7 +171,7 @@ static bool LinuxProcessList_readStatFile(Process *process, const char* dirname,
    location += 2;
    char *end = strrchr(location, ')');
    if (!end) return false;
-   
+
    int commsize = end - location;
    memcpy(command, location, commsize);
    command[commsize] = '\0';
@@ -219,7 +219,7 @@ static bool LinuxProcessList_readStatFile(Process *process, const char* dirname,
    location += 1;
    assert(location != NULL);
    process->processor = strtol(location, &location, 10);
-   
+
    process->time = lp->utime + lp->stime;
 
    return true;
@@ -236,13 +236,13 @@ static bool LinuxProcessList_statProcessDir(Process* process, const char* dirnam
    if (statok == -1)
       return false;
    process->st_uid = sstat.st_uid;
-  
+
    struct tm date;
    time_t ctime = sstat.st_ctime;
    process->starttime_ctime = ctime;
    (void) localtime_r((time_t*) &ctime, &date);
    strftime(process->starttime_show, 7, ((ctime > curTime - 86400) ? "%R " : "%b%d "), &date);
-   
+
    return true;
 }
 
@@ -259,7 +259,7 @@ static void LinuxProcessList_readIoFile(LinuxProcess* process, const char* dirna
       process->io_rate_write_bps = -1;
       return;
    }
-   
+
    char buffer[1024];
    ssize_t buflen = xread(fd, buffer, 1023);
    close(fd);
@@ -276,7 +276,7 @@ static void LinuxProcessList_readIoFile(LinuxProcess* process, const char* dirna
             process->io_rchar = strtoull(line+7, NULL, 10);
          else if (strncmp(line+1, "ead_bytes: ", 11) == 0) {
             process->io_read_bytes = strtoull(line+12, NULL, 10);
-            process->io_rate_read_bps = 
+            process->io_rate_read_bps =
                ((double)(process->io_read_bytes - last_read))/(((double)(now - process->io_rate_read_time))/1000);
             process->io_rate_read_time = now;
          }
@@ -286,7 +286,7 @@ static void LinuxProcessList_readIoFile(LinuxProcess* process, const char* dirna
             process->io_wchar = strtoull(line+7, NULL, 10);
          else if (strncmp(line+1, "rite_bytes: ", 12) == 0) {
             process->io_write_bytes = strtoull(line+13, NULL, 10);
-            process->io_rate_write_bps = 
+            process->io_rate_write_bps =
                ((double)(process->io_write_bytes - last_write))/(((double)(now - process->io_rate_write_time))/1000);
             process->io_rate_write_time = now;
          }
@@ -465,11 +465,11 @@ static bool LinuxProcessList_readCmdlineFile(Process* process, const char* dirna
    int fd = open(filename, O_RDONLY);
    if (fd == -1)
       return false;
-         
+
    char command[4096+1]; // max cmdline length on Linux
    int amtRead = xread(fd, command, sizeof(command) - 1);
    close(fd);
-   int tokenEnd = 0; 
+   int tokenEnd = 0;
    if (amtRead > 0) {
       for (int i = 0; i < amtRead; i++)
          if (command[i] == '\0' || command[i] == '\n') {
@@ -521,17 +521,17 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
 
       // filename is a number: process directory
       int pid = atoi(name);
-     
+
       if (parent && pid == parent->pid)
          continue;
 
-      if (pid <= 0) 
+      if (pid <= 0)
          continue;
 
       bool preExisting = false;
       Process* proc = ProcessList_getProcess(pl, pid, &preExisting, (Process_New) LinuxProcess_new);
       proc->tgid = parent ? parent->pid : pid;
-      
+
       LinuxProcess* lp = (LinuxProcess*) proc;
 
       char subdirname[MAX_NAME+1];
@@ -572,7 +572,7 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
             LinuxProcessList_readOpenVZData(lp, dirname, name);
          }
          #endif
-         
+
          #ifdef HAVE_VSERVER
          if (settings->flags & PROCESS_FLAG_LINUX_VSERVER) {
             LinuxProcessList_readVServerData(lp, dirname, name);
@@ -596,7 +596,7 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
       if (settings->flags & PROCESS_FLAG_LINUX_CGROUP)
          LinuxProcessList_readCGroupFile(lp, dirname, name);
       #endif
-      
+
       if (settings->flags & PROCESS_FLAG_LINUX_OOM)
          LinuxProcessList_readOomData(lp, dirname, name);
 

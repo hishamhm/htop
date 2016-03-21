@@ -29,7 +29,7 @@ MeterClass HostnameMeter_class = {
       .extends = Class(Meter),
       .delete = Meter_delete
    },
-   .setValues = HostnameMeter_setValues, 
+   .setValues = HostnameMeter_setValues,
    .defaultMode = TEXT_METERMODE,
    .maxItems = 0,
    .total = 100.0,

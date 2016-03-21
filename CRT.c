@@ -552,12 +552,12 @@ void CRT_init(int delay, int colorScheme) {
    }
    CRT_colors = CRT_colorSchemes[colorScheme];
    CRT_colorScheme = colorScheme;
-   
+
    for (int i = 0; i < LAST_COLORELEMENT; i++) {
       unsigned int color = CRT_colorSchemes[COLORSCHEME_DEFAULT][i];
       CRT_colorSchemes[COLORSCHEME_BROKENGRAY][i] = color == (A_BOLD | ColorPair(Black,Black)) ? ColorPair(White,Black) : color;
    }
-   
+
    halfdelay(CRT_delay);
    nonl();
    intrflush(stdscr, false);
@@ -666,7 +666,7 @@ void CRT_setColors(int colorScheme) {
          for (int j = 0; j < 8; j++)
             init_pair((7-i)*8+j, i, j);
    } else {
-      for (int i = 0; i < 8; i++) 
+      for (int i = 0; i < 8; i++)
          for (int j = 0; j < 8; j++)
             init_pair((7-i)*8+j, i, (j==0?-1:j));
    }

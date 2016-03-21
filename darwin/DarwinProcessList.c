@@ -170,7 +170,7 @@ void ProcessList_goThroughEntries(ProcessList* super) {
 
        DarwinProcess_setFromKInfoProc(&proc->super, &ps[i], tv.tv_sec, preExisting);
        DarwinProcess_setFromLibprocPidinfo(proc, dpl);
-       
+
        DarwinProcess_scanThreads(proc);
 
        super->totalTasks += 1;

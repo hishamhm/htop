@@ -32,7 +32,7 @@ MeterClass ClockMeter_class = {
       .extends = Class(Meter),
       .delete = Meter_delete
    },
-   .setValues = ClockMeter_setValues, 
+   .setValues = ClockMeter_setValues,
    .defaultMode = TEXT_METERMODE,
    .maxItems = 1,
    .total = 1440, /* 24*60 */

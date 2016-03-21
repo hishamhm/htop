@@ -35,7 +35,7 @@ int BatteryMeter_attributes[] = {
 static void BatteryMeter_setValues(Meter * this, char *buffer, int len) {
    ACPresence isOnAC;
    double percent;
-   
+
    Battery_getData(&percent, &isOnAC);
 
    if (percent == -1) {

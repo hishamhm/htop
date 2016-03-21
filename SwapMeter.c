@@ -54,7 +54,7 @@ MeterClass SwapMeter_class = {
       .delete = Meter_delete,
       .display = SwapMeter_display,
    },
-   .setValues = SwapMeter_setValues, 
+   .setValues = SwapMeter_setValues,
    .defaultMode = BAR_METERMODE,
    .maxItems = 1,
    .total = 100.0,
