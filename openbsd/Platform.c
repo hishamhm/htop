@@ -195,11 +195,6 @@ void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
    *fifteen = (double) loadAverage.ldavg[2] / loadAverage.fscale;
 }
 
-int Platform_getMaxPid() {
-   // this is hard-coded in sys/sys/proc.h - no sysctl exists
-   return 32766;
-}
-
 double Platform_setCPUValues(Meter* this, int cpu) {
    int i;
    double perc;

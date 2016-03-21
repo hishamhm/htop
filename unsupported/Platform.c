@@ -87,7 +87,7 @@ void Platform_setBindings(Htop_Action* keys) {
 
 int Platform_numberOfFields = 100;
 
-extern char Process_pidFormat[20];
+extern char Process_pidFormat[21];
 
 ProcessPidColumn Process_pidColumns[] = {
    { .id = 0, .label = NULL },
@@ -101,10 +101,6 @@ void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
    *one = 0;
    *five = 0;
    *fifteen = 0;
-}
-
-int Platform_getMaxPid() {
-   return 1;
 }
 
 double Platform_setCPUValues(Meter* this, int cpu) {
