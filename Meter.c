@@ -425,14 +425,30 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       data->values[nValues - 1] = valuesBuf2[items] / this->total;
 
       // Determine the dominant color of the cell in the graph
-      // O(GRAPH_HEIGHT * items)
+      // O(GRAPH_HEIGHT + items) (linear time)
+      int buf1Start = 0, buf2Start = 0;
       double low, high = 0.0;
       for (int h = 0; h < GRAPH_HEIGHT; h++) {
          low = high; // low == (this->total * (h) / GRAPH_HEIGHT);
          high = this->total * (h + 1) / GRAPH_HEIGHT;
          double maxArea = 0.0;
          int color = BAR_SHADOW;
-         for (int i = 0; i < items; i++) {
+         for (int i = MIN(buf1Start, buf2Start); ; i++) {
+            if (valuesBuf1[i] < high)
+               buf1Start = i;
+            if (valuesBuf2[i] < high)
+               buf2Start = i;
+            if (i >= items)
+               break; // No more items
+            if (valuesBuf1[i] >= high && valuesBuf2[i] >= high) {
+               // This cell is finished. Rest of values are out of this.
+               break;
+            }
+            // Skip items that have no area in this cell.
+            if (valuesBuf1[i] >= high)
+               i = MAX(i, buf2Start);
+            if (valuesBuf2[i] >= high)
+               i = MAX(i, buf1Start);
             double area;
             area = CLAMP(valuesBuf1[i + 1], low, high) +
                    CLAMP(valuesBuf2[i + 1], low, high);
