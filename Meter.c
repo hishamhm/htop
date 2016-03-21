@@ -70,6 +70,7 @@ typedef struct MeterClass_ {
 #define Meter_defaultMode(this_)       As_Meter(this_)->defaultMode
 #define Meter_getItems(this_)          As_Meter(this_)->curItems
 #define Meter_setItems(this_, n_)      As_Meter(this_)->curItems = (n_)
+#define Meter_getMaxItems(this_)       As_Meter(this_)->maxItems
 #define Meter_attributes(this_)        As_Meter(this_)->attributes
 #define Meter_name(this_)              As_Meter(this_)->name
 #define Meter_uiName(this_)            As_Meter(this_)->uiName
@@ -106,6 +107,9 @@ typedef enum {
 typedef struct GraphData_ {
    struct timeval time;
    double values[METER_BUFFER_LEN];
+   int colors[METER_BUFFER_LEN][GRAPH_HEIGHT];
+   double *valuesBuf1;
+   double *valuesBuf2;
 } GraphData;
 
 }*/
@@ -359,9 +363,23 @@ static int GraphMeterMode_pixPerRow;
 
 static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
 
-   if (!this->drawData) this->drawData = xCalloc(1, sizeof(GraphData));
-    GraphData* data = (GraphData*) this->drawData;
    const int nValues = METER_BUFFER_LEN;
+   if (!this->drawData) {
+      this->drawData = xCalloc(1, sizeof(GraphData) +
+                       2 * (Meter_getMaxItems(this) + 1) * sizeof(double));
+      GraphData* data = (GraphData*) this->drawData;
+      // We allocate valuesBuf1 and 2 together with drawData so that they can
+      // be free()'d together in one call.
+      data->valuesBuf1 = (double *) (((char *) data) + sizeof(GraphData));
+      data->valuesBuf2 = ((double *) data->valuesBuf1) +
+                         (Meter_getMaxItems(this) + 1);
+      for (int i = 0; i < nValues; i++) {
+         for (int h = 0; h < GRAPH_HEIGHT; h++) {
+            data->colors[i][h] = BAR_SHADOW;
+         }
+      }
+   }
+   GraphData* data = (GraphData*) this->drawData;
 
 #ifdef HAVE_LIBNCURSESW
    if (CRT_utf8) {
@@ -386,38 +404,67 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       struct timeval delay = { .tv_sec = (int)(CRT_delay/10), .tv_usec = (CRT_delay-((int)(CRT_delay/10)*10)) * 100000 };
       timeradd(&now, &delay, &(data->time));
 
-      for (int i = 0; i < nValues - 1; i++)
+      for (int i = 0; i < nValues - 1; i++) {
          data->values[i] = data->values[i+1];
+         memcpy(data->colors[i], data->colors[i+1], sizeof(data->colors[i]));
+      }
    
       char buffer[nValues];
       Meter_setValues(this, buffer, nValues - 1);
    
-      double value = 0.0;
       int items = Meter_getItems(this);
-      for (int i = 0; i < items; i++)
-         value += this->values[i];
-      value /= this->total;
-      data->values[nValues - 1] = value;
+
+      double *valuesBuf1 = data->valuesBuf1;
+      double *valuesBuf2 = data->valuesBuf2;
+
+      valuesBuf1[0] = valuesBuf2[0] = 0.0;
+      for (int i = 0; i < items; i++) {
+         valuesBuf1[i + 1] = valuesBuf2[i + 1];
+         valuesBuf2[i + 1] = valuesBuf2[i] + this->values[i];
+      }
+      data->values[nValues - 1] = valuesBuf2[items] / this->total;
+
+      // Determine the dominant color of the cell in the graph
+      // O(GRAPH_HEIGHT * items)
+      double low, high = 0.0;
+      for (int h = 0; h < GRAPH_HEIGHT; h++) {
+         low = high; // low == (this->total * (h) / GRAPH_HEIGHT);
+         high = this->total * (h + 1) / GRAPH_HEIGHT;
+         double maxArea = 0.0;
+         int color = BAR_SHADOW;
+         for (int i = 0; i < items; i++) {
+            double area;
+            area = CLAMP(valuesBuf1[i + 1], low, high) +
+                   CLAMP(valuesBuf2[i + 1], low, high);
+            area -= (CLAMP(valuesBuf1[i], low, high) +
+                     CLAMP(valuesBuf2[i], low, high));
+            if (area > maxArea) {
+               maxArea = area;
+               color = Meter_attributes(this)[i];
+            }
+         }
+         data->colors[nValues - 1][h] = color;
+      }
    }
-   
-   int i = nValues - (w*2) + 2, k = 0;
+
+   // Print the graph
+   int i = nValues - (w * 2) + 2, k = 0;
    if (i < 0) {
-      k = -i/2;
+      k = -i / 2;
       i = 0;
    }
-   for (; i < nValues; i+=2, k++) {
+   for (; i < nValues; i += 2, k++) {
       int pix = GraphMeterMode_pixPerRow * GRAPH_HEIGHT;
-      int v1 = CLAMP(data->values[i] * pix, 1, pix);
-      int v2 = CLAMP(data->values[i+1] * pix, 1, pix);
+      int v1 = CLAMP((int) (data->values[i] * pix), 1, pix);
+      int v2 = CLAMP((int) (data->values[i + 1] * pix), 1, pix);
 
-      int colorIdx = GRAPH_1;
-      for (int line = 0; line < GRAPH_HEIGHT; line++) {
-         int line1 = CLAMP(v1 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line)), 0, GraphMeterMode_pixPerRow);
-         int line2 = CLAMP(v2 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line)), 0, GraphMeterMode_pixPerRow);
-
-         attrset(CRT_colors[colorIdx]);
-         mvaddstr(y+line, x+k, GraphMeterMode_dots[line1 * (GraphMeterMode_pixPerRow + 1) + line2]);
-         colorIdx = GRAPH_2;
+      // Vertical bars from bottom up
+      for (int h = 0; h < GRAPH_HEIGHT; h++) {
+         int line = GRAPH_HEIGHT - 1 - h;
+         int col1 = CLAMP(v1 - (GraphMeterMode_pixPerRow * h), 0, GraphMeterMode_pixPerRow);
+         int col2 = CLAMP(v2 - (GraphMeterMode_pixPerRow * h), 0, GraphMeterMode_pixPerRow);
+         attrset(CRT_colors[data->colors[i+1][h]]);
+         mvaddstr(y+line, x+k, GraphMeterMode_dots[col1 * (GraphMeterMode_pixPerRow + 1) + col2]);
       }
    }
    attrset(CRT_colors[RESET_COLOR]);
