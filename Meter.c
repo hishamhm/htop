@@ -13,6 +13,7 @@ in the source distribution for its full text.
 #include "StringUtils.h"
 #include "ListItem.h"
 #include "Settings.h"
+#include "ProcessList.h"
 
 #include <math.h>
 #include <string.h>
@@ -106,6 +107,7 @@ typedef enum {
 
 typedef struct GraphData_ {
    struct timeval time;
+   int offset;
    double values[METER_BUFFER_LEN];
    int colors[METER_BUFFER_LEN][GRAPH_HEIGHT];
    double *valuesBuf1;
@@ -404,6 +406,9 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       struct timeval delay = { .tv_sec = (int)(CRT_delay/10), .tv_usec = (CRT_delay-((int)(CRT_delay/10)*10)) * 100000 };
       timeradd(&now, &delay, &(data->time));
 
+      data->offset = (this->pl->settings->alignGraphMeter) ?
+                     (data->offset + 1) % 2 : 0;
+
       for (int i = 0; i < nValues - 1; i++) {
          data->values[i] = data->values[i+1];
          memcpy(data->colors[i], data->colors[i+1], sizeof(data->colors[i]));
@@ -431,8 +436,12 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       for (int h = 0; h < GRAPH_HEIGHT; h++) {
          low = high; // low == (this->total * (h) / GRAPH_HEIGHT);
          high = this->total * (h + 1) / GRAPH_HEIGHT;
+
          double maxArea = 0.0;
          int color = BAR_SHADOW;
+         double offsetMaxArea = 0.0;
+         int offsetColor = BAR_SHADOW;
+
          for (int i = MIN(buf1Start, buf2Start); ; i++) {
             if (valuesBuf1[i] < high)
                buf1Start = i;
@@ -458,8 +467,21 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
                maxArea = area;
                color = Meter_attributes(this)[i];
             }
+            if (data->offset > 0) {
+               // Trick: data->colors[0][] was never rendered in the routine
+               // below, with or without aligning. So we may use it as color
+               // storage for offset (the last one measurement).
+               area = CLAMP(valuesBuf2[i + 1], low, high);
+               area -= CLAMP(valuesBuf2[i], low, high);
+               if (area > offsetMaxArea) {
+                  offsetMaxArea = area;
+                  offsetColor = Meter_attributes(this)[i];
+               }
+            }
          }
          data->colors[nValues - 1][h] = color;
+         if (data->offset > 0)
+            data->colors[0][h] = offsetColor;
       }
    }
 
@@ -469,17 +491,19 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       k = -i / 2;
       i = 0;
    }
+   i += data->offset;
    for (; i < nValues; i += 2, k++) {
       int pix = GraphMeterMode_pixPerRow * GRAPH_HEIGHT;
       int v1 = CLAMP((int) (data->values[i] * pix), 1, pix);
-      int v2 = CLAMP((int) (data->values[i + 1] * pix), 1, pix);
+      int v2 = (i == nValues - 1) ? 0 :
+               CLAMP((int) (data->values[i + 1] * pix), 1, pix);
 
       // Vertical bars from bottom up
       for (int h = 0; h < GRAPH_HEIGHT; h++) {
          int line = GRAPH_HEIGHT - 1 - h;
          int col1 = CLAMP(v1 - (GraphMeterMode_pixPerRow * h), 0, GraphMeterMode_pixPerRow);
          int col2 = CLAMP(v2 - (GraphMeterMode_pixPerRow * h), 0, GraphMeterMode_pixPerRow);
-         attrset(CRT_colors[data->colors[i+1][h]]);
+         attrset(CRT_colors[data->colors[(i == nValues - 1) ? 0 : i + 1][h]]);
          mvaddstr(y+line, x+k, GraphMeterMode_dots[col1 * (GraphMeterMode_pixPerRow + 1) + col2]);
       }
    }

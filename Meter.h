@@ -93,6 +93,7 @@ typedef enum {
 
 typedef struct GraphData_ {
    struct timeval time;
+   int offset;
    double values[METER_BUFFER_LEN];
    int colors[METER_BUFFER_LEN][GRAPH_HEIGHT];
    double *valuesBuf1;
