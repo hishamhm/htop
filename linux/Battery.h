@@ -32,7 +32,7 @@ Linux battery readings written by Ian P. Hands (iphands@gmail.com, ihands@redhat
 /**
  * Returns a pointer to the suffix of `str` if its beginning matches `prefix`.
  * Returns NULL if the prefix does not match.
- * Examples: 
+ * Examples:
  * match("hello world", "hello "); -> "world"
  * match("hello world", "goodbye "); -> NULL
  */

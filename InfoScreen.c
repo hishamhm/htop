@@ -118,7 +118,7 @@ void InfoScreen_run(InfoScreen* this) {
          move(LINES-1, CRT_cursorX);
       ESCDELAY = 25;
       int ch = getch();
-      
+
       if (ch == ERR) {
          if (As_InfoScreen(this)->onErr) {
             InfoScreen_onErr(this);
@@ -141,7 +141,7 @@ void InfoScreen_run(InfoScreen* this) {
          IncSet_handleKey(this->inc, ch, panel, IncSet_getListItemValue, this->lines);
          continue;
       }
-      
+
       switch(ch) {
       case ERR:
          continue;

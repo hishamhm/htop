@@ -31,7 +31,7 @@ typedef struct {
 
 typedef struct Settings_ {
    char* filename;
-   
+
    MeterColumnSettings columns[2];
 
    ProcessField* fields;
@@ -114,7 +114,7 @@ static void Settings_defaultMeters(Settings* this) {
       this->columns[i].modes = xCalloc(sizes[i], sizeof(int));
       this->columns[i].len = sizes[i];
    }
-   
+
    int r = 0;
    if (this->cpuCount > 8) {
       this->columns[0].names[0] = xStrdup("LeftCPUs2");
@@ -134,7 +134,7 @@ static void Settings_defaultMeters(Settings* this) {
    this->columns[0].modes[1] = BAR_METERMODE;
    this->columns[0].names[2] = xStrdup("Swap");
    this->columns[0].modes[2] = BAR_METERMODE;
-   
+
    this->columns[1].names[r] = xStrdup("Tasks");
    this->columns[1].modes[r++] = TEXT_METERMODE;
    this->columns[1].names[r] = xStrdup("LoadAverage");
@@ -172,7 +172,7 @@ static bool Settings_read(Settings* this, const char* fileName) {
    seteuid(euid);
    if (!fd)
       return false;
-   
+
    const int maxLine = 2048;
    char buffer[maxLine];
    bool readMeters = false;
@@ -315,7 +315,7 @@ bool Settings_write(Settings* this) {
 }
 
 Settings* Settings_new(int cpuCount) {
-  
+
    Settings* this = xCalloc(1, sizeof(Settings));
 
    this->sortKey = PERCENT_CPU;
@@ -334,7 +334,7 @@ Settings* Settings_new(int cpuCount) {
    this->cpuCount = cpuCount;
    this->showProgramPath = true;
    this->highlightThreads = true;
-   
+
    this->fields = xCalloc(Platform_numberOfFields+1, sizeof(ProcessField));
    // TODO: turn 'fields' into a Vector,
    // (and ProcessFields into proper objects).

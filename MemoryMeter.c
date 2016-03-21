@@ -60,7 +60,7 @@ MeterClass MemoryMeter_class = {
       .delete = Meter_delete,
       .display = MemoryMeter_display,
    },
-   .setValues = MemoryMeter_setValues, 
+   .setValues = MemoryMeter_setValues,
    .defaultMode = BAR_METERMODE,
    .maxItems = 3,
    .total = 100.0,

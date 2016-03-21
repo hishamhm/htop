@@ -49,7 +49,7 @@ MeterClass UptimeMeter_class = {
       .extends = Class(Meter),
       .delete = Meter_delete
    },
-   .setValues = UptimeMeter_setValues, 
+   .setValues = UptimeMeter_setValues,
    .defaultMode = TEXT_METERMODE,
    .maxItems = 1,
    .total = 100.0,

@@ -2,10 +2,10 @@
 .SH "NAME"
 htop \- interactive process viewer
 .SH "SYNOPSIS"
-.LP 
+.LP
 .B htop [\fI\-dChusv\fR]
 .SH "DESCRIPTION"
-.LP 
+.LP
 Htop is a free (GPL) ncurses-based process viewer for Linux.
 .LP
 It is similar to top, but allows you to scroll vertically and horizontally,
@@ -15,11 +15,11 @@ processes and acting on them all at once.
 .LP
 Tasks related to processes (killing, renicing) can be done without
 entering their PIDs.
-.br 
+.br
 .SH "COMMAND-LINE OPTIONS"
 .LP
 Mandatory arguments to long options are mandatory for short options too.
-.LP 
+.LP
 .TP
 \fB\-d \-\-delay=DELAY\fR
 Delay between updates, in tenths of seconds
@@ -42,11 +42,11 @@ Show only the processes of a given user
 \fB\-v \-\-version
 Output version information and exit
 .PP
-.br 
+.br
 .SH "INTERACTIVE COMMANDS"
-.LP 
+.LP
 The following commands are supported while in htop:
-.LP 
+.LP
 .TP 5
 .B Arrows, PgUP, PgDn, Home, End
 Scroll the process list.
@@ -117,7 +117,7 @@ Quit
 Invert the sort order: if sort order is increasing, switch to decreasing, and
 vice-versa.
 .TP
-.B +, \- 
+.B +, \-
 When in tree view mode, expand or collapse subtree. When a subtree is collapsed
 a "+" sign shows to the left of the process name.
 .TP
@@ -162,17 +162,17 @@ PID search: type in process ID and the selection highlight will be moved to it.
 .PD
 
 .SH "COLUMNS"
-.LP 
+.LP
 The following columns can display data about each process. A value of '\-' in
 all the rows indicates that a column is unsupported on your system, or
 currently unimplemented in htop. The names below are the ones used in the
 "Available Columns" section of the setup screen. If a different name is
 shown in htop's main screen, it is shown below in parenthesis.
-.LP 
+.LP
 .TP 5
 .B Command
 The full command line of the process (i.e. program name and arguments).
-.TP 
+.TP
 .B PID
 The process ID.
 .TP
@@ -193,7 +193,7 @@ The process's group ID.
 .TP
 .B SESSION (SESN)
 The process's session ID.
-.TP 
+.TP
 .B TTY_NR (TTY)
 The controlling terminal of the process.
 .TP
@@ -348,7 +348,7 @@ The I/O scheduling class followed by the priority if the class supports it:
 Currently unsupported (always displays '-').
 
 .SH "CONFIG FILE"
-.LP 
+.LP
 By default htop reads its configuration from the XDG-compliant path
 ~/.config/htop/htoprc -- the configuration file is overwritten by htop's
 in-program Setup configuration, so it should not be hand-edited. If no
@@ -373,7 +373,7 @@ and make memory size representations consistent throughout htop.
 proc(5), top(1), free(1), ps(1), uptime(1), limits.conf(5)
 
 .SH "AUTHORS"
-.LP 
+.LP
 htop is developed by Hisham Muhammad <hisham@gobolinux.org>.
 .LP
 This man page was written by Bartosz Fenski <fenio@o2.pl> for the Debian
