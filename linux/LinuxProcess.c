@@ -114,7 +114,7 @@ typedef struct LinuxProcess_ {
    double io_rate_write_bps;
    #endif
    #ifdef HAVE_OPENVZ
-   unsigned int ctid;
+   char* ctid;
    unsigned int vpid;
    #endif
    #ifdef HAVE_VSERVER
@@ -251,6 +251,9 @@ LinuxProcess* LinuxProcess_new(Settings* settings) {
 void Process_delete(Object* cast) {
    LinuxProcess* this = (LinuxProcess*) cast;
    Process_done((Process*)cast);
+#ifdef HAVE_OPENVZ
+   free(this->ctid);
+#endif
 #ifdef HAVE_CGROUP
    free(this->cgroup);
 #endif
@@ -321,7 +324,7 @@ void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field)
    }
    #endif
    #ifdef HAVE_OPENVZ
-   case CTID: snprintf(buffer, n, "%7u ", lp->ctid); break;
+   case CTID: snprintf(buffer, n, "%8.8s ", lp->ctid); break;
    case VPID: snprintf(buffer, n, Process_pidFormat, lp->vpid); break;
    #endif
    #ifdef HAVE_VSERVER
@@ -396,7 +399,7 @@ long LinuxProcess_compare(const void* v1, const void* v2) {
    #endif
    #ifdef HAVE_OPENVZ
    case CTID:
-      return (p2->ctid - p1->ctid);
+      return strcmp(p1->ctid ?: "", p2->ctid ?: "");
    case VPID:
       return (p2->vpid - p1->vpid);
    #endif
