@@ -293,6 +293,7 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
    // First draw in the bar[] buffer...
    int offset = 0;
    int items = Meter_getItems(this);
+   assert(items == 0 || this->total > 0.0);
    for (int i = 0; i < items; i++) {
       double value = this->values[i];
       value = CLAMP(value, 0.0, this->total);
@@ -394,6 +395,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
    
       double value = 0.0;
       int items = Meter_getItems(this);
+      assert(this->total > 0.0);
       for (int i = 0; i < items; i++)
          value += this->values[i];
       value /= this->total;
