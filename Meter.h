@@ -9,6 +9,8 @@ Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
+#define HAVE_LOAD_GRAPH
+
 #define METER_BUFFER_LEN 256
 
 #define GRAPH_DELAY (DEFAULT_DELAY/2)
@@ -123,6 +125,8 @@ ListItem* Meter_toListItem(Meter* this, bool moving);
 /* ---------- TextMeterMode ---------- */
 
 /* ---------- BarMeterMode ---------- */
+
+// [         :         ]
 
 /* ---------- GraphMeterMode ---------- */
 
