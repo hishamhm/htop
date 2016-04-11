@@ -306,7 +306,10 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
          bar[w / 2] = ':';
       }
       assert(Meter_getItems(this) == 1);
-      
+
+#ifndef M_PI_2
+# define M_PI_2 atan2(1,0)
+#endif
       blockSizes[0] = (int)round(atan2(this->values[0], this->pl->cpuCount) *
                                  w / M_PI_2);
       for (int j = 0; j < blockSizes[0]; j++) {
@@ -362,8 +365,6 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
    move(y, x + w + 1);
    attrset(CRT_colors[RESET_COLOR]);
 }
-
-// [         :         ]
 
 /* ---------- GraphMeterMode ---------- */
 
