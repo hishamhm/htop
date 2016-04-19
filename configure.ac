@@ -4,7 +4,7 @@
 AC_PREREQ(2.65)
 AC_INIT([htop],[2.0.1],[hisham@gobolinux.org])
 
-year=$(date +%Y)
+year=$(date --utc --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y)
 
 # The following two lines are required by hwloc scripts
 AC_USE_SYSTEM_EXTENSIONS
