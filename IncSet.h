@@ -12,6 +12,7 @@ in the source distribution for its full text.
 
 #include "FunctionBar.h"
 #include "Panel.h"
+#include <regex.h>
 #include <stdbool.h>
 
 #define INCMODE_MAX 40
@@ -35,6 +36,11 @@ typedef struct IncSet_ {
    IncMode* active;
    FunctionBar* defaultBar;
    bool filtering;
+   bool regex;
+   bool exclude;
+   bool regexAlloc;
+   char* rawFilter;
+   regex_t regexFilter;
 } IncSet;
 
 typedef const char* (*IncMode_GetPanelValue)(Panel*, int);
@@ -43,6 +49,8 @@ typedef const char* (*IncMode_GetPanelValue)(Panel*, int);
 IncSet* IncSet_new(FunctionBar* bar);
 
 void IncSet_delete(IncSet* this);
+
+bool IncSet_filterTest(IncSet* this, const char* str);
 
 bool IncSet_handleKey(IncSet* this, int ch, Panel* panel, IncMode_GetPanelValue getPanelValue, Vector* lines);
 

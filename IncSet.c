@@ -17,6 +17,7 @@ in the source distribution for its full text.
 
 #include "FunctionBar.h"
 #include "Panel.h"
+#include <regex.h>
 #include <stdbool.h>
 
 #define INCMODE_MAX 40
@@ -40,6 +41,11 @@ typedef struct IncSet_ {
    IncMode* active;
    FunctionBar* defaultBar;
    bool filtering;
+   bool regex;
+   bool exclude;
+   bool regexAlloc;
+   char* rawFilter;
+   regex_t regexFilter;
 } IncSet;
 
 typedef const char* (*IncMode_GetPanelValue)(Panel*, int);
@@ -61,9 +67,11 @@ static inline void IncMode_initSearch(IncMode* search) {
    search->isFilter = false;
 }
 
-static const char* filterFunctions[] = {"Done  ", "Clear ", " Filter: ", NULL};
-static const char* filterKeys[] = {"Enter", "Esc", "  "};
-static int filterEvents[] = {13, 27, ERR};
+static const char* filterFunctions[] = {"Done  ", "Clear ", "!Regexp ", "Filter Out ", " Filter: ", NULL};
+static const char* filterKeys[] = {"Enter", "Esc", "F5", "F6", "  "};
+static const char* regexLabels[] = {"Regexp  ", "!Regexp "};
+static const char* excludeLabels[] = {"Filter Out ", "Filter In  "};
+static int filterEvents[] = {13, 27, KEY_F(5), KEY_F(6), ERR};
 
 static inline void IncMode_initFilter(IncMode* filter) {
    memset(filter, 0, sizeof(IncMode));
@@ -82,13 +90,69 @@ IncSet* IncSet_new(FunctionBar* bar) {
    this->active = NULL;
    this->filtering = false;
    this->defaultBar = bar;
+   this->rawFilter = NULL;
+   this->regex = true;
+   this->exclude = false;
+   this->regexAlloc = false;   
    return this;
 }
+
+static void freeFilter(IncSet* this);
 
 void IncSet_delete(IncSet* this) {
    IncMode_done(&(this->modes[0]));
    IncMode_done(&(this->modes[1]));
+   freeFilter(this);
    free(this);
+}
+
+
+static void updateBarLabels(IncSet* this) {
+   if (this->active == &(this->modes[INC_FILTER])) {
+      IncMode* filterMode = &(this->modes[INC_FILTER]);
+      FunctionBar_setLabel(filterMode->bar, KEY_F(5), regexLabels[this->regex ? 1 : 0]);
+      FunctionBar_setLabel(filterMode->bar, KEY_F(6), excludeLabels[this->exclude ? 1 : 0]);
+   }
+}
+
+static bool testWithFilter(IncSet* this, const char* testSubject) {
+   if (!this || !this->filtering) {
+      return true;
+   }
+   if (this->regexAlloc) {
+      return regexec(&this->regexFilter, testSubject, 0, NULL, 0) ? this->exclude : !this->exclude;
+   }
+   return  String_contains_i(testSubject, this->rawFilter ? this->rawFilter : "" ) ? !this->exclude : this->exclude;
+}
+
+bool IncSet_filterTest(IncSet* this, const char* str) {
+      return !this || !this->filtering || testWithFilter(this, str);
+}
+
+static void freeFilter(IncSet* this) {
+   if (this->regexAlloc) {
+      regfree(&this->regexFilter);
+      this->regexAlloc = false;
+   }
+   if (this->rawFilter) {
+      free(this->rawFilter);
+      this->rawFilter = NULL;
+   }
+}
+
+static void compileFilter(IncSet* this, const char* filterStr) {
+   if (this->rawFilter) {
+      freeFilter(this);
+   }
+   if (filterStr) {
+      this->rawFilter = xStrdup(filterStr);
+      if (this->regex) {
+         int result = regcomp(&this->regexFilter, this->rawFilter, REG_EXTENDED|REG_NOSUB|REG_ICASE);
+         if (!result) {
+            this->regexAlloc = true;
+         }
+      }
+   }
 }
 
 static void updateWeakPanel(IncSet* this, Panel* panel, Vector* lines) {
@@ -99,7 +163,7 @@ static void updateWeakPanel(IncSet* this, Panel* panel, Vector* lines) {
       const char* incFilter = this->modes[INC_FILTER].buffer;
       for (int i = 0; i < Vector_size(lines); i++) {
          ListItem* line = (ListItem*)Vector_get(lines, i);
-         if (String_contains_i(line->value, incFilter)) {
+         if (testWithFilter(this, line->value)) {
             Panel_add(panel, (Object*)line);
             if (selected == (Object*)line) Panel_setSelected(panel, n);
             n++;
@@ -114,11 +178,11 @@ static void updateWeakPanel(IncSet* this, Panel* panel, Vector* lines) {
    }
 }
 
-static void search(IncMode* mode, Panel* panel, IncMode_GetPanelValue getPanelValue) {
+static void search(IncSet* this, IncMode* mode, Panel* panel, IncMode_GetPanelValue getPanelValue) {
    int size = Panel_size(panel);
    bool found = false;
    for (int i = 0; i < size; i++) {
-      if (String_contains_i(getPanelValue(panel, i), mode->buffer)) {
+      if (testWithFilter(this, getPanelValue(panel, i))) {
          Panel_setSelected(panel, i);
          found = true;
          break;
@@ -151,11 +215,23 @@ bool IncSet_handleKey(IncSet* this, int ch, Panel* panel, IncMode_GetPanelValue 
          }
       }
       doSearch = false;
+   } else if (ch == KEY_F(5)) {
+      if (mode->isFilter) {
+         filterChanged = true;
+         this->regex = !this->regex;
+         updateBarLabels(this);
+      }
+   } else if (ch == KEY_F(6)) {
+      if (mode->isFilter) {
+         filterChanged = true;
+         this->exclude = !this->exclude;
+         updateBarLabels(this);
+      }      
    } else if (ch < 255 && isprint((char)ch) && (mode->index < INCMODE_MAX)) {
       mode->buffer[mode->index] = ch;
       mode->index++;
       mode->buffer[mode->index] = 0;
-      if (mode->isFilter) {
+      if (mode->isFilter) {         
          filterChanged = true;
          if (mode->index == 1) this->filtering = true;
       }
@@ -166,6 +242,7 @@ bool IncSet_handleKey(IncSet* this, int ch, Panel* panel, IncMode_GetPanelValue 
          filterChanged = true;
          if (mode->index == 0) {
             this->filtering = false;
+            freeFilter(this);
             IncMode_reset(mode);
          }
       }
@@ -176,6 +253,7 @@ bool IncSet_handleKey(IncSet* this, int ch, Panel* panel, IncMode_GetPanelValue 
          filterChanged = true;
          if (ch == 27) {
             this->filtering = false;
+            freeFilter(this);
             IncMode_reset(mode);
          }
       } else {
@@ -186,8 +264,11 @@ bool IncSet_handleKey(IncSet* this, int ch, Panel* panel, IncMode_GetPanelValue 
       FunctionBar_draw(this->defaultBar, NULL);
       doSearch = false;
    }
+   if (filterChanged) {
+      compileFilter(this, mode->buffer);
+   }
    if (doSearch) {
-      search(mode, panel, getPanelValue);
+      search(this, mode, panel, getPanelValue);
    }
    if (filterChanged && lines) {
       updateWeakPanel(this, panel, lines);
@@ -204,6 +285,7 @@ const char* IncSet_getListItemValue(Panel* panel, int i) {
 
 void IncSet_activate(IncSet* this, IncType type, Panel* panel) {
    this->active = &(this->modes[type]);
+   updateBarLabels(this);
    FunctionBar_draw(this->active->bar, this->active->buffer);
    panel->currentBar = this->active->bar;
 }

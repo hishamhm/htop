@@ -21,6 +21,7 @@ in the source distribution for its full text.
 #include "Panel.h"
 #include "Process.h"
 #include "Settings.h"
+#include "IncSet.h"
 
 #ifdef HAVE_LIBHWLOC
 #include <hwloc.h>
@@ -45,7 +46,7 @@ typedef struct ProcessList_ {
    Panel* panel;
    int following;
    uid_t userId;
-   const char* incFilter;
+   IncSet* incSet;
    Hashtable* pidWhiteList;
 
    #ifdef HAVE_LIBHWLOC
@@ -266,8 +267,6 @@ void ProcessList_expandTree(ProcessList* this) {
 }
 
 void ProcessList_rebuildPanel(ProcessList* this) {
-   const char* incFilter = this->incFilter;
-
    int currPos = Panel_getSelectedIndex(this->panel);
    pid_t currPid = this->following != -1 ? this->following : 0;
    int currScrollV = this->panel->scrollV;
@@ -281,7 +280,7 @@ void ProcessList_rebuildPanel(ProcessList* this) {
 
       if ( (!p->show)
          || (this->userId != (uid_t) -1 && (p->st_uid != this->userId))
-         || (incFilter && !(String_contains_i(p->comm, incFilter)))
+         || !IncSet_filterTest(this->incSet, p->comm)
          || (this->pidWhiteList && !Hashtable_get(this->pidWhiteList, p->tgid)) )
          hidden = true;
 

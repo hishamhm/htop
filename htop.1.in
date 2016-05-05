@@ -84,7 +84,10 @@ search mode, pressing F3 will cycle through matching occurrences.
 .B F4, \\\\
 Incremental process filtering: type in part of a process command line and
 only processes whose names match will be shown. To cancel filtering,
-enter the Filter option again and press Esc.
+enter the Filter option again and press Esc. F5 will toggle between a
+POSIX Extended Regular Expression and plain string match, both kinds are
+case insensitive. F6 will toggle between showing processes whose names do
+match and don't match.
 .TP
 .B F5, t
 Tree view: organize processes by parenthood, and layout the relations
