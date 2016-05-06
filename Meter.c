@@ -274,36 +274,88 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
    w -= captionLen;
    attrset(CRT_colors[BAR_BORDER]);
    mvaddch(y, x, '[');
-   mvaddch(y, x + w, ']');
    
    w--;
    x++;
 
-   if (w < 1) {
+   if (w < 0) {
       attrset(CRT_colors[RESET_COLOR]);
       return;
    }
-   char bar[w + 1];
-   
+
+   char bar[w + 2];
+   snprintf(bar, w + 2, "%*s]", w, buffer);
+
    int blockSizes[10];
-
-   snprintf(bar, w + 1, "%*s", w, buffer);
-
-   // First draw in the bar[] buffer...
-   int offset = 0;
    int items = Meter_getItems(this);
+
+   // The ideal algorithm for drawing requires sorting and O(n*log(n)+w) time,
+   // but such precision and rounding is not useful. This version is a less
+   // precise but linear time (O(n+w)) algorithm.
+
+   // Pass 1/3: Compute itemWidth (maximum number of characters that can be
+   // plotted per item)
+   int itemWidth = w + 1;
    for (int i = 0; i < items; i++) {
-      double value = this->values[i];
-      value = CLAMP(value, 0.0, this->total);
-      if (value > 0) {
-         blockSizes[i] = ceil((value/this->total) * w);
-      } else {
-         blockSizes[i] = 0;
+      blockSizes[i] = 0;
+      if (this->values[i] > 0.0)
+         itemWidth--;
+   }
+   // Pass 2/3: Distribute items into A (very small), B (small) and C (larger
+   // values) buckets.
+   int countA = 0, countB = 0;
+   double totalA = 0.0, totalB = 0.0;
+   for (int i = 0; i < items; i++) {
+      if (this->values[i] <= 0.0)
+         continue;
+      // Belongs to A if (width <= 0 || value / total <= 1.0 / width)
+      if (this->values[i] * w <= this->total) {
+         blockSizes[i] = 1;
+         countA++;
+         totalA += this->values[i];
+         continue;
       }
-      int nextOffset = offset + blockSizes[i];
-      // (Control against invalid values)
-      nextOffset = CLAMP(nextOffset, 0, w);
-      for (int j = offset; j < nextOffset; j++)
+      // Belongs to B if (value / total < 1.0 / itemWidth)
+      if (this->values[i] * itemWidth < this->total) {
+         blockSizes[i] = 2;
+         countB++;
+         totalB += this->values[i];
+      }
+      // Belongs to C otherwise
+   }
+   assert(width <= 0 || totalB * width > total * countB);
+   // If there are more space that can be plotted for B, let widthB be this
+   // additional space.
+   double widthB = 0.0;
+   if ((double)countB * (this->total - totalA) < totalB * (w - countA)) {
+      widthB = (totalB * (w - countA) / (this->total - totalA)) - countB;
+   }
+   double widthC = (double)(w - countA - countB) - widthB;
+   double totalC = this->total - totalA - totalB;
+   // Pass 3/3: Plot.
+   int offset = 0;
+   double plotted = 0.0, plot; // Unit: characters
+   for (int i = 0; i < items; i++) {
+      if (this->values[i] <= 0.0)
+         continue;
+      if (blockSizes[i] == 1) {
+         // A: Always plotted as 1 character
+         plot = plotted + 1.0;
+      } else if (blockSizes[i] == 2) {
+         // B: 1 or 2 characters
+         plot = plotted + 1.0;
+         if (widthB > 0.0) {
+            plot += widthB * (this->values[i] * w - this->total) /
+                    (totalB * w - this->total * countB);
+         }
+      } else {
+         // C: More than 1 character
+         plot = plotted + (this->values[i] * widthC / totalC);
+      }
+      int nextOffset = MIN((int) lround(plot), w + 1);
+      blockSizes[i] = nextOffset - offset;
+      // Prepare bar[] buffer for printing...
+      for (int j = offset; j < nextOffset; j++) {
          if (bar[j] == ' ') {
             if (CRT_colorScheme == COLORSCHEME_MONOCHROME) {
                bar[j] = BarMeterMode_characters[i];
@@ -311,20 +363,19 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
                bar[j] = '|';
             }
          }
-      offset = nextOffset;
-   }
-
-   // ...then print the buffer.
-   offset = 0;
-   for (int i = 0; i < items; i++) {
+      }
+      // ...and then print the buffer.
       attrset(CRT_colors[Meter_attributes(this)[i]]);
       mvaddnstr(y, x + offset, bar + offset, blockSizes[i]);
-      offset += blockSizes[i];
-      offset = CLAMP(offset, 0, w);
+
+      plotted = plot;
+      offset = nextOffset;
    }
-   if (offset < w) {
+   if (offset < w + 1) {
       attrset(CRT_colors[BAR_SHADOW]);
       mvaddnstr(y, x + offset, bar + offset, w - offset);
+      attrset(CRT_colors[BAR_BORDER]);
+      mvaddch(y, x + w, bar[w]);
    }
 
    move(y, x + w + 1);
