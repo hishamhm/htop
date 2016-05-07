@@ -254,5 +254,6 @@ void Platform_getKernelVersion(char *KernelVersion) {
         kernelversion = String_cat(unix, " ");
         kernelversion = String_cat(kernelversion, version);
         strncpy(KernelVersion, kernelversion, strlen(kernelversion));
+        fclose(fd);
     }
 }
