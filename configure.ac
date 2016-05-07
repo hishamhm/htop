@@ -2,9 +2,10 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.65)
-AC_INIT([htop],[2.0.0],[hisham@gobolinux.org])
+AC_INIT([htop],[2.0.1],[hisham@gobolinux.org])
 
-year=$(date +%Y)
+SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(date +%s)}"
+year=$(date -u -d "@$SOURCE_DATE_EPOCH" "+%Y" 2>/dev/null || date -u -r "$SOURCE_DATE_EPOCH" "+%Y" 2>/dev/null || date -u "+%Y")
 
 # The following two lines are required by hwloc scripts
 AC_USE_SYSTEM_EXTENSIONS
@@ -26,17 +27,17 @@ AC_PROG_LIBTOOL
 
 # Checks for platform.
 # ----------------------------------------------------------------------
-case "$target" in
-*linux*)
+case "$target_os" in
+linux*|gnu*)
    my_htop_platform=linux
    ;;
-*freebsd*)
+freebsd*|kfreebsd*)
    my_htop_platform=freebsd
    ;;
-*openbsd*)
+openbsd*)
    my_htop_platform=openbsd
    ;;
-*darwin*)
+darwin*)
    my_htop_platform=darwin
    ;;
 *)

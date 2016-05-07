@@ -19,7 +19,7 @@ int HostnameMeter_attributes[] = {
    HOSTNAME
 };
 
-static void HostnameMeter_setValues(Meter* this, char* buffer, int size) {
+static void HostnameMeter_updateValues(Meter* this, char* buffer, int size) {
    (void) this;
    gethostname(buffer, size-1);
 }
@@ -29,8 +29,9 @@ MeterClass HostnameMeter_class = {
       .extends = Class(Meter),
       .delete = Meter_delete
    },
-   .setValues = HostnameMeter_setValues, 
+   .updateValues = HostnameMeter_updateValues,
    .defaultMode = TEXT_METERMODE,
+   .maxItems = 0,
    .total = 100.0,
    .attributes = HostnameMeter_attributes,
    .name = "Hostname",
