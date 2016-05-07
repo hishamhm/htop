@@ -19,7 +19,7 @@ int KernelVersionMeter_attributes[] = {
    KERNELVERSION
 };
 
-static void KernelVersionMeter_setValues(Meter* this, char* buffer, int len) {
+static void KernelVersionMeter_updateValues(Meter* this, char* buffer, int len) {
     (void) this;
     char *kernversion = xMalloc(256);
     Platform_getKernelVersion(kernversion);
@@ -32,7 +32,7 @@ MeterClass KernelVersionMeter_class = {
       .extends = Class(Meter),
       .delete = Meter_delete,
    },
-   .setValues = KernelVersionMeter_setValues,
+   .updateValues = KernelVersionMeter_updateValues,
    .defaultMode = TEXT_METERMODE,
    .total = 100.0,
    .attributes = KernelVersionMeter_attributes,
