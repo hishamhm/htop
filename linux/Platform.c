@@ -21,6 +21,7 @@ in the source distribution for its full text.
 #include "UptimeMeter.h"
 #include "ClockMeter.h"
 #include "HostnameMeter.h"
+#include "UnameMeter.h"
 #include "LinuxProcess.h"
 
 #include <math.h>
@@ -119,6 +120,7 @@ MeterClass* Platform_meterTypes[] = {
    &UptimeMeter_class,
    &BatteryMeter_class,
    &HostnameMeter_class,
+   &UnameMeter_class,
    &AllCPUsMeter_class,
    &AllCPUs2Meter_class,
    &LeftCPUsMeter_class,
