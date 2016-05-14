@@ -64,7 +64,7 @@ int ActiveUsersMeter_attributes[] = {
 /* Is the given user in the given char buffer?
  * Return true only for strict matching of the whole user name.
  * Rely on the fact that users are space-separated in the buffer. */ /* TODO use a constant char instead of space */
-static int name_in( const char* user, const char* buffer, int bufferlen ) {
+static int ActiveUsersMeter_name_in( const char* user, const char* buffer, int bufferlen ) {
     assert(user != NULL);
     if( buffer == NULL ) { return false; }
 
@@ -76,28 +76,32 @@ static int name_in( const char* user, const char* buffer, int bufferlen ) {
 
     char* pos = strstr(buffer, name);
 
+    bool found = false;
     if( pos == NULL ) {
         /* Not even a " user*" match. */
-        return false;
+        found = false;
     } else {
         /* Avoid " usersmthg" matches by checking for an end char.
          * Thus only " user " or " user\0" will match. */
         if( *(pos+namelen) == ' ' || *(pos+namelen) == '\0' ) {
-            return true;
+            found = true;
         } else {
-            return false;
+            found = false;
         }
     }
+
+    free(name);
+    return found;
 }
 
 
 /* Is the given user in one of the data buffers? */
-static int user_in( const char* user, char** strings, int maxItems, int bufferlen ) {
+static int ActiveUsersMeter_user_in( const char* user, char** strings, int maxItems, int bufferlen ) {
     assert(user != NULL);
     for( int i = 0; i < maxItems; ++i ) {
         /* if there is no string already existing, just skip.
          * If the user is found in a existing string, then it's a match. */
-        if(strings[i] != NULL && name_in( user, strings[i], bufferlen ) ) {
+        if(strings[i] != NULL && ActiveUsersMeter_name_in( user, strings[i], bufferlen ) ) {
             return true;
         }
     }
@@ -110,7 +114,7 @@ static int user_in( const char* user, char** strings, int maxItems, int bufferle
  * (because we do not want a user to be shown in all activity level,
  * only the higher one, if this function is called in descending order)
  * and print those ones in the buffer. */
-static void active_users(struct ProcessList_* pl, const int min_cpu, const int max_cpu, char** strings, int maxItems, char* buffer, int len) {
+static void ActiveUsersMeter_active_users(struct ProcessList_* pl, const int min_cpu, const int max_cpu, char** strings, int maxItems, char* buffer, int len) {
 
     /* If no active process were to be found. */
     snprintf( buffer, len, "%s", "" );
@@ -143,7 +147,7 @@ static void active_users(struct ProcessList_* pl, const int min_cpu, const int m
                     /* If the user is not already showed,
                      * either in the buffers held by "strings"
                      * or in the currently built buffer (which may not be an item of "strings"). */
-                    if( !user_in(p->user, strings, maxItems, len) && !name_in(p->user, buffer, len) ) {
+                    if( !ActiveUsersMeter_user_in(p->user, strings, maxItems, len) && !ActiveUsersMeter_name_in(p->user, buffer, len) ) {
 
                         /* Add him/her to the list. */
                         strncpy(prev_users, buffer, len);
@@ -159,7 +163,7 @@ static void active_users(struct ProcessList_* pl, const int min_cpu, const int m
 
 /* Gather the users active in the given bounds (but not elsewhere)
  * and save them in the meter data field for the given level. */
-static void activity( Meter* this, int level, const int min_cpu, const int max_cpu ) {
+static void ActiveUsersMeter_activity( Meter* this, int level, const int min_cpu, const int max_cpu ) {
 
     MeterClass* type = (MeterClass*) Class(ActiveUsersMeter);
 
@@ -167,7 +171,7 @@ static void activity( Meter* this, int level, const int min_cpu, const int max_c
     free( this->strings[level] );
     char* users = calloc( METER_BUFFER_LEN, sizeof(char) );
     assert( users != NULL );
-    active_users( this->pl, min_cpu, max_cpu, this->strings, type->maxItems, users, METER_BUFFER_LEN);
+    ActiveUsersMeter_active_users( this->pl, min_cpu, max_cpu, this->strings, type->maxItems, users, METER_BUFFER_LEN);
     this->strings[level] = users;
 }
 
@@ -176,7 +180,7 @@ static void activity( Meter* this, int level, const int min_cpu, const int max_c
  * and write it in the colored string at the given position.
  * Trim the user string if necessary.
  * Return current_pos + length of the written string. */
-static int add_users( Meter* this, int level, int current_pos, RichString* out ) {
+static int ActiveUsersMeter_add_users( Meter* this, int level, int current_pos, RichString* out ) {
 
    char* users = this->strings[level];
    size_t len = strlen( users ); /* FIXME use strnlen */
@@ -202,17 +206,17 @@ static int add_users( Meter* this, int level, int current_pos, RichString* out )
 static void ActiveUsersMeter_gather_data(Meter* this, char* buffer, int len) {
     /* NOTE: `buffer` and `len` are not used because data are saved in Meter.strings. */
 
-    activity( this, ACTIVE_LEVEL_HIGH, 95, 100 );
-    activity( this, ACTIVE_LEVEL_MID , 50,  95 );
-    activity( this, ACTIVE_LEVEL_LOW ,  0,  50 );
+    ActiveUsersMeter_activity( this, ACTIVE_LEVEL_HIGH, 95, 100 );
+    ActiveUsersMeter_activity( this, ACTIVE_LEVEL_MID , 50,  95 );
+    ActiveUsersMeter_activity( this, ACTIVE_LEVEL_LOW ,  0,  50 );
     /* If you change the levels bounds,
      * do not forget to update the description beyond. */
 }
 
 
 /* Readability macro for the display function.
- * Call add_users and immediately return if the output is full. */
-#define ACTIVE_USERS_ADD(level) add_users( this, level, len, out ); if( len == RICHSTRING_MAXLEN ) { return; }
+ * Call ActiveUsersMeter_add_users and immediately return if the output is full. */
+#define ACTIVE_USERS_ADD(level) ActiveUsersMeter_add_users( this, level, len, out ); if( len == RICHSTRING_MAXLEN ) { return; }
 
 /* Concatenate active users data and write them as a colored string. */
 static void ActiveUsersMeter_display(Object* cast, RichString* out) {

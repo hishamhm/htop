@@ -136,9 +136,9 @@ Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type) {
    this->param = param;
    this->pl = pl;
    type->curItems = type->maxItems;
-   this->values = xCalloc(type->maxItems, sizeof(double));
+   this->values  = xCalloc(type->maxItems, sizeof(double));
    this->strings = xCalloc(type->maxItems, sizeof(char*));
-   for( int i = 0; i < maxItems; ++i ) { this->strings[i] = NULL; }
+   for( int i = 0; i < type->maxItems; ++i ) { this->strings[i] = NULL; }
    this->total = type->total;
    this->caption = xStrdup(type->caption);
    if (Meter_initFn(this))
