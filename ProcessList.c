@@ -265,6 +265,14 @@ void ProcessList_expandTree(ProcessList* this) {
    }
 }
 
+void ProcessList_collapseAllTrees(ProcessList* this) {
+   int size = Vector_size(this->processes);
+   for (int i = 0; i < size; i++) {
+      Process* process = (Process*) Vector_get(this->processes, i);
+      process->showChildren = false;
+   }
+}
+
 void ProcessList_rebuildPanel(ProcessList* this) {
    const char* incFilter = this->incFilter;
 

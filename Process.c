@@ -506,7 +506,7 @@ ProcessClass Process_class = {
 void Process_init(Process* this, struct Settings_* settings) {
    this->settings = settings;
    this->tag = false;
-   this->showChildren = true;
+   this->showChildren = !this->settings->allTreesCollapsed;
    this->show = true;
    this->updated = false;
    this->basenameOffset = -1;

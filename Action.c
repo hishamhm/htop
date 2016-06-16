@@ -224,6 +224,15 @@ static Htop_Reaction actionToggleTreeView(State* st) {
    return HTOP_REFRESH | HTOP_SAVE_SETTINGS | HTOP_KEEP_FOLLOWING | HTOP_REDRAW_BAR | HTOP_UPDATE_PANELHDR;
 }
 
+static Htop_Reaction actionExpandOrCollapseAllTrees(State* st) {
+   st->settings->allTreesCollapsed = !st->settings->allTreesCollapsed;
+   if (st->settings->allTreesCollapsed)
+      ProcessList_collapseAllTrees(st->pl);
+   else
+      ProcessList_expandTree(st->pl);
+   return HTOP_REFRESH | HTOP_SAVE_SETTINGS;
+}
+
 static Htop_Reaction actionIncFilter(State* st) {
    IncSet* inc = ((MainPanel*)st->panel)->inc;
    IncSet_activate(inc, INC_FILTER, st->panel);
@@ -531,6 +540,7 @@ void Action_setBindings(Htop_Action* keys) {
    keys['p'] = actionToggleProgramPath;
    keys['t'] = actionToggleTreeView;
    keys[KEY_F(5)] = actionToggleTreeView;
+   keys['E'] = actionExpandOrCollapseAllTrees;
    keys[KEY_F(4)] = actionIncFilter;
    keys['\\'] = actionIncFilter;
    keys[KEY_F(3)] = actionIncSearch;
