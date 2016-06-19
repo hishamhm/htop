@@ -49,9 +49,9 @@ void EnvScreen_scan(InfoScreen* this) {
    Panel_prune(panel);
 
    uid_t euid = geteuid();
-   (void) seteuid(getuid());
+   if (seteuid(getuid())) {/* ignore return value */};
    char *env = Platform_getProcessEnv(this->process->pid);
-   (void) seteuid(euid);
+   if (seteuid(euid)) {/* ignore return value */};
    if (env) {
       for (char *p = env; *p; p = strrchr(p, 0)+1)
          InfoScreen_addLine(this, p);
