@@ -94,6 +94,9 @@ update of system calls issued by the process.
 Display open files for a process: if lsof(1) is installed, pressing this key
 will display the list of file descriptors opened by the process.
 .TP
+.B L
+Display full command line for a process wrapped in a separate window.
+.TP
 .B F1, h, ?
 Go to the help screen
 .TP
