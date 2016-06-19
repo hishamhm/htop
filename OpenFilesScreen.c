@@ -91,7 +91,7 @@ static OpenFiles_ProcessData* OpenFilesScreen_getProcessData(pid_t pid) {
       if (!line) {
          break;
       }
-      char cmd = line[0];
+      unsigned char cmd = line[0];
       if (cmd == 'f') {
          OpenFiles_FileData* nextFile = xCalloc(1, sizeof(OpenFiles_FileData));
          if (fdata == NULL) {
@@ -130,9 +130,9 @@ void OpenFilesScreen_scan(InfoScreen* this) {
       while (fdata) {
          char** data = fdata->data.data;
          int lenN = data['n'] ? strlen(data['n']) : 0;
-         int sizeEntry = 5 + 4 + 10 + 10 + 10 + lenN + 5 /*spaces*/ + 1 /*null*/;
+         int sizeEntry = 5 + 7 + 10 + 10 + 10 + lenN + 5 /*spaces*/ + 1 /*null*/;
          char* entry = xMalloc(sizeEntry);
-         snprintf(entry, sizeEntry, "%5s %4s %10s %10s %10s %s",
+         snprintf(entry, sizeEntry, "%5.5s %7.7s %10.10s %10.10s %10.10s %s",
             data['f'] ? data['f'] : "",
             data['t'] ? data['t'] : "",
             data['D'] ? data['D'] : "",
