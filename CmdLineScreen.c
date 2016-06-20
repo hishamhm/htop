@@ -42,6 +42,7 @@ void CmdLineScreen_draw(InfoScreen* this) {
    char* title = xMalloc(COLS);
    snprintf(title, COLS - 4, "Full command line of process %d - %s", this->process->pid, this->process->comm);
    InfoScreen_drawTitled(this, "%s...", title);
+   free(title);
 }
 
 void CmdLineScreen_scan(InfoScreen* this) {
