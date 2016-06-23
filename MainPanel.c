@@ -105,22 +105,6 @@ static HandlerResult MainPanel_eventHandler(Panel* super, int ch) {
       } else {
          reaction |= HTOP_KEEP_FOLLOWING;
       }
-/* todo check if everything still works
-      switch (ch) {
-      case KEY_LEFT:
-      case 'h':
-         if (super->scrollH > 0) {
-            super->scrollH -= CRT_scrollHAmount;
-            super->needsRedraw = true;
-         }
-         return HANDLED;
-      case KEY_RIGHT:
-      case 'l':
-         super->scrollH += CRT_scrollHAmount;
-         super->needsRedraw = true;
-         return HANDLED;
-      }
-*/
    }
 
    if (reaction & HTOP_REDRAW_BAR) {
