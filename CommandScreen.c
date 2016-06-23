@@ -45,24 +45,35 @@ void CommandScreen_draw(InfoScreen* this) {
    free(title);
 }
 
+void CommandScreen_addLine(InfoScreen* this, char* p, int line_offset, int len) {
+   char *line = xMalloc(len + 1);
+   memcpy(line, p - line_offset, len);
+   line[len] = '\0';
+   InfoScreen_addLine(this, line);
+   free(line);
+}
+
 void CommandScreen_scan(InfoScreen* this) {
    Panel* panel = this->display;
    int idx = MAX(Panel_getSelectedIndex(panel), 0);
 
    Panel_prune(panel);
 
-   char *buf = xMalloc(COLS + 1);
-   char *cmd = this->process->comm;
-   int total = strlen(cmd), curr = 0, len;
+   char *p = this->process->comm;
+   int line_offset = 0, last_spc = -1, len;
+   for (; *p; p++, line_offset++) {
+      if (*p == ' ' || *p == '\t') {
+         last_spc = line_offset;
+      }
 
-   while (curr < total) {
-      len = MIN(COLS, total - curr);
-      memcpy(buf, cmd + curr, len);
-      buf[len] = '\0';
-      InfoScreen_addLine(this, buf);
-      curr += len;
+      if (line_offset == COLS) {
+         len = (last_spc == -1) ? line_offset : last_spc;
+         CommandScreen_addLine(this, p, line_offset, len);
+         line_offset -= len;
+         last_spc = -1;
+      }
    }
 
-   free(buf);
+   CommandScreen_addLine(this, p, line_offset, line_offset);
    Panel_setSelected(panel, idx);
 }

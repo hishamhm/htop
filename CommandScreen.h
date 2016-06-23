@@ -17,6 +17,8 @@ void CommandScreen_delete(Object* this);
 
 void CommandScreen_draw(InfoScreen* this);
 
+void CommandScreen_addLine(InfoScreen* this, char* p, int line_offset, int len);
+
 void CommandScreen_scan(InfoScreen* this);
 
 #endif
