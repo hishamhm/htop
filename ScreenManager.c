@@ -189,7 +189,7 @@ void ScreenManager_run(ScreenManager* this, Panel** lastFocus, int* lastKey) {
       }
 
       int prevCh = ch;
-      ESCDELAY = 25;
+      set_escdelay(25);
       ch = getch();
 
       HandlerResult result = IGNORED;
@@ -280,6 +280,9 @@ void ScreenManager_run(ScreenManager* this, Panel** lastFocus, int* lastKey) {
       }
       case KEY_LEFT:
       case 'h':
+         if (this->panelCount < 2) {
+            goto defaultHandler;
+         }
          if (!this->allowFocusChange)
             break;
          tryLeft:
@@ -292,6 +295,9 @@ void ScreenManager_run(ScreenManager* this, Panel** lastFocus, int* lastKey) {
       case KEY_RIGHT:
       case 'l':
       case 9:
+         if (this->panelCount < 2) {
+            goto defaultHandler;
+         }
          if (!this->allowFocusChange)
             break;
          tryRight:
@@ -307,6 +313,7 @@ void ScreenManager_run(ScreenManager* this, Panel** lastFocus, int* lastKey) {
          quit = true;
          continue;
       default:
+         defaultHandler:
          sortTimeout = resetSortTimeout;
          Panel_onKey(panelFocus, ch);
          break;

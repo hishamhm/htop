@@ -48,6 +48,7 @@ in the source distribution for its full text.
 #define PROCESS_FLAG_IO 0x0001
 
 typedef enum ProcessFields {
+   NULL_PROCESSFIELD = 0,
    PID = 1,
    COMM = 2,
    STATE = 3,
@@ -193,7 +194,7 @@ void Process_setupColumnWidths() {
    assert(digits < 20);
    for (int i = 0; Process_pidColumns[i].label; i++) {
       assert(i < 20);
-      sprintf(Process_titleBuffer[i], "%*s ", digits, Process_pidColumns[i].label);
+      snprintf(Process_titleBuffer[i], 20, "%*s ", digits, Process_pidColumns[i].label);
       Process_fields[Process_pidColumns[i].id].title = Process_titleBuffer[i];
    }
    sprintf(Process_pidFormat, "%%%dd ", digits);
@@ -394,7 +395,7 @@ void Process_writeField(Process* this, RichString* str, ProcessField field) {
          int indent = (this->indent < 0 ? -this->indent : this->indent);
 
          for (int i = 0; i < 32; i++)
-            if (indent & (1 << i))
+            if (indent & (1U << i))
                maxIndent = i+1;
           for (int i = 0; i < maxIndent - 1; i++) {
             int written;
@@ -518,10 +519,10 @@ void Process_toggleTag(Process* this) {
 
 bool Process_setPriority(Process* this, int priority) {
    uid_t euid = geteuid();
-   seteuid(getuid());
+   (void) seteuid(getuid());
    int old_prio = getpriority(PRIO_PROCESS, this->pid);
    int err = setpriority(PRIO_PROCESS, this->pid, priority);
-   seteuid(euid);
+   (void) seteuid(euid);
    if (err == 0 && old_prio != getpriority(PRIO_PROCESS, this->pid)) {
       this->nice = priority;
    }
@@ -534,9 +535,9 @@ bool Process_changePriorityBy(Process* this, size_t delta) {
 
 void Process_sendSignal(Process* this, size_t sgn) {
    uid_t euid = geteuid();
-   seteuid(getuid());
+   (void) seteuid(getuid());
    kill(this->pid, (int) sgn);
-   seteuid(euid);
+   (void) seteuid(euid);
 }
 
 long Process_pidCompare(const void* v1, const void* v2) {

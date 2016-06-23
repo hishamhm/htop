@@ -83,6 +83,7 @@ void InfoScreen_drawTitled(InfoScreen* this, char* fmt, ...) {
    wmove(stdscr, 0, 0);
    vw_printw(stdscr, fmt, ap);
    attrset(CRT_colors[DEFAULT_COLOR]);
+   this->display->needsRedraw = true;
    Panel_draw(this->display, true);
    IncSet_drawBar(this->inc);
    va_end(ap);
@@ -116,7 +117,7 @@ void InfoScreen_run(InfoScreen* this) {
 
       if (this->inc->active)
          move(LINES-1, CRT_cursorX);
-      ESCDELAY = 25;
+      set_escdelay(25);
       int ch = getch();
       
       if (ch == ERR) {

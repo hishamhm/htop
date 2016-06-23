@@ -13,9 +13,10 @@ in the source distribution for its full text.
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 /*{
+#include <stdio.h>
+
 #define String_startsWith(s, match) (strstr((s), (match)) == (s))
 #define String_contains_i(s1, s2) (strcasestr(s1, s2) != NULL)
 }*/
@@ -69,13 +70,7 @@ char** String_split(const char* s, char sep, int* n) {
       ctr++;
       if (ctr == blocks) {
          blocks += rate;
-         char** newOut = (char**) xRealloc(out, sizeof(char*) * blocks);
-         if (newOut) {
-            out = newOut;
-         } else {
-            blocks -= rate;
-            break;
-         }
+         out = (char**) xRealloc(out, sizeof(char*) * blocks);
       }
       s += size + 1;
    }
@@ -86,10 +81,7 @@ char** String_split(const char* s, char sep, int* n) {
       out[ctr] = token;
       ctr++;
    }
-   char** newOut = xRealloc(out, sizeof(char*) * (ctr + 1));
-   if (newOut) {
-      out = newOut;
-   }
+   out = xRealloc(out, sizeof(char*) * (ctr + 1));
    out[ctr] = NULL;
    *n = ctr;
    return out;
@@ -127,4 +119,30 @@ char* String_getToken(const char* line, const unsigned short int numMatch) {
 
    match[foundCount] = '\0';
    return((char*)xStrdup(match));
+}
+
+char* String_readLine(FILE* fd) {
+   const int step = 1024;
+   int bufSize = step;
+   char* buffer = xMalloc(step + 1);
+   char* at = buffer;
+   for (;;) {
+      char* ok = fgets(at, step + 1, fd);
+      if (!ok) {
+         free(buffer);
+         return NULL;
+      }
+      char* newLine = strrchr(at, '\n');
+      if (newLine) {
+         *newLine = '\0';
+         return buffer;
+      } else {
+         if (feof(fd)) {
+            return buffer;
+         }
+      }
+      bufSize += step;
+      buffer = xRealloc(buffer, bufSize + 1);
+      at = buffer + bufSize - step;
+   }
 }
