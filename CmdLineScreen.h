@@ -17,6 +17,8 @@ void CmdLineScreen_delete(Object* this);
 
 void CmdLineScreen_draw(InfoScreen* this);
 
+void CmdLineScreen_addLine(InfoScreen* this, char* p, int line_offset, int len);
+
 void CmdLineScreen_scan(InfoScreen* this);
 
 #endif
