@@ -127,12 +127,11 @@ ListItem* Meter_toListItem(Meter* this, bool moving);
 
 /* ---------- GraphMeterMode ---------- */
 
-#ifdef HAVE_LIBNCURSESW
-
-#define PIXPERROW_UTF8 4
-#endif
-
-#define PIXPERROW_ASCII 2
+typedef enum {
+   GRAPHSTYLE_ASCII = 0, // Fallback default
+   GRAPHSTYLE_UTF8 = 1,  // UTF-8 default (braille)
+   LAST_GRAPHSTYLE       // Dummy & unused.
+} GraphStyleId;
 
 /* ---------- LEDMeterMode ---------- */
 
