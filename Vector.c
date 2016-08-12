@@ -7,13 +7,14 @@ in the source distribution for its full text.
 
 #include "Vector.h"
 
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
 
 /*{
 #include "Object.h"
+
+#include <assert.h>
 
 #define swap(a_,x_,y_) do{ void* tmp_ = a_[x_]; a_[x_] = a_[y_]; a_[y_] = tmp_; }while(0)
 
@@ -270,19 +271,12 @@ void Vector_set(Vector* this, int idx, void* data_) {
    assert(Vector_isConsistent(this));
 }
 
-#ifdef DEBUG
-
-inline Object* Vector_get(Vector* this, int idx) {
-   assert(idx < this->items);
-   assert(Vector_isConsistent(this));
-   return this->array[idx];
-}
-
-#else
-
-#define Vector_get(v_, idx_) ((v_)->array[idx_])
-
-#endif
+// Prototype:
+// inline Object* Vector_get(Vector* this, int idx);
+#define Vector_get(this_, idx_) \
+           (assert((idx_) < (this_)->items), \
+            assert(Vector_isConsistent(this_)), \
+            (this_)->array[idx_])
 
 inline int Vector_size(Vector* this) {
    assert(Vector_isConsistent(this));

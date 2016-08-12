@@ -11,6 +11,8 @@ in the source distribution for its full text.
 
 #include "Object.h"
 
+#include <assert.h>
+
 #define swap(a_,x_,y_) do{ void* tmp_ = a_[x_]; a_[x_] = a_[y_]; a_[y_] = tmp_; }while(0)
 
 #ifndef DEFAULT_SIZE
@@ -60,15 +62,12 @@ void Vector_moveDown(Vector* this, int idx);
 
 void Vector_set(Vector* this, int idx, void* data_);
 
-#ifdef DEBUG
-
-extern Object* Vector_get(Vector* this, int idx);
-
-#else
-
-#define Vector_get(v_, idx_) ((v_)->array[idx_])
-
-#endif
+// Prototype:
+// inline Object* Vector_get(Vector* this, int idx);
+#define Vector_get(this_, idx_) \
+           (assert((idx_) < (this_)->items), \
+            assert(Vector_isConsistent(this_)), \
+            (this_)->array[idx_])
 
 extern int Vector_size(Vector* this);
 
