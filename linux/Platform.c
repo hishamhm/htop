@@ -21,6 +21,7 @@ in the source distribution for its full text.
 #include "UptimeMeter.h"
 #include "ClockMeter.h"
 #include "HostnameMeter.h"
+#include "NetTrafficMeter.h"
 #include "LinuxProcess.h"
 
 #include <math.h>
@@ -28,6 +29,7 @@ in the source distribution for its full text.
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*{
 #include "Action.h"
@@ -126,6 +128,7 @@ MeterClass* Platform_meterTypes[] = {
    &LeftCPUs2Meter_class,
    &RightCPUs2Meter_class,
    &BlankMeter_class,
+   &NetTrafficMeter_class,
    NULL
 };
 
@@ -193,6 +196,63 @@ double Platform_setCPUValues(Meter* this, int cpu) {
    percent = CLAMP(percent, 0.0, 100.0);
    if (isnan(percent)) percent = 0.0;
    return percent;
+}
+
+void Platform_setNICInit(Meter* this) {
+   LinuxProcessList* pl = (LinuxProcessList*) this->pl;
+   NICData* nicData = &(pl->nics[this->param]);
+   
+   if (nicData->name == NULL)
+   {
+      Meter_setCaption(this, "NIC");
+      return;
+   }
+   
+   char buffer[4];
+   memset((void*)&buffer, 0, sizeof(char)*4);
+   int namelen = strlen(nicData->name);
+   if (namelen > 3)
+   {
+      buffer[0] = nicData->name[namelen - 3];
+      buffer[1] = nicData->name[namelen - 2];
+      buffer[2] = nicData->name[namelen - 1];
+   }
+   else
+   {
+      snprintf(buffer, 3, "%s", nicData->name);
+   }
+   Meter_setCaption(this, buffer);
+}
+
+double* Platform_setNICValues(Meter* this) {
+   LinuxProcessList* pl = (LinuxProcessList*) this->pl;
+   NICData* nicData = &(pl->nics[this->param]);
+   
+   float gbit = 134217728.0; // 1 Gbit
+   //if (pl->nic100mbps)
+   //   gbit = 13107200.0; // 100 Mbit if wanted
+   
+   float ninp = (float)(nicData->receivedPeriod / 10.0);
+   float noutp = (float)(nicData->transmittedPeriod / 10.0);
+   
+   // TODO: these values also need to be adjusted by measurement period
+   
+   float nin = (ninp / 1024.0 / 1024.0);
+   float nout = (noutp / 1024.0 / 1024.0);
+   
+   this->values[0] = (ninp / gbit) * 100.0;
+   this->values[1] = (noutp / gbit) * 100.0;
+   
+   static double r[2];
+   r[0] = nin;
+   r[1] = nout;
+   return r;
+}
+
+char* Platform_getNICName(ProcessList* pl, int nic) {
+   LinuxProcessList* lpl = (LinuxProcessList*) pl;
+   NICData* nicData = &(lpl->nics[nic]);
+   return nicData->name;
 }
 
 void Platform_setMemoryValues(Meter* this) {

@@ -39,6 +39,12 @@ int Platform_getMaxPid();
 
 double Platform_setCPUValues(Meter* this, int cpu);
 
+void Platform_setNICInit(Meter* this);
+
+double* Platform_setNICValues(Meter* this);
+
+char* Platform_getNICName(ProcessList* pl, int nic);
+
 void Platform_setMemoryValues(Meter* this);
 
 void Platform_setSwapValues(Meter* this);

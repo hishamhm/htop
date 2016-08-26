@@ -59,10 +59,23 @@ typedef struct CPUData_ {
    unsigned long long int guestPeriod;
 } CPUData;
 
+typedef struct NICData_ {
+   char* name;
+   unsigned long long int receivedBytes;
+   unsigned long long int transmittedBytes;
+   unsigned long long int totalBytes;
+   
+   unsigned long long int receivedPeriod;
+   unsigned long long int transmittedPeriod;
+   unsigned long long int totalPeriod;
+} NICData;
+
 typedef struct LinuxProcessList_ {
    ProcessList super;
 
    CPUData* cpus;
+   
+   NICData* nics;
 
 } LinuxProcessList;
 
@@ -127,11 +140,12 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    nics -= 2;
    pl->nicCount = nics;
    
-   pl->nics = calloc(sizeof(NICData), nics);
+   this->nics = calloc(sizeof(NICData), nics);
    for (int i = 0; i < nics; i++) {
-      pl->nics[i].totalBytes = 1;
-      pl->nics[i].totalPeriod = 1;
+      this->nics[i].totalBytes = 1;
+      this->nics[i].totalPeriod = 1;
    }
+   fclose(netfile);
    
    return pl;
 }
@@ -779,11 +793,42 @@ static inline double LinuxProcessList_scanCPUTime(LinuxProcessList* this) {
    return period;
 }
 
+static inline void LinuxProcessList_scanNICTraffic(LinuxProcessList* this) {
+   FILE* file = fopen("/proc/net/dev", "r");
+   char buffer[256];
+   memset((void*)&buffer, 0, sizeof(char)*256);
+   int line = 0;
+   while (fgets(buffer, 255, file) != NULL) {
+      if (line < 2) {
+         line++;
+         continue;
+      }
+      
+      char* name;
+      name = malloc(32 * sizeof(char)); // i hope 32 characters are enough
+      unsigned long long int rbytes, rpackets, rerrs, rdrop, rfifo, rframe, rcompressed, rmulticast, tbytes, tpackets, terrs, tdrop, tfifo, tcolls, tcarriere, tcompressed;
+      sscanf(buffer, " %[a-zA-Z0-9]:%llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu %llu", name, &rbytes, &rpackets, &rerrs, &rdrop, &rfifo, &rframe, &rcompressed, &rmulticast, &tbytes, &tpackets, &terrs, &tdrop, &tfifo, &tcolls, &tcarriere, &tcompressed);
+      NICData* nicData = &(this->nics[line - 2]);
+      nicData->name = name;
+      nicData->receivedPeriod = rbytes - nicData->receivedBytes;
+      nicData->transmittedPeriod = tbytes - nicData->transmittedBytes;
+      nicData->totalPeriod = (rbytes + tbytes) - nicData->totalBytes;
+      nicData->receivedBytes = rbytes;
+      nicData->transmittedBytes = tbytes;
+      nicData->totalBytes = rbytes + tbytes;
+      
+      memset((void*)&buffer, 0, sizeof(char)*256);
+      line++;
+   }
+   fclose(file);
+}
+
 void ProcessList_goThroughEntries(ProcessList* super) {
    LinuxProcessList* this = (LinuxProcessList*) super;
 
    LinuxProcessList_scanMemoryInfo(super);
    double period = LinuxProcessList_scanCPUTime(this);
+   LinuxProcessList_scanNICTraffic(this);
 
    struct timeval tv;
    gettimeofday(&tv, NULL);

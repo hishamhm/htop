@@ -55,6 +55,7 @@ typedef struct LinuxProcessList_ {
    ProcessList super;
 
    CPUData* cpus;
+   
    NICData* nics;
 
 } LinuxProcessList;
