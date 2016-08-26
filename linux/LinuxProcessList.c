@@ -299,7 +299,7 @@ static void LinuxProcessList_readIoFile(LinuxProcess* process, const char* dirna
          }
          break;
       case 'c':
-         if (strncmp(line+1, "ancelled_write_bytes: ", 22) == 0) {
+         if (strncmp(line+1, "cancelled_write_bytes: ", 22) == 0) {
            process->io_cancelled_write_bytes = strtoull(line+23, NULL, 10);
         }
       }
