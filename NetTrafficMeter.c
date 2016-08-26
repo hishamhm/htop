@@ -49,8 +49,8 @@ static void NetTrafficMeter_updateValues(Meter* this, char* buffer, int size) {
       NetTrafficMeter_init(this);
 
    float gbit = 134217728.0; // 1 Gbit
-   if (pl->nic100mbps)
-      gbit = 13107200.0; // 100 Mbit if wanted
+   //if (pl->nic100mbps)
+   //   gbit = 13107200.0; // 100 Mbit if wanted
    
    float ninp = (float)nicData->receivedPeriod / ((float)pl->delay / 10.0);
    float noutp = (float)nicData->transmittedPeriod / ((float)pl->delay / 10.0);
