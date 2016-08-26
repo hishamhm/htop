@@ -40,10 +40,22 @@ typedef struct CPUData_ {
    unsigned long long int guestPeriod;
 } CPUData;
 
+typedef struct NICData_ {
+   char* name;
+   unsigned long long int receivedBytes;
+   unsigned long long int transmittedBytes;
+   unsigned long long int totalBytes;
+   
+   unsigned long long int receivedPeriod;
+   unsigned long long int transmittedPeriod;
+   unsigned long long int totalPeriod;
+} NICData;
+
 typedef struct LinuxProcessList_ {
    ProcessList super;
 
    CPUData* cpus;
+   NICData* nics;
 
 } LinuxProcessList;
 

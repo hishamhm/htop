@@ -115,6 +115,24 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
       this->cpus[i].totalPeriod = 1;
    }
 
+   // Update NIC count:
+   FILE* netfile = fopen("/proc/net/dev", "r");
+   if (netfile == NULL) {
+      CRT_fatalError("Cannot open /proc/net/dev");
+   }
+   int nics = 0;
+   while (fgets(buffer, 255, netfile) != NULL) {
+      nics++;
+   }
+   nics -= 2;
+   pl->nicCount = nics;
+   
+   pl->nics = calloc(sizeof(NICData), nics);
+   for (int i = 0; i < nics; i++) {
+      pl->nics[i].totalBytes = 1;
+      pl->nics[i].totalPeriod = 1;
+   }
+   
    return pl;
 }
 
