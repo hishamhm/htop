@@ -5,6 +5,8 @@ Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
+#include "config.h"
+
 #include "Platform.h"
 #include "IOPriority.h"
 #include "IOPriorityPanel.h"
@@ -48,6 +50,9 @@ ProcessField Platform_defaultFields[] = { PID, USER, PRIORITY, NICE, M_SIZE, M_R
 int Platform_numberOfFields = LAST_PROCESSFIELD;
 
 const SignalItem Platform_signals[] = {
+   // Same signal numbers across all architectures:
+   // 0-6, 8, 9, 11, 13-15
+   // (0-3, 6, 9, 14, 15, are mandated by POSIX XSI, by the way)
    { .name = " 0 Cancel",    .number = 0 },
    { .name = " 1 SIGHUP",    .number = 1 },
    { .name = " 2 SIGINT",    .number = 2 },
@@ -56,6 +61,100 @@ const SignalItem Platform_signals[] = {
    { .name = " 5 SIGTRAP",   .number = 5 },
    { .name = " 6 SIGABRT",   .number = 6 },
    { .name = " 6 SIGIOT",    .number = 6 },
+   #if (TARGET_CPU_ALPHA || TARGET_CPU_SPARC)
+   // Converted from Linux kernel source
+   // "arch/{alpha,sparc}/include/uapi/asm/signal.h"
+   { .name = " 7 SIGEMT",    .number = 7 },
+   { .name = " 8 SIGFPE",    .number = 8 },
+   { .name = " 9 SIGKILL",   .number = 9 },
+   { .name = "10 SIGBUS",    .number = 10 },
+   { .name = "11 SIGSEGV",   .number = 11 },
+   { .name = "12 SIGSYS",    .number = 12 },
+   { .name = "13 SIGPIPE",   .number = 13 },
+   { .name = "14 SIGALRM",   .number = 14 },
+   { .name = "15 SIGTERM",   .number = 15 },
+   { .name = "16 SIGURG",    .number = 16 },
+   { .name = "17 SIGSTOP",   .number = 17 },
+   { .name = "18 SIGTSTP",   .number = 18 },
+   { .name = "19 SIGCONT",   .number = 19 },
+   { .name = "20 SIGCHLD",   .number = 20 },
+   { .name = "21 SIGTTIN",   .number = 21 },
+   { .name = "22 SIGTTOU",   .number = 22 },
+   { .name = "23 SIGIO",     .number = 23 },
+   { .name = "23 SIGPOLL",   .number = 23 },
+   { .name = "24 SIGXCPU",   .number = 24 },
+   { .name = "25 SIGXFSZ",   .number = 25 },
+   { .name = "26 SIGVTALRM", .number = 26 },
+   { .name = "27 SIGPROF",   .number = 27 },
+   { .name = "28 SIGWINCH",  .number = 28 },
+   # if TARGET_CPU_ALPHA
+   { .name = "29 SIGINFO",   .number = 29 },
+   # elif TARGET_CPU_SPARC
+   { .name = "29 SIGLOST",   .number = 29 },
+   # endif
+   { .name = "29 SIGPWR",    .number = 29 },
+   { .name = "30 SIGUSR1",   .number = 30 },
+   { .name = "31 SIGUSR2",   .number = 31 },
+   #elif TARGET_CPU_MIPS
+   // Converted from Linux kernel source
+   // "arch/mips/include/uapi/asm/signal.h"
+   { .name = " 7 SIGEMT",    .number = 7 },
+   { .name = " 8 SIGFPE",    .number = 8 },
+   { .name = " 9 SIGKILL",   .number = 9 },
+   { .name = "10 SIGBUS",    .number = 10 },
+   { .name = "11 SIGSEGV",   .number = 11 },
+   { .name = "12 SIGSYS",    .number = 12 },
+   { .name = "13 SIGPIPE",   .number = 13 },
+   { .name = "14 SIGALRM",   .number = 14 },
+   { .name = "15 SIGTERM",   .number = 15 },
+   { .name = "16 SIGUSR1",   .number = 16 },
+   { .name = "17 SIGUSR2",   .number = 17 },
+   { .name = "18 SIGCHLD",   .number = 18 },
+   { .name = "19 SIGPWR",    .number = 19 },
+   { .name = "20 SIGWINCH",  .number = 20 },
+   { .name = "21 SIGURG",    .number = 21 },
+   { .name = "22 SIGIO",     .number = 22 },
+   { .name = "22 SIGPOLL",   .number = 22 },
+   { .name = "23 SIGSTOP",   .number = 23 },
+   { .name = "24 SIGTSTP",   .number = 24 },
+   { .name = "25 SIGCONT",   .number = 25 },
+   { .name = "26 SIGTTIN",   .number = 26 },
+   { .name = "27 SIGTTOU",   .number = 27 },
+   { .name = "28 SIGVTALRM", .number = 28 },
+   { .name = "29 SIGPROF",   .number = 29 },
+   { .name = "30 SIGXCPU",   .number = 30 },
+   { .name = "31 SIGXFSZ",   .number = 31 },
+   #elif TARGET_CPU_HPPA
+   // Converted from Linux kernel source
+   // "arch/parisc/include/uapi/asm/signal.h"
+   { .name = " 7 SIGSTKFLT", .number = 7 },
+   { .name = " 8 SIGFPE",    .number = 8 },
+   { .name = " 9 SIGKILL",   .number = 9 },
+   { .name = "10 SIGBUS",    .number = 10 },
+   { .name = "11 SIGSEGV",   .number = 11 },
+   { .name = "12 SIGXCPU",   .number = 12 },
+   { .name = "13 SIGPIPE",   .number = 13 },
+   { .name = "14 SIGALRM",   .number = 14 },
+   { .name = "15 SIGTERM",   .number = 15 },
+   { .name = "16 SIGUSR1",   .number = 16 },
+   { .name = "17 SIGUSR2",   .number = 17 },
+   { .name = "18 SIGCHLD",   .number = 18 },
+   { .name = "19 SIGPWR",    .number = 19 },
+   { .name = "20 SIGVTALRM", .number = 20 },
+   { .name = "21 SIGPROF",   .number = 21 },
+   { .name = "22 SIGIO",     .number = 22 },
+   { .name = "22 SIGPOLL",   .number = 22 },
+   { .name = "23 SIGWINCH",  .number = 23 },
+   { .name = "24 SIGSTOP",   .number = 24 },
+   { .name = "25 SIGTSTP",   .number = 25 },
+   { .name = "26 SIGCONT",   .number = 26 },
+   { .name = "27 SIGTTIN",   .number = 27 },
+   { .name = "28 SIGTTOU",   .number = 28 },
+   { .name = "29 SIGURG",    .number = 29 },
+   { .name = "30 SIGXFSZ",   .number = 30 },
+   { .name = "31 SIGSYS",    .number = 31 },
+   #else
+   // Common architectures (x86, arm, etc.)
    { .name = " 7 SIGBUS",    .number = 7 },
    { .name = " 8 SIGFPE",    .number = 8 },
    { .name = " 9 SIGKILL",   .number = 9 },
@@ -82,6 +181,7 @@ const SignalItem Platform_signals[] = {
    { .name = "29 SIGPOLL",   .number = 29 },
    { .name = "30 SIGPWR",    .number = 30 },
    { .name = "31 SIGSYS",    .number = 31 },
+   #endif
 };
 
 const unsigned int Platform_numberOfSignals = sizeof(Platform_signals)/sizeof(SignalItem);
