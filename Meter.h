@@ -17,6 +17,7 @@ in the source distribution for its full text.
 
 #include "ListItem.h"
 
+#include <limits.h>
 #include <sys/time.h>
 
 typedef struct Meter_ Meter;
@@ -106,6 +107,21 @@ typedef struct GraphData_ {
 #ifndef CLAMP
 #define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
 #endif
+
+#ifndef __has_builtin
+# define __has_builtin(x) 0
+#endif
+#if (__has_builtin(__builtin_clz) || \
+    ((__GNUC__ > 3) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)))
+# define HAS_BUILTIN_CLZ 1
+/*
+ * ulog2(x): base-2 logarithm of (unsigned int) x, rounded down, but
+ *           ulog2(0U) will be undefined behavior.
+ * (You may use ulog2(x | 1) to define the (x == 0) behavior.)
+ */
+# define ulog2(x)   (CHAR_BIT*sizeof(unsigned int)-1-__builtin_clz(x))
+# define ullog2(x)  (CHAR_BIT*sizeof(unsigned long)-1-__builtin_clzl(x))
+#endif // __has_builtin(__builtin_clz) || GNU C 3.4 or later
 
 extern MeterClass Meter_class;
 
