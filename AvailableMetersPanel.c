@@ -9,12 +9,14 @@ in the source distribution for its full text.
 #include "MetersPanel.h"
 
 #include "CPUMeter.h"
+#include "NetTrafficMeter.h"
 #include "Header.h"
 #include "ListItem.h"
 #include "Platform.h"
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 /*{
 #include "Settings.h"
@@ -120,6 +122,16 @@ AvailableMetersPanel* AvailableMetersPanel_new(Settings* settings, Header* heade
       const char* label = type->description ? type->description : type->uiName;
       Panel_add(super, (Object*) ListItem_new(label, i << 16));
    }
+   
+   // NICs
+   for (int i = 0; i < pl->nicCount; i++) {
+      MeterClass* class = &NetTrafficMeter_class;
+      char buffer[50];
+      memset((void*)&buffer, 0, sizeof(char) * 50);
+      snprintf(buffer, 50, "%s %s", class->uiName, Platform_getNICName(pl, i));
+      Panel_add(super, (Object*) ListItem_new(buffer, 17 << 16 | i));
+   }
+   
    // Handle (&CPUMeter_class)
    MeterClass* type = &CPUMeter_class;
    int cpus = pl->cpuCount;

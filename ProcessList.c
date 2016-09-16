@@ -69,6 +69,8 @@ typedef struct ProcessList_ {
    unsigned long long int freeSwap;
 
    int cpuCount;
+   
+   int nicCount;
 
 } ProcessList;
 
