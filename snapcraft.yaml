@@ -2,7 +2,7 @@ name: htop
 version: master
 summary: Interactive processes viewer
 description: |
-  Htop is an ncursed-based process viewer similar to top, but it
+  Htop is an ncurses-based process viewer similar to top, but it
   allows one to scroll the list vertically and horizontally to see
   all processes and their full command lines.
 
