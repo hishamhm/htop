@@ -1,0 +1,24 @@
+name: htop
+version: master
+summary: Interactive processes viewer
+description: |
+  Htop is an ncursed-based process viewer similar to top, but it
+  allows one to scroll the list vertically and horizontally to see
+  all processes and their full command lines.
+
+  Tasks related to processes (killing, renicing) can be done without
+  entering their PIDs.
+
+grade: stable
+confinement: strict
+
+apps:
+  htop:
+    command: bin/htop
+    plugs: [system-observe, process-control]
+
+parts:
+  htop:
+    plugin: autotools
+    source: .
+    build-packages: [libncursesw5-dev]
