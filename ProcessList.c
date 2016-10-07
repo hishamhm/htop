@@ -599,7 +599,21 @@ static bool ProcessList_processEntries(ProcessList* this, const char* dirname, P
       process->percent_cpu = MAX(MIN(percent_cpu, cpus*100.0), 0.0);
       if (isnan(process->percent_cpu)) process->percent_cpu = 0.0;
       process->percent_mem = (process->m_resident * PAGE_SIZE_KB) / (float)(this->totalMem) * 100.0;
-
+      
+      {
+         double new_sortkey;
+         new_sortkey = process->percent_mem / 3 + process->percent_cpu;
+         if (process->pid != process->tgid) {
+            new_sortkey -= process->percent_mem;
+         }
+         new_sortkey += 2*log(process->io_rate_read_bps + process->io_rate_write_bps + 1);
+         if (process->state == 'S') new_sortkey-=1;
+         if (process->state == 'D') new_sortkey+=10;
+         if (process->state == 'T') new_sortkey-=100;
+         
+         process->my_sortkey = process->my_sortkey * 0.6 + new_sortkey * 0.4;
+      }
+      
       if(!existingProcess) {
 
          if (! ProcessList_statProcessDir(process, dirname, name))

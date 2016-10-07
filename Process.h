@@ -74,6 +74,7 @@ typedef enum ProcessField_ {
    #ifdef HAVE_CGROUP
    CGROUP,
    #endif
+   SORTKEY,
    LAST_PROCESSFIELD
 } ProcessField;
 
@@ -168,6 +169,7 @@ typedef struct Process_ {
    #ifdef HAVE_CGROUP
    char* cgroup;
    #endif
+   double my_sortkey;
 } Process;
 
 
