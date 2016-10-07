@@ -1,32 +1,28 @@
 /*
-htop
-(C) 2004-2010 Hisham H. Muhammad
+htop - CheckItem.c
+(C) 2004-2011 Hisham H. Muhammad
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
 #include "CheckItem.h"
-#include "Object.h"
+
 #include "CRT.h"
 
-#include "debug.h"
+#include <assert.h>
+#include <stdlib.h>
 
 /*{
+#include "Object.h"
 
 typedef struct CheckItem_ {
    Object super;
    char* text;
-   bool value;
    bool* ref;
+   bool value;
 } CheckItem;
 
 }*/
-
-#ifdef DEBUG
-char* CHECKITEM_CLASS = "CheckItem";
-#else
-#define CHECKITEM_CLASS NULL
-#endif
 
 static void CheckItem_delete(Object* cast) {
    CheckItem* this = (CheckItem*)cast;
@@ -48,14 +44,24 @@ static void CheckItem_display(Object* cast, RichString* out) {
    RichString_append(out, CRT_colors[CHECK_TEXT], this->text);
 }
 
-CheckItem* CheckItem_new(char* text, bool* ref, bool value) {
-   CheckItem* this = malloc(sizeof(CheckItem));
-   Object_setClass(this, CHECKITEM_CLASS);
-   ((Object*)this)->display = CheckItem_display;
-   ((Object*)this)->delete = CheckItem_delete;
+ObjectClass CheckItem_class = {
+   .display = CheckItem_display,
+   .delete = CheckItem_delete
+};
+
+CheckItem* CheckItem_newByRef(char* text, bool* ref) {
+   CheckItem* this = AllocThis(CheckItem);
+   this->text = text;
+   this->value = false;
+   this->ref = ref;
+   return this;
+}
+
+CheckItem* CheckItem_newByVal(char* text, bool value) {
+   CheckItem* this = AllocThis(CheckItem);
    this->text = text;
    this->value = value;
-   this->ref = ref;
+   this->ref = NULL;
    return this;
 }
 

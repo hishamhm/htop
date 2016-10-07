@@ -1,4 +1,135 @@
 
+What's new in version 2.0.2
+
+* Mac OS X: stop trying when task_for_pid fails for a process,
+  stops spamming logs with errors.
+* Add Ctrl+A and Ctrl+E to go to beginning and end of line
+* FreeBSD: fixes for CPU calculation
+  (thanks to Tim Creech, Andy Pilate)
+* Usability: auto-follow process after a search.
+* Use Linux backend on GNU Hurd
+* Improvement for reproducible builds.
+* BUGFIX: Fix behavior of Alt-key combinations
+  (thanks to Kang-Che Sung)
+* Various code tweaks and cleanups
+  (thanks to Kang-Che Sung)
+
+What's new in version 2.0.1
+
+* OpenBSD: Various fixes and improvements
+  (thanks to Michael McConville and Juan Francisco Cantero Hurtado)
+* FreeBSD: fix CPU and memory readings
+  (thanks to Tim Creech, Hung-Yi Chen, Bernard Spil, Greg V)
+* FreeBSD: add battery support
+  (thanks to Greg V)
+* Linux: Retain last-obtained name of a zombie process
+* Mac OS X: Improve portability for OS X versions
+  (thanks to Michael Klein)
+* Mac OS X: Fix reading command-line arguments and basename
+* Mac OS X: Fix process state information
+* Mac OS X: Fix tree view collapsing/expanding
+* Mac OS X: Fix tree organization
+* Mac OS X: Fix memory accounting
+* Fix crash when emptying a column of meters
+* Make Esc key more responsive
+
+What's new in version 2.0.0
+
+* Platform abstraction layer
+* Initial FreeBSD support
+* Initial Mac OS X support
+  (thanks to David Hunt)
+* Swap meter for Mac OSX
+  (thanks to Ștefan Rusu)
+* OpenBSD port
+  (thanks to Michael McConville)
+* FreeBSD support improvements
+  (thanks to Martin Misuth)
+* Support for NCurses 6 ABI, including mouse wheel support
+* Much improved mouse responsiveness
+* Process environment variables screen
+  (thanks to Michael Klein)
+* Higher-resolution UTF-8 based Graph mode
+  (Thanks to James Hall from vtop for the idea!)
+* Show program path settings
+  (thanks to Tobias Geerinckx-Rice)
+* BUGFIX: Fix crash when scrolling an empty filtered list.
+* Use dynamic units for text display, and several fixes
+  (thanks to Christian Hesse)
+* BUGFIX: fix error caused by overflow in usertime calculation.
+  (thanks to Patrick Marlier)
+* Catch all memory allocation errors
+  (thanks to Michael McConville for the push)
+* Several tweaks and bugfixes
+  (See the Git log for details and contributors!)
+
+What's new in version 1.0.3
+
+* Tag all children ('c' key)
+* Fixes in accounting of guest time when using virtualization
+  (thanks to Patrick Marlier)
+* Performance improvements
+  (thanks to Jann Horn)
+* Further performance improvements due to conditional parsing
+  of IO data depending on selected fields.
+* Better consistency in coloring.
+* Increase limit of buffer when tracing a deep nested process tree.
+* Display pagefault stats.
+* BUGFIX: Fix crash when adding meters and toggling detailed CPU time.
+  (thanks to Dawid Gajownik)
+* Add column to track the OOM-killer score of processes
+  (thanks to Leigh Simpson)
+
+What's new in version 1.0.2
+
+* Add IO priority support ('i' key)
+* Avoid deleting .htoprc if it is a symlink
+* Fail gracefully when /proc is not mounted
+  (thanks to Philipp Hagemeister)
+* Option to update process names on every refresh
+  (thanks to Rob Hoelz)
+* BUGFIX: Fix crashes when process list is empty
+
+What's new in version 1.0.1
+
+* Move .htoprc to XDG-compliant path ~/.config/htop/htoprc,
+  respecting $XDG_CONFIG_HOME 
+  (thanks to Hadzhimurad Ustarkhan for the suggestion.)
+* Safer behavior on the kill screen, to make it harder to kill the wrong process.
+* Fix for building in FreeBSD 8.2
+  (thanks to Trond Endrestol)
+* BUGFIX: behavior of 'F' (follow) key was broken, also affecting the
+  persistence of mouse selections.
+* BUGFIX: keep main panel up-to-date when running the screen manager,
+  to fix crash when processes die while on the F9/Kill screen.
+
+What's new in version 1.0
+
+* Performance improvements
+* Support for splitting CPU meters into two or four columns
+  (thanks to Wim Heirman)
+* Switch from PLPA, which is now deprecated, to HWLOC.
+* Bring back support for native Linux sched_setaffinity,
+  so we don't have to use HWLOC where we don't need to.
+* Support for typing in user names and column fields in selection panels.
+* Support for UTF-8 tree drawing
+  (thanks to Bin Guo)
+* Option for counting CPUs from zero
+  (thanks to Sean Noonan)
+* Meters update in every screen (no longer halting while on Setup, etc.)
+* Stricter checks for command-line options
+  (thanks to Sebastian Pipping)
+* Incremental filtering
+  (thanks to Seth Heeren for the idea and initial implementation)
+* Try harder to find the ncurses header
+  (thanks to Moritz Barsnick)
+* Man page updates
+  (thanks to Vincent Launchbury)
+* BUGFIX: Support larger numbers for process times.
+  (thanks to Tristan Nakagawa for the report.)
+* BUGFIX: Segfault in BarMeterMode_draw() for small terminal widths
+  (patch by Sebastian Pipping)
+
 What's new in version 0.9
 
 * Add support for "steal"/guest CPU time measurement

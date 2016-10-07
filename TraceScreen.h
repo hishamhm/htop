@@ -9,34 +9,32 @@ Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
-#define _GNU_SOURCE
-#include <stdio.h>
-#include <unistd.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-
-#include "ProcessList.h"
-#include "Process.h"
-#include "ListItem.h"
-#include "Panel.h"
-#include "FunctionBar.h"
-
+#include "InfoScreen.h"
 
 typedef struct TraceScreen_ {
-   Process* process;
-   Panel* display;
-   FunctionBar* bar;
+   InfoScreen super;
    bool tracing;
+   int fdpair[2];
+   int child;
+   FILE* strace;
+   int fd_strace;
+   bool contLine;
+   bool follow;
 } TraceScreen;
 
 
+extern InfoScreenClass TraceScreen_class;
+
 TraceScreen* TraceScreen_new(Process* process);
 
-void TraceScreen_delete(TraceScreen* this);
+void TraceScreen_delete(Object* cast);
 
-void TraceScreen_run(TraceScreen* this);
+void TraceScreen_draw(InfoScreen* this);
+
+bool TraceScreen_forkTracer(TraceScreen* this);
+
+void TraceScreen_updateTrace(InfoScreen* super);
+
+bool TraceScreen_onKey(InfoScreen* super, int ch);
 
 #endif

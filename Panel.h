@@ -4,38 +4,44 @@
 #define HEADER_Panel
 /*
 htop - Panel.h
-(C) 2004-2010 Hisham H. Muhammad
+(C) 2004-2011 Hisham H. Muhammad
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
-#include "Object.h"
-#include "Vector.h"
-#include "CRT.h"
-#include "RichString.h"
-#include "ListItem.h"
-
-#include <math.h>
-#include <stdbool.h>
-
-#include "debug.h"
-#include <assert.h>
-
-#include <curses.h>
 //#link curses
 
+#include "Object.h"
+#include "Vector.h"
+#include "FunctionBar.h"
 
 typedef struct Panel_ Panel;
 
 typedef enum HandlerResult_ {
-   HANDLED,
-   IGNORED,
-   BREAK_LOOP
+   HANDLED     = 0x01,
+   IGNORED     = 0x02,
+   BREAK_LOOP  = 0x04,
+   REDRAW      = 0x08,
+   RESCAN      = 0x10,
+   SYNTH_KEY   = 0x20,
 } HandlerResult;
 
-#define EVENT_SETSELECTED -1
+#define EVENT_SET_SELECTED -1
+
+#define EVENT_HEADER_CLICK(x_) (-10000 + x_)
+#define EVENT_IS_HEADER_CLICK(ev_) (ev_ >= -10000 && ev_ <= -9000)
+#define EVENT_HEADER_CLICK_GET_X(ev_) (ev_ + 10000)
 
 typedef HandlerResult(*Panel_EventHandler)(Panel*, int);
+
+typedef struct PanelClass_ {
+   const ObjectClass super;
+   const Panel_EventHandler eventHandler;
+} PanelClass;
+
+#define As_Panel(this_)                ((PanelClass*)((this_)->super.klass))
+#define Panel_eventHandlerFn(this_)    As_Panel(this_)->eventHandler
+#define Panel_eventHandler(this_, ev_) As_Panel(this_)->eventHandler((Panel*)(this_), ev_)
 
 struct Panel_ {
    Object super;
@@ -43,13 +49,19 @@ struct Panel_ {
    WINDOW* window;
    Vector* items;
    int selected;
-   int scrollV, scrollH;
-   int scrollHAmount;
    int oldSelected;
+   int selectedLen;
+   void* eventHandlerState;
+   int scrollV;
+   short scrollH;
    bool needsRedraw;
+   FunctionBar* currentBar;
+   FunctionBar* defaultBar;
    RichString header;
-   Panel_EventHandler eventHandler;
+   int selectionColor;
 };
+
+#define Panel_setDefaultBar(this_) do{ (this_)->currentBar = (this_)->defaultBar; }while(0)
 
 
 #ifndef MIN
@@ -59,30 +71,23 @@ struct Panel_ {
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #endif
 
-#ifdef DEBUG
-extern char* PANEL_CLASS;
-#else
-#define PANEL_CLASS NULL
-#endif
+#define KEY_CTRL(l) ((l)-'A'+1)
 
-#define KEY_CTRLN      0016            /* control-n key */
-#define KEY_CTRLP      0020            /* control-p key */
-#define KEY_CTRLF      0006            /* control-f key */
-#define KEY_CTRLB      0002            /* control-b key */
+extern PanelClass Panel_class;
 
-Panel* Panel_new(int x, int y, int w, int h, char* type, bool owner, Object_Compare compare);
+Panel* Panel_new(int x, int y, int w, int h, bool owner, ObjectClass* type, FunctionBar* fuBar);
 
 void Panel_delete(Object* cast);
 
-void Panel_init(Panel* this, int x, int y, int w, int h, char* type, bool owner);
+void Panel_init(Panel* this, int x, int y, int w, int h, ObjectClass* type, bool owner, FunctionBar* fuBar);
 
 void Panel_done(Panel* this);
+
+void Panel_setSelectionColor(Panel* this, int color);
 
 RichString* Panel_getHeader(Panel* this);
 
 extern void Panel_setHeader(Panel* this, const char* header);
-
-void Panel_setEventHandler(Panel* this, Panel_EventHandler eh);
 
 void Panel_move(Panel* this, int x, int y);
 
@@ -115,5 +120,7 @@ void Panel_setSelected(Panel* this, int selected);
 void Panel_draw(Panel* this, bool focus);
 
 bool Panel_onKey(Panel* this, int key);
+
+HandlerResult Panel_selectByTyping(Panel* this, int ch);
 
 #endif

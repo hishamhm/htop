@@ -1,19 +1,19 @@
 /*
-htop
-(C) 2004-2010 Hisham H. Muhammad
+htop - Hashtable.c
+(C) 2004-2011 Hisham H. Muhammad
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
 #include "Hashtable.h"
+#include "XAlloc.h"
 
 #include <stdlib.h>
-#include <stdbool.h>
 #include <assert.h>
 
-#include "debug.h"
-
 /*{
+#include <stdbool.h>
+
 typedef struct Hashtable_ Hashtable;
 
 typedef void(*Hashtable_PairFunction)(int, void*, void*);
@@ -64,7 +64,7 @@ int Hashtable_count(Hashtable* this) {
 static HashtableItem* HashtableItem_new(unsigned int key, void* value) {
    HashtableItem* this;
    
-   this = (HashtableItem*) malloc(sizeof(HashtableItem));
+   this = xMalloc(sizeof(HashtableItem));
    this->key = key;
    this->value = value;
    this->next = NULL;
@@ -74,10 +74,10 @@ static HashtableItem* HashtableItem_new(unsigned int key, void* value) {
 Hashtable* Hashtable_new(int size, bool owner) {
    Hashtable* this;
    
-   this = (Hashtable*) malloc(sizeof(Hashtable));
+   this = xMalloc(sizeof(Hashtable));
    this->items = 0;
    this->size = size;
-   this->buckets = (HashtableItem**) calloc(sizeof(HashtableItem*), size);
+   this->buckets = (HashtableItem**) xCalloc(size, sizeof(HashtableItem*));
    this->owner = owner;
    assert(Hashtable_isConsistent(this));
    return this;

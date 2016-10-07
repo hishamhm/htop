@@ -4,31 +4,12 @@
 #define HEADER_CRT
 /*
 htop - CRT.h
-(C) 2004-2010 Hisham H. Muhammad
+(C) 2004-2011 Hisham H. Muhammad
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
-
-#include <curses.h>
-#include <signal.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include <execinfo.h>
-
-#include "String.h"
-
-#include "config.h"
-#include "debug.h"
-
 #define ColorPair(i,j) COLOR_PAIR((7-i)*8+j)
-
-#define COLORSCHEME_DEFAULT 0
-#define COLORSCHEME_MONOCHROME 1
-#define COLORSCHEME_BLACKONWHITE 2
-#define COLORSCHEME_BLACKONWHITE2 3
-#define COLORSCHEME_MIDNIGHT 4
-#define COLORSCHEME_BLACKNIGHT 5
 
 #define Black COLOR_BLACK
 #define Red COLOR_RED
@@ -39,10 +20,35 @@ in the source distribution for its full text.
 #define Cyan COLOR_CYAN
 #define White COLOR_WHITE
 
+#define KEY_WHEELUP KEY_F(20)
+#define KEY_WHEELDOWN KEY_F(21)
+#define KEY_RECLICK KEY_F(22)
+
 //#link curses
 
-bool CRT_hasColors;
+#include <stdbool.h>
 
+typedef enum TreeStr_ {
+   TREE_STR_HORZ,
+   TREE_STR_VERT,
+   TREE_STR_RTEE,
+   TREE_STR_BEND,
+   TREE_STR_TEND,
+   TREE_STR_OPEN,
+   TREE_STR_SHUT,
+   TREE_STR_COUNT
+} TreeStr;
+
+typedef enum ColorSchemes_ {
+   COLORSCHEME_DEFAULT = 0,
+   COLORSCHEME_MONOCHROME = 1,
+   COLORSCHEME_BLACKONWHITE = 2,
+   COLORSCHEME_LIGHTTERMINAL = 3,
+   COLORSCHEME_MIDNIGHT = 4,
+   COLORSCHEME_BLACKNIGHT = 5,
+   COLORSCHEME_BROKENGRAY = 6,
+   LAST_COLORSCHEME = 7,
+} ColorSchemes;
 
 typedef enum ColorElements_ {
    RESET_COLOR,
@@ -52,8 +58,9 @@ typedef enum ColorElements_ {
    FAILED_SEARCH,
    PANEL_HEADER_FOCUS,
    PANEL_HEADER_UNFOCUS,
-   PANEL_HIGHLIGHT_FOCUS,
-   PANEL_HIGHLIGHT_UNFOCUS,
+   PANEL_SELECTION_FOCUS,
+   PANEL_SELECTION_FOLLOW,
+   PANEL_SELECTION_UNFOCUS,
    LARGE_NUMBER,
    METER_TEXT,
    METER_VALUE,
@@ -68,6 +75,7 @@ typedef enum ColorElements_ {
    PROCESS_MEGABYTES,
    PROCESS_TREE,
    PROCESS_R_STATE,
+   PROCESS_D_STATE,
    PROCESS_BASENAME,
    PROCESS_HIGH_PRIORITY,
    PROCESS_LOW_PRIORITY,
@@ -77,15 +85,9 @@ typedef enum ColorElements_ {
    BAR_SHADOW,
    GRAPH_1,
    GRAPH_2,
-   GRAPH_3,
-   GRAPH_4,
-   GRAPH_5,
-   GRAPH_6,
-   GRAPH_7,
-   GRAPH_8,
-   GRAPH_9,
    MEMORY_USED,
    MEMORY_BUFFERS,
+   MEMORY_BUFFERS_TEXT,
    MEMORY_CACHE,
    LOAD,
    LOAD_AVERAGE_FIFTEEN,
@@ -98,6 +100,7 @@ typedef enum ColorElements_ {
    HELP_BOLD,
    HOSTNAME,
    CPU_NICE,
+   CPU_NICE_TEXT,
    CPU_NORMAL,
    CPU_KERNEL,
    CPU_IOWAIT,
@@ -108,16 +111,42 @@ typedef enum ColorElements_ {
    LAST_COLORELEMENT
 } ColorElements;
 
+void CRT_fatalError(const char* note) __attribute__ ((noreturn));
 
-// TODO: centralize these in Settings.
+void CRT_handleSIGSEGV(int sgn);
+
+#define KEY_ALT(x) (KEY_F(64 - 26) + (x - 'A'))
+
+
+extern const char *CRT_treeStrAscii[TREE_STR_COUNT];
+
+#ifdef HAVE_LIBNCURSESW
+
+extern const char *CRT_treeStrUtf8[TREE_STR_COUNT];
+
+extern bool CRT_utf8;
+
+#endif
+
+extern const char **CRT_treeStr;
 
 extern int CRT_delay;
 
-extern int CRT_colorScheme;
+int* CRT_colors;
 
-extern int CRT_colors[LAST_COLORELEMENT];
+extern int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT];
+
+extern int CRT_cursorX;
+
+extern int CRT_scrollHAmount;
+
+extern int CRT_scrollWheelVAmount;
 
 char* CRT_termType;
+
+// TODO move color scheme to Settings, perhaps?
+
+extern int CRT_colorScheme;
 
 void *backtraceArray[128];
 
@@ -126,6 +155,8 @@ void *backtraceArray[128];
 void CRT_init(int delay, int colorScheme);
 
 void CRT_done();
+
+void CRT_fatalError(const char* note);
 
 int CRT_readKey();
 

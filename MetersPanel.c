@@ -1,24 +1,44 @@
+/*
+htop - MetersPanel.c
+(C) 2004-2011 Hisham H. Muhammad
+Released under the GNU GPL, see the COPYING file
+in the source distribution for its full text.
+*/
 
 #include "MetersPanel.h"
 
+#include <stdlib.h>
+#include <assert.h>
+#include "CRT.h"
+
+/*{
 #include "Panel.h"
 #include "Settings.h"
 #include "ScreenManager.h"
 
-#include "debug.h"
-#include <assert.h>
+typedef struct MetersPanel_ MetersPanel;
 
-/*{
-
-typedef struct MetersPanel_ {
+struct MetersPanel_ {
    Panel super;
 
    Settings* settings;
    Vector* meters;
    ScreenManager* scr;
-} MetersPanel;
+   MetersPanel* leftNeighbor;
+   MetersPanel* rightNeighbor;
+   bool moving;
+};
 
 }*/
+
+static const char* MetersFunctions[] = {"Type  ", "Move  ", "Delete", "Done  ", NULL};
+static const char* MetersKeys[] = {"Space", "Enter", "Del", "Esc"};
+static int MetersEvents[] = {' ', 13, KEY_DC, 27};
+
+static const char* MetersMovingFunctions[] = {"Up    ", "Down  ", "Left  ", "Right ",  "Confirm", "Delete", "Done  ", NULL};
+static const char* MetersMovingKeys[] = {"Up", "Dn", "Lt", "Rt", "Enter", "Del", "Esc"};
+static int MetersMovingEvents[] = {KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT, 13, KEY_DC, 27};
+static FunctionBar* Meters_movingBar = NULL;
 
 static void MetersPanel_delete(Object* object) {
    Panel* super = (Panel*) object;
@@ -27,26 +47,82 @@ static void MetersPanel_delete(Object* object) {
    free(this);
 }
 
-static HandlerResult MetersPanel_EventHandler(Panel* super, int ch) {
+void MetersPanel_setMoving(MetersPanel* this, bool moving) {
+   Panel* super = (Panel*) this;
+   this->moving = moving;
+   ListItem* selected = (ListItem*)Panel_getSelected(super);
+   if (selected) {
+      selected->moving = moving;
+   }
+   if (!moving) {
+      Panel_setSelectionColor(super, CRT_colors[PANEL_SELECTION_FOCUS]);
+      Panel_setDefaultBar(super);
+   } else {
+      Panel_setSelectionColor(super, CRT_colors[PANEL_SELECTION_FOLLOW]);
+      super->currentBar = Meters_movingBar;
+   }
+   FunctionBar_draw(this->super.currentBar, NULL);
+}
+
+static inline bool moveToNeighbor(MetersPanel* this, MetersPanel* neighbor, int selected) {
+   Panel* super = (Panel*) this;
+   if (this->moving) {
+      if (neighbor) {
+         if (selected < Vector_size(this->meters)) {
+            MetersPanel_setMoving(this, false);
+
+            Meter* meter = (Meter*) Vector_take(this->meters, selected);
+            Panel_remove(super, selected);
+            Vector_insert(neighbor->meters, selected, meter);
+            Panel_insert(&(neighbor->super), selected, (Object*) Meter_toListItem(meter, false));
+            Panel_setSelected(&(neighbor->super), selected);
+
+            MetersPanel_setMoving(neighbor, true);
+            return true;
+         }
+      }
+   }
+   return false;
+}
+
+static HandlerResult MetersPanel_eventHandler(Panel* super, int ch) {
    MetersPanel* this = (MetersPanel*) super;
    
    int selected = Panel_getSelectedIndex(super);
    HandlerResult result = IGNORED;
+   bool sideMove = false;
 
    switch(ch) {
       case 0x0a:
       case 0x0d:
       case KEY_ENTER:
+      {
+         if (!Vector_size(this->meters))
+            break;
+         MetersPanel_setMoving(this, !(this->moving));
+         result = HANDLED;
+         break;
+      }
+      case ' ':
       case KEY_F(4):
       case 't':
       {
+         if (!Vector_size(this->meters))
+            break;
          Meter* meter = (Meter*) Vector_get(this->meters, selected);
          int mode = meter->mode + 1;
          if (mode == LAST_METERMODE) mode = 1;
          Meter_setMode(meter, mode);
-         Panel_set(super, selected, (Object*) Meter_toListItem(meter));
+         Panel_set(super, selected, (Object*) Meter_toListItem(meter, this->moving));
          result = HANDLED;
          break;
+      }
+      case KEY_UP:
+      {
+         if (!this->moving) {
+            break;
+         }
+         /* else fallthrough */
       }
       case KEY_F(7):
       case '[':
@@ -57,6 +133,13 @@ static HandlerResult MetersPanel_EventHandler(Panel* super, int ch) {
          result = HANDLED;
          break;
       }
+      case KEY_DOWN:
+      {
+         if (!this->moving) {
+            break;
+         }
+         /* else fallthrough */
+      }
       case KEY_F(8):
       case ']':
       case '+':
@@ -66,19 +149,41 @@ static HandlerResult MetersPanel_EventHandler(Panel* super, int ch) {
          result = HANDLED;
          break;
       }
+      case KEY_RIGHT:
+      {
+         sideMove = moveToNeighbor(this, this->rightNeighbor, selected);
+         if (this->moving && !sideMove) {
+            // lock user here until it exits positioning-mode
+            result = HANDLED;
+         }
+         // if user is free, don't set HANDLED;
+         // let ScreenManager handle focus.
+         break;
+      }
+      case KEY_LEFT:
+      {
+         sideMove = moveToNeighbor(this, this->leftNeighbor, selected);
+         if (this->moving && !sideMove) {
+            result = HANDLED;
+         }
+         break;
+      }
       case KEY_F(9):
       case KEY_DC:
       {
+         if (!Vector_size(this->meters))
+            break;
          if (selected < Vector_size(this->meters)) {
             Vector_remove(this->meters, selected);
             Panel_remove(super, selected);
          }
+         MetersPanel_setMoving(this, false);
          result = HANDLED;
          break;
       }
    }
-   if (result == HANDLED) {
-      Header* header = this->settings->header;
+   if (result == HANDLED || sideMove) {
+      Header* header = (Header*) this->scr->header;
       this->settings->changed = true;
       Header_calculateHeight(header);
       Header_draw(header);
@@ -87,20 +192,33 @@ static HandlerResult MetersPanel_EventHandler(Panel* super, int ch) {
    return result;
 }
 
+PanelClass MetersPanel_class = {
+   .super = {
+      .extends = Class(Panel),
+      .delete = MetersPanel_delete
+   },
+   .eventHandler = MetersPanel_eventHandler
+};
+
 MetersPanel* MetersPanel_new(Settings* settings, const char* header, Vector* meters, ScreenManager* scr) {
-   MetersPanel* this = (MetersPanel*) malloc(sizeof(MetersPanel));
+   MetersPanel* this = AllocThis(MetersPanel);
    Panel* super = (Panel*) this;
-   Panel_init(super, 1, 1, 1, 1, LISTITEM_CLASS, true);
-   ((Object*)this)->delete = MetersPanel_delete;
+   FunctionBar* fuBar = FunctionBar_new(MetersFunctions, MetersKeys, MetersEvents);
+   if (!Meters_movingBar) {
+      Meters_movingBar = FunctionBar_new(MetersMovingFunctions, MetersMovingKeys, MetersMovingEvents);
+   }
+   Panel_init(super, 1, 1, 1, 1, Class(ListItem), true, fuBar);
 
    this->settings = settings;
    this->meters = meters;
    this->scr = scr;
-   super->eventHandler = MetersPanel_EventHandler;
+   this->moving = false;
+   this->rightNeighbor = NULL;
+   this->leftNeighbor = NULL;
    Panel_setHeader(super, header);
    for (int i = 0; i < Vector_size(meters); i++) {
       Meter* meter = (Meter*) Vector_get(meters, i);
-      Panel_add(super, (Object*) Meter_toListItem(meter));
+      Panel_add(super, (Object*) Meter_toListItem(meter, false));
    }
    return this;
 }

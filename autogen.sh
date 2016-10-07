@@ -1,9 +1,3 @@
 #!/bin/sh
-
-aclocal -I m4
-autoconf
-autoheader
-libtoolize --copy --force
-automake --add-missing --copy
-
-
+mkdir -p m4
+autoreconf --install --force

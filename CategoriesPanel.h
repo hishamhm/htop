@@ -2,30 +2,32 @@
 
 #ifndef HEADER_CategoriesPanel
 #define HEADER_CategoriesPanel
-
-#include "AvailableMetersPanel.h"
-#include "MetersPanel.h"
-#include "DisplayOptionsPanel.h"
-#include "ColumnsPanel.h"
-#include "ColorsPanel.h"
-#include "AvailableColumnsPanel.h"
+/*
+htop - CategoriesPanel.h
+(C) 2004-2011 Hisham H. Muhammad
+Released under the GNU GPL, see the COPYING file
+in the source distribution for its full text.
+*/
 
 #include "Panel.h"
-
-#include "debug.h"
-#include <assert.h>
-
+#include "Settings.h"
+#include "ScreenManager.h"
+#include "ProcessList.h"
 
 typedef struct CategoriesPanel_ {
    Panel super;
+   ScreenManager* scr;
 
    Settings* settings;
-   ScreenManager* scr;
+   Header* header;
+   ProcessList* pl;
 } CategoriesPanel;
 
 
 void CategoriesPanel_makeMetersPage(CategoriesPanel* this);
 
-CategoriesPanel* CategoriesPanel_new(Settings* settings, ScreenManager* scr);
+extern PanelClass CategoriesPanel_class;
+
+CategoriesPanel* CategoriesPanel_new(ScreenManager* scr, Settings* settings, Header* header, ProcessList* pl);
 
 #endif

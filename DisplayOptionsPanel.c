@@ -1,15 +1,23 @@
+/*
+htop - DisplayOptionsPanel.c
+(C) 2004-2011 Hisham H. Muhammad
+Released under the GNU GPL, see the COPYING file
+in the source distribution for its full text.
+*/
 
 #include "DisplayOptionsPanel.h"
 
-#include "Panel.h"
 #include "CheckItem.h"
-#include "Settings.h"
-#include "ScreenManager.h"
+#include "CRT.h"
 
-#include "debug.h"
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 /*{
+#include "Panel.h"
+#include "Settings.h"
+#include "ScreenManager.h"
 
 typedef struct DisplayOptionsPanel_ {
    Panel super;
@@ -19,6 +27,8 @@ typedef struct DisplayOptionsPanel_ {
 } DisplayOptionsPanel;
 
 }*/
+
+static const char* DisplayOptionsFunctions[] = {"      ", "      ", "      ", "      ", "      ", "      ", "      ", "      ", "      ", "Done  ", NULL};
 
 static void DisplayOptionsPanel_delete(Object* object) {
    Panel* super = (Panel*) object;
@@ -38,6 +48,7 @@ static HandlerResult DisplayOptionsPanel_eventHandler(Panel* super, int ch) {
    case 0x0d:
    case KEY_ENTER:
    case KEY_MOUSE:
+   case KEY_RECLICK:
    case ' ':
       CheckItem_set(selected, ! (CheckItem_get(selected)) );
       result = HANDLED;
@@ -45,34 +56,46 @@ static HandlerResult DisplayOptionsPanel_eventHandler(Panel* super, int ch) {
 
    if (result == HANDLED) {
       this->settings->changed = true;
-      Header* header = this->settings->header;
-      Header_calculateHeight(header);
+      const Header* header = this->scr->header;
+      Header_calculateHeight((Header*) header);
+      Header_reinit((Header*) header);
       Header_draw(header);
       ScreenManager_resize(this->scr, this->scr->x1, header->height, this->scr->x2, this->scr->y2);
    }
    return result;
 }
 
+PanelClass DisplayOptionsPanel_class = {
+   .super = {
+      .extends = Class(Panel),
+      .delete = DisplayOptionsPanel_delete
+   },
+   .eventHandler = DisplayOptionsPanel_eventHandler
+};
+
 DisplayOptionsPanel* DisplayOptionsPanel_new(Settings* settings, ScreenManager* scr) {
-   DisplayOptionsPanel* this = (DisplayOptionsPanel*) malloc(sizeof(DisplayOptionsPanel));
+   DisplayOptionsPanel* this = AllocThis(DisplayOptionsPanel);
    Panel* super = (Panel*) this;
-   Panel_init(super, 1, 1, 1, 1, CHECKITEM_CLASS, true);
-   ((Object*)this)->delete = DisplayOptionsPanel_delete;
+   FunctionBar* fuBar = FunctionBar_new(DisplayOptionsFunctions, NULL, NULL);
+   Panel_init(super, 1, 1, 1, 1, Class(CheckItem), true, fuBar);
 
    this->settings = settings;
    this->scr = scr;
-   super->eventHandler = DisplayOptionsPanel_eventHandler;
 
    Panel_setHeader(super, "Display options");
-   Panel_add(super, (Object*) CheckItem_new(String_copy("Tree view"), &(settings->pl->treeView), false));
-   Panel_add(super, (Object*) CheckItem_new(String_copy("Shadow other users' processes"), &(settings->pl->shadowOtherUsers), false));
-   Panel_add(super, (Object*) CheckItem_new(String_copy("Hide kernel threads"), &(settings->pl->hideKernelThreads), false));
-   Panel_add(super, (Object*) CheckItem_new(String_copy("Hide userland threads"), &(settings->pl->hideUserlandThreads), false));
-   Panel_add(super, (Object*) CheckItem_new(String_copy("Display threads in a different color"), &(settings->pl->highlightThreads), false));
-   Panel_add(super, (Object*) CheckItem_new(String_copy("Show custom thread names"), &(settings->pl->showThreadNames), false));
-   Panel_add(super, (Object*) CheckItem_new(String_copy("Highlight program \"basename\""), &(settings->pl->highlightBaseName), false));
-   Panel_add(super, (Object*) CheckItem_new(String_copy("Highlight large numbers in memory counters"), &(settings->pl->highlightMegabytes), false));
-   Panel_add(super, (Object*) CheckItem_new(String_copy("Leave a margin around header"), &(settings->header->margin), false));
-   Panel_add(super, (Object*) CheckItem_new(String_copy("Detailed CPU time (System/IO-Wait/Hard-IRQ/Soft-IRQ/Steal/Guest)"), &(settings->pl->detailedCPUTime), false));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Tree view"), &(settings->treeView)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Shadow other users' processes"), &(settings->shadowOtherUsers)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Hide kernel threads"), &(settings->hideKernelThreads)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Hide userland process threads"), &(settings->hideUserlandThreads)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Display threads in a different color"), &(settings->highlightThreads)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Show custom thread names"), &(settings->showThreadNames)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Show program path"), &(settings->showProgramPath)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Highlight program \"basename\""), &(settings->highlightBaseName)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Highlight large numbers in memory counters"), &(settings->highlightMegabytes)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Leave a margin around header"), &(settings->headerMargin)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Detailed CPU time (System/IO-Wait/Hard-IRQ/Soft-IRQ/Steal/Guest)"), &(settings->detailedCPUTime)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Count CPUs from 0 instead of 1"), &(settings->countCPUsFromZero)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Update process names on every refresh"), &(settings->updateProcessNames)));
+   Panel_add(super, (Object*) CheckItem_newByRef(xStrdup("Add guest time in CPU meter percentage"), &(settings->accountGuestInCPUMeter)));
    return this;
 }

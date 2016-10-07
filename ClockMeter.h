@@ -3,20 +3,16 @@
 #ifndef HEADER_ClockMeter
 #define HEADER_ClockMeter
 /*
-htop
-(C) 2004-2010 Hisham H. Muhammad
+htop - ClockMeter.h
+(C) 2004-2011 Hisham H. Muhammad
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
 #include "Meter.h"
 
-#include <time.h>
-
-#include "debug.h"
-
 extern int ClockMeter_attributes[];
 
-extern MeterType ClockMeter;
+extern MeterClass ClockMeter_class;
 
 #endif

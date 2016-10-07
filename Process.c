@@ -1,39 +1,40 @@
 /*
 htop - Process.c
-(C) 2004-2010 Hisham H. Muhammad
+(C) 2004-2015 Hisham H. Muhammad
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
-#define _GNU_SOURCE
-#include "ProcessList.h"
-#include "Object.h"
-#include "CRT.h"
-#include "String.h"
 #include "Process.h"
-#include "RichString.h"
+#include "Settings.h"
 
-#include "debug.h"
+#include "CRT.h"
+#include "StringUtils.h"
+#include "RichString.h"
+#include "Platform.h"
 
 #include <stdio.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/param.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <string.h>
 #include <stdbool.h>
 #include <pwd.h>
-#include <sched.h>
 #include <time.h>
+#include <assert.h>
+#include <math.h>
 
-#ifdef HAVE_PLPA
-#include <plpa.h>
+#ifdef __ANDROID__
+#define SYS_ioprio_get __NR_ioprio_get
+#define SYS_ioprio_set __NR_ioprio_set
 #endif
 
-// This works only with glibc 2.1+. On earlier versions
+// On Linux, this works only with glibc 2.1+. On earlier versions
 // the behavior is similar to have a hardcoded page size.
 #ifndef PAGE_SIZE
 #define PAGE_SIZE ( sysconf(_SC_PAGESIZE) )
@@ -41,78 +42,93 @@ in the source distribution for its full text.
 #define PAGE_SIZE_KB ( PAGE_SIZE / ONE_K )
 
 /*{
+#include "Object.h"
 
-#ifndef Process_isKernelThread
-#define Process_isKernelThread(_process) (_process->pgrp == 0)
-#endif
+#include <sys/types.h>
 
-#ifndef Process_isUserlandThread
-#define Process_isUserlandThread(_process) (_process->pid != _process->tgid)
-#endif
+#define PROCESS_FLAG_IO 0x0001
 
-#ifndef Process_isThread
-#define Process_isThread(_process) (Process_isUserlandThread(_process) || Process_isKernelThread(_process))
-#endif
-
-typedef enum ProcessField_ {
-   PID = 1, COMM, STATE, PPID, PGRP, SESSION, TTY_NR, TPGID, FLAGS, MINFLT, CMINFLT, MAJFLT, CMAJFLT, UTIME,
-   STIME, CUTIME, CSTIME, PRIORITY, NICE, ITREALVALUE, STARTTIME, VSIZE, RSS, RLIM, STARTCODE, ENDCODE,
-   STARTSTACK, KSTKESP, KSTKEIP, SIGNAL, BLOCKED, SSIGIGNORE, SIGCATCH, WCHAN, NSWAP, CNSWAP, EXIT_SIGNAL,
-   PROCESSOR, M_SIZE, M_RESIDENT, M_SHARE, M_TRS, M_DRS, M_LRS, M_DT, ST_UID, PERCENT_CPU, PERCENT_MEM,
-   USER, TIME, NLWP, TGID,
-   #ifdef HAVE_OPENVZ
-   CTID, VPID,
-   #endif
-   #ifdef HAVE_VSERVER
-   VXID,
-   #endif
-   #ifdef HAVE_TASKSTATS
-   RCHAR, WCHAR, SYSCR, SYSCW, RBYTES, WBYTES, CNCLWB, IO_READ_RATE, IO_WRITE_RATE, IO_RATE,
-   #endif
-   #ifdef HAVE_CGROUP
-   CGROUP,
-   #endif
-   SORTKEY,
-   LAST_PROCESSFIELD
+typedef enum ProcessFields {
+   NULL_PROCESSFIELD = 0,
+   PID = 1,
+   COMM = 2,
+   STATE = 3,
+   PPID = 4,
+   PGRP = 5,
+   SESSION = 6,
+   TTY_NR = 7,
+   TPGID = 8,
+   MINFLT = 10,
+   MAJFLT = 12,
+   PRIORITY = 18,
+   NICE = 19,
+   STARTTIME = 21,
+   PROCESSOR = 38,
+   M_SIZE = 39,
+   M_RESIDENT = 40,
+   ST_UID = 46,
+   PERCENT_CPU = 47,
+   PERCENT_MEM = 48,
+   USER = 49,
+   TIME = 50,
+   NLWP = 51,
+   TGID = 52,
+   SORTKEY = 53,
 } ProcessField;
 
-struct ProcessList_;
+typedef struct ProcessPidColumn_ {
+   int id;
+   char* label;
+} ProcessPidColumn;
 
 typedef struct Process_ {
    Object super;
 
-   struct ProcessList_ *pl;
+   struct Settings_* settings;
+
+   unsigned long long int time;
+   pid_t pid;
+   pid_t ppid;
+   pid_t tgid;
+   char* comm;
+   int commLen;
+   int indent;
+
+   int basenameOffset;
    bool updated;
 
-   pid_t pid;
-   char* comm;
-   int indent;
    char state;
    bool tag;
    bool showChildren;
    bool show;
-   pid_t ppid;
    unsigned int pgrp;
    unsigned int session;
    unsigned int tty_nr;
-   pid_t tgid;
    int tpgid;
+   uid_t st_uid;
    unsigned long int flags;
-   #ifdef DEBUG
-   unsigned long int minflt;
-   unsigned long int cminflt;
-   unsigned long int majflt;
-   unsigned long int cmajflt;
-   #endif
-   unsigned long int utime;
-   unsigned long int stime;
-   long int cutime;
-   long int cstime;
+   int processor;
+
+   float percent_cpu;
+   float percent_mem;
+   char* user;
+
    long int priority;
    long int nice;
    long int nlwp;
    char starttime_show[8];
    time_t starttime_ctime;
+
+   long m_size;
+   long m_resident;
+
+   int exit_signal;
+
+   unsigned long int minflt;
+   unsigned long int majflt;
+
+   double my_sortkey;
+
    #ifdef DEBUG
    long int itrealvalue;
    unsigned long int vsize;
@@ -131,292 +147,226 @@ typedef struct Process_ {
    unsigned long int nswap;
    unsigned long int cnswap;
    #endif
-   int exit_signal;
-   int processor;
-   int m_size;
-   int m_resident;
-   int m_share;
-   int m_trs;
-   int m_drs;
-   int m_lrs;
-   int m_dt;
-   uid_t st_uid;
-   float percent_cpu;
-   float percent_mem;
-   char* user;
-   #ifdef HAVE_OPENVZ
-   unsigned int ctid;
-   unsigned int vpid;
-   #endif
-   #ifdef HAVE_VSERVER
-   unsigned int vxid;
-   #endif
-   #ifdef HAVE_TASKSTATS
-   unsigned long long io_rchar;
-   unsigned long long io_wchar;
-   unsigned long long io_syscr;
-   unsigned long long io_syscw;
-   unsigned long long io_read_bytes;
-   unsigned long long io_write_bytes;
-   unsigned long long io_cancelled_write_bytes;
-   double io_rate_read_bps;
-   unsigned long long io_rate_read_time;
-   double io_rate_write_bps;
-   unsigned long long io_rate_write_time;   
-   #endif
-   #ifdef HAVE_CGROUP
-   char* cgroup;
-   #endif
-   double my_sortkey;
+
 } Process;
+
+typedef struct ProcessFieldData_ {
+   const char* name;
+   const char* title;
+   const char* description;
+   int flags;
+} ProcessFieldData;
+
+// Implemented in platform-specific code:
+void Process_writeField(Process* this, RichString* str, ProcessField field);
+long Process_compare(const void* v1, const void* v2);
+void Process_delete(Object* cast);
+bool Process_isThread(Process* this);
+extern ProcessFieldData Process_fields[];
+extern ProcessPidColumn Process_pidColumns[];
+extern char Process_pidFormat[20];
+
+typedef Process*(*Process_New)(struct Settings_*);
+typedef void (*Process_WriteField)(Process*, RichString*, ProcessField);
+
+typedef struct ProcessClass_ {
+   const ObjectClass super;
+   const Process_WriteField writeField;
+} ProcessClass;
+
+#define As_Process(this_)              ((ProcessClass*)((this_)->super.klass))
 
 }*/
 
-#ifdef DEBUG
-char* PROCESS_CLASS = "Process";
-#else
-#define PROCESS_CLASS NULL
-#endif
-
-const char *Process_fieldNames[] = {
-   "", "PID", "Command", "STATE", "PPID", "PGRP", "SESSION",
-   "TTY_NR", "TPGID", "FLAGS", "MINFLT", "CMINFLT", "MAJFLT", "CMAJFLT",
-   "UTIME", "STIME", "CUTIME", "CSTIME", "PRIORITY", "NICE", "ITREALVALUE",
-   "STARTTIME", "VSIZE", "RSS", "RLIM", "STARTCODE", "ENDCODE", "STARTSTACK",
-   "KSTKESP", "KSTKEIP", "SIGNAL", "BLOCKED", "SIGIGNORE", "SIGCATCH", "WCHAN",
-   "NSWAP", "CNSWAP", "EXIT_SIGNAL", "PROCESSOR", "M_SIZE", "M_RESIDENT", "M_SHARE",
-   "M_TRS", "M_DRS", "M_LRS", "M_DT", "ST_UID", "PERCENT_CPU", "PERCENT_MEM",
-   "USER", "TIME", "NLWP", "TGID", 
-#ifdef HAVE_OPENVZ
-   "CTID", "VPID",
-#endif
-#ifdef HAVE_VSERVER
-   "VXID",
-#endif
-#ifdef HAVE_TASKSTATS
-   "RCHAR", "WCHAR", "SYSCR", "SYSCW", "RBYTES", "WBYTES", "CNCLWB",
-   "IO_READ_RATE", "IO_WRITE_RATE", "IO_RATE",
-#endif
-#ifdef HAVE_CGROUP
-   "CGROUP",
-#endif
-   "SORTKEY",
-"*** report bug! ***"
-};
-
-const char *Process_fieldTitles[] = {
-   "", "  PID ", "Command ", "S ", " PPID ", " PGRP ", " SESN ",
-   "  TTY ", "TPGID ", "- ", "- ", "- ", "- ", "- ",
-   " UTIME+  ", " STIME+  ",  "- ", "- ", "PRI ", " NI ", "- ",
-   "START ", "- ", "- ", "- ", "- ", "- ", "- ",
-   "- ", "- ", "- ", "- ", "- ", "- ", "- ",
-   "- ", "- ", "- ", "CPU ", " VIRT ", "  RES ", "  SHR ",
-   " CODE ", " DATA ", " LIB ", " DIRTY ", " UID ", "CPU% ", "MEM% ",
-   "USER     ", "  TIME+  ", "NLWP ", " TGID ",
-#ifdef HAVE_OPENVZ
-   " CTID ", " VPID ",
-#endif
-#ifdef HAVE_VSERVER
-   " VXID ",
-#endif
-#ifdef HAVE_TASKSTATS
-   "   RD_CHAR ", "   WR_CHAR ", "   RD_SYSC ", "   WR_SYSC ", " IO_RBYTES ", " IO_WBYTES ", " IO_CANCEL ",
-   " IORR ", " IOWR ", "   IO ",
-#endif
-#ifdef HAVE_CGROUP
-   "    CGROUP ",
-#endif
-   " SK ",
-"*** report bug! ***"
-};
-
 static int Process_getuid = -1;
 
-#define ONE_K 1024
+#define ONE_K 1024L
 #define ONE_M (ONE_K * ONE_K)
 #define ONE_G (ONE_M * ONE_K)
 
-static void Process_printLargeNumber(Process* this, RichString* str, unsigned long number) {
+#define ONE_DECIMAL_K 1000L
+#define ONE_DECIMAL_M (ONE_DECIMAL_K * ONE_DECIMAL_K)
+#define ONE_DECIMAL_G (ONE_DECIMAL_M * ONE_DECIMAL_K)
+
+char Process_pidFormat[20] = "%7d ";
+
+static char Process_titleBuffer[20][20];
+
+void Process_setupColumnWidths() {
+   int maxPid = Platform_getMaxPid();
+   if (maxPid == -1) return;
+   int digits = ceil(log10(maxPid));
+   assert(digits < 20);
+   for (int i = 0; Process_pidColumns[i].label; i++) {
+      assert(i < 20);
+      snprintf(Process_titleBuffer[i], 20, "%*s ", digits, Process_pidColumns[i].label);
+      Process_fields[Process_pidColumns[i].id].title = Process_titleBuffer[i];
+   }
+   sprintf(Process_pidFormat, "%%%dd ", digits);
+}
+
+void Process_humanNumber(RichString* str, unsigned long number, bool coloring) {
    char buffer[11];
    int len;
-   if(number >= (10 * ONE_M)) {
-      if(number >= (100 * ONE_M)) {
-         len = snprintf(buffer, 10, "%4ldG ", number / ONE_M);
-         RichString_appendn(str, CRT_colors[LARGE_NUMBER], buffer, len);
-      } else {
-         len = snprintf(buffer, 10, "%3.1fG ", (float)number / ONE_M);
-         RichString_appendn(str, CRT_colors[LARGE_NUMBER], buffer, len);
+   
+   int largeNumberColor = CRT_colors[LARGE_NUMBER];
+   int processMegabytesColor = CRT_colors[PROCESS_MEGABYTES];
+   int processColor = CRT_colors[PROCESS];
+   if (!coloring) {
+      largeNumberColor = CRT_colors[PROCESS];
+      processMegabytesColor = CRT_colors[PROCESS];
+   }
+ 
+   if(number >= (10 * ONE_DECIMAL_M)) {
+      #ifdef __LP64__
+      if(number >= (100 * ONE_DECIMAL_G)) {
+         len = snprintf(buffer, 10, "%4ldT ", number / ONE_G);
+         RichString_appendn(str, largeNumberColor, buffer, len);
+         return;
+      } else if (number >= (1000 * ONE_DECIMAL_M)) {
+         len = snprintf(buffer, 10, "%4.1lfT ", (double)number / ONE_G);
+         RichString_appendn(str, largeNumberColor, buffer, len);
+         return;
       }
+      #endif
+      if(number >= (100 * ONE_DECIMAL_M)) {
+         len = snprintf(buffer, 10, "%4ldG ", number / ONE_M);
+         RichString_appendn(str, largeNumberColor, buffer, len);
+         return;
+      }
+      len = snprintf(buffer, 10, "%4.1lfG ", (double)number / ONE_M);
+      RichString_appendn(str, largeNumberColor, buffer, len);
+      return;
    } else if (number >= 100000) {
       len = snprintf(buffer, 10, "%4ldM ", number / ONE_K);
-      int attr = this->pl->highlightMegabytes
-               ? CRT_colors[PROCESS_MEGABYTES]
-               : CRT_colors[PROCESS];
-      RichString_appendn(str, attr, buffer, len);
-   } else if (this->pl->highlightMegabytes && number >= 1000) {
+      RichString_appendn(str, processMegabytesColor, buffer, len);
+      return;
+   } else if (number >= 1000) {
       len = snprintf(buffer, 10, "%2ld", number/1000);
-      RichString_appendn(str, CRT_colors[PROCESS_MEGABYTES], buffer, len);
+      RichString_appendn(str, processMegabytesColor, buffer, len);
       number %= 1000;
-      len = snprintf(buffer, 10, "%03ld ", number);
-      RichString_appendn(str, CRT_colors[PROCESS], buffer, len);
+      len = snprintf(buffer, 10, "%03lu ", number);
+      RichString_appendn(str, processColor, buffer, len);
+      return;
+   }
+   len = snprintf(buffer, 10, "%5lu ", number);
+   RichString_appendn(str, processColor, buffer, len);
+}
+
+void Process_colorNumber(RichString* str, unsigned long long number, bool coloring) {
+   char buffer[14];
+
+   int largeNumberColor = CRT_colors[LARGE_NUMBER];
+   int processMegabytesColor = CRT_colors[PROCESS_MEGABYTES];
+   int processColor = CRT_colors[PROCESS];
+   int processShadowColor = CRT_colors[PROCESS_SHADOW];
+   if (!coloring) {
+      largeNumberColor = CRT_colors[PROCESS];
+      processMegabytesColor = CRT_colors[PROCESS];
+      processShadowColor = CRT_colors[PROCESS];
+   }
+
+   if (number > 10000000000) {
+      snprintf(buffer, 13, "%11lld ", number / 1000);
+      RichString_appendn(str, largeNumberColor, buffer, 5);
+      RichString_appendn(str, processMegabytesColor, buffer+5, 3);
+      RichString_appendn(str, processColor, buffer+8, 4);
    } else {
-      len = snprintf(buffer, 10, "%5ld ", number);
-      RichString_appendn(str, CRT_colors[PROCESS], buffer, len);
+      snprintf(buffer, 13, "%11llu ", number);
+      RichString_appendn(str, largeNumberColor, buffer, 2);
+      RichString_appendn(str, processMegabytesColor, buffer+2, 3);
+      RichString_appendn(str, processColor, buffer+5, 3);
+      RichString_appendn(str, processShadowColor, buffer+8, 4);
    }
 }
 
-static double jiffy = 0.0;
+void Process_printTime(RichString* str, unsigned long long totalHundredths) {
+   unsigned long long totalSeconds = totalHundredths / 100;
 
-static void Process_printTime(RichString* str, unsigned long t) {
-   if(jiffy == 0.0) jiffy = sysconf(_SC_CLK_TCK);
-   double jiffytime = 1.0 / jiffy;
-
-   double realTime = t * jiffytime;
-   int iRealTime = (int) realTime;
-
-   int hours = iRealTime / 3600;
-   int minutes = (iRealTime / 60) % 60;
-   int seconds = iRealTime % 60;
-   int hundredths = (realTime - iRealTime) * 100;
+   unsigned long long hours = totalSeconds / 3600;
+   int minutes = (totalSeconds / 60) % 60;
+   int seconds = totalSeconds % 60;
+   int hundredths = totalHundredths - (totalSeconds * 100);
    char buffer[11];
-   if (hours) {
-      snprintf(buffer, 10, "%2dh", hours);
+   if (hours >= 100) {
+      snprintf(buffer, 10, "%7lluh ", hours);
       RichString_append(str, CRT_colors[LARGE_NUMBER], buffer);
-      snprintf(buffer, 10, "%02d:%02d ", minutes, seconds);
    } else {
-      snprintf(buffer, 10, "%2d:%02d.%02d ", minutes, seconds, hundredths);
+      if (hours) {
+         snprintf(buffer, 10, "%2lluh", hours);
+         RichString_append(str, CRT_colors[LARGE_NUMBER], buffer);
+         snprintf(buffer, 10, "%02d:%02d ", minutes, seconds);
+      } else {
+         snprintf(buffer, 10, "%2d:%02d.%02d ", minutes, seconds, hundredths);
+      }
+      RichString_append(str, CRT_colors[DEFAULT_COLOR], buffer);
    }
-   RichString_append(str, CRT_colors[DEFAULT_COLOR], buffer);
 }
 
 static inline void Process_writeCommand(Process* this, int attr, int baseattr, RichString* str) {
-   int start = RichString_size(str);
-   RichString_append(str, attr, this->comm);
-   if (this->pl->highlightBaseName) {
-      int finish = RichString_size(str) - 1;
-      int space = RichString_findChar(str, ' ', start);
-      if (space != -1)
-         finish = space - 1;
-      for (;;) {
-         int slash = RichString_findChar(str, '/', start);
-         if (slash == -1 || slash > finish)
+   int start = RichString_size(str), finish = 0;
+   char* comm = this->comm;
+
+   if (this->settings->highlightBaseName || !this->settings->showProgramPath) {
+      int i, basename = 0;
+      for (i = 0; i < this->basenameOffset; i++) {
+         if (comm[i] == '/') {
+            basename = i + 1;
+         } else if (comm[i] == ':') {
+            finish = i + 1;
             break;
-         start = slash + 1;
+         }
       }
+      if (!finish) {
+         if (this->settings->showProgramPath)
+            start += basename;
+         else
+            comm += basename;
+         finish = this->basenameOffset - basename;
+      }
+      finish += start - 1;
+   }
+
+   RichString_append(str, attr, comm);
+
+   if (this->settings->highlightBaseName)
       RichString_setAttrn(str, baseattr, start, finish);
+}
+
+void Process_outputRate(RichString* str, char* buffer, int n, double rate, int coloring) {
+   int largeNumberColor = CRT_colors[LARGE_NUMBER];
+   int processMegabytesColor = CRT_colors[PROCESS_MEGABYTES];
+   int processColor = CRT_colors[PROCESS];
+   if (!coloring) {
+      largeNumberColor = CRT_colors[PROCESS];
+      processMegabytesColor = CRT_colors[PROCESS];
+   }
+   if (rate == -1) {
+      int len = snprintf(buffer, n, "    no perm ");
+      RichString_appendn(str, CRT_colors[PROCESS_SHADOW], buffer, len);
+   } else if (rate < ONE_K) {
+      int len = snprintf(buffer, n, "%7.2f B/s ", rate);
+      RichString_appendn(str, processColor, buffer, len);
+   } else if (rate < ONE_K * ONE_K) {
+      int len = snprintf(buffer, n, "%7.2f K/s ", rate / ONE_K);
+      RichString_appendn(str, processColor, buffer, len);
+   } else if (rate < ONE_K * ONE_K * ONE_K) {
+      int len = snprintf(buffer, n, "%7.2f M/s ", rate / ONE_K / ONE_K);
+      RichString_appendn(str, processMegabytesColor, buffer, len);
+   } else {
+      int len = snprintf(buffer, n, "%7.2f G/s ", rate / ONE_K / ONE_K / ONE_K);
+      RichString_appendn(str, largeNumberColor, buffer, len);
    }
 }
 
-static inline void Process_outputRate(Process* this, RichString* str, int attr, char* buffer, int n, double rate) {
-   rate = rate / 1024;
-   if (rate < 0.01)
-      snprintf(buffer, n, "    0 ");
-   else if (rate <= 10)
-      snprintf(buffer, n, "%5.2f ", rate);
-   else if (rate <= 100)
-      snprintf(buffer, n, "%5.1f ", rate);
-   else {
-      Process_printLargeNumber(this, str, rate);
-      return;
-   }
-   RichString_append(str, attr, buffer);
-}
-
-static void Process_writeField(Process* this, RichString* str, ProcessField field) {
-   char buffer[128]; buffer[127] = '\0';
+void Process_writeField(Process* this, RichString* str, ProcessField field) {
+   char buffer[256]; buffer[255] = '\0';
    int attr = CRT_colors[DEFAULT_COLOR];
    int baseattr = CRT_colors[PROCESS_BASENAME];
    int n = sizeof(buffer) - 1;
+   bool coloring = this->settings->highlightMegabytes;
 
    switch (field) {
-   case PID: snprintf(buffer, n, "%5u ", this->pid); break;
-   case PPID: snprintf(buffer, n, "%5u ", this->ppid); break;
-   case PGRP: snprintf(buffer, n, "%5u ", this->pgrp); break;
-   case SESSION: snprintf(buffer, n, "%5u ", this->session); break;
-   case TTY_NR: snprintf(buffer, n, "%5u ", this->tty_nr); break;
-   case TGID: snprintf(buffer, n, "%5u ", this->tgid); break;
-   case TPGID: snprintf(buffer, n, "%5d ", this->tpgid); break;
-   case PROCESSOR: snprintf(buffer, n, "%3d ", this->processor+1); break;
-   case NLWP: snprintf(buffer, n, "%4ld ", this->nlwp); break;
-   case COMM: {
-      if (this->pl->highlightThreads && Process_isThread(this)) {
-         attr = CRT_colors[PROCESS_THREAD];
-         baseattr = CRT_colors[PROCESS_THREAD_BASENAME];
-      }
-      if (!this->pl->treeView || this->indent == 0) {
-         Process_writeCommand(this, attr, baseattr, str);
-         return;
-      } else {
-         char* buf = buffer;
-         int maxIndent = 0;
-         for (int i = 0; i < 32; i++)
-            if (this->indent & (1 << i))
-               maxIndent = i+1;
-          for (int i = 0; i < maxIndent - 1; i++) {
-            if (this->indent & (1 << i))
-               snprintf(buf, n, " |  ");
-            else
-               snprintf(buf, n, "    ");
-            buf += 4;
-            n -= 4;
-         }
-         if (this->pl->direction == 1)
-            snprintf(buf, n, " `%s ", this->showChildren ? "-" : "+" );
-         else
-            snprintf(buf, n, " ,%s ", this->showChildren ? "-" : "+" );
-         RichString_append(str, CRT_colors[PROCESS_TREE], buffer);
-         Process_writeCommand(this, attr, baseattr, str);
-         return;
-      }
-   }
-   case STATE: {
-      snprintf(buffer, n, "%c ", this->state);
-      attr = this->state == 'R'
-           ? CRT_colors[PROCESS_R_STATE]
-           : attr;
-      break;
-   }
-   case PRIORITY: {
-      if(this->priority == -100)
-         snprintf(buffer, n, " RT ");
-      else
-         snprintf(buffer, n, "%3ld ", this->priority);
-      break;
-   }
-   case NICE: {
-      snprintf(buffer, n, "%3ld ", this->nice);
-      attr = this->nice < 0 ? CRT_colors[PROCESS_HIGH_PRIORITY]
-           : this->nice > 0 ? CRT_colors[PROCESS_LOW_PRIORITY]
-           : attr;
-      break;
-   }
-   case M_DRS: Process_printLargeNumber(this, str, this->m_drs * PAGE_SIZE_KB); return;
-   case M_DT: Process_printLargeNumber(this, str, this->m_dt * PAGE_SIZE_KB); return;
-   case M_LRS: Process_printLargeNumber(this, str, this->m_lrs * PAGE_SIZE_KB); return;
-   case M_TRS: Process_printLargeNumber(this, str, this->m_trs * PAGE_SIZE_KB); return;
-   case M_SIZE: Process_printLargeNumber(this, str, this->m_size * PAGE_SIZE_KB); return;
-   case M_RESIDENT: Process_printLargeNumber(this, str, this->m_resident * PAGE_SIZE_KB); return;
-   case M_SHARE: Process_printLargeNumber(this, str, this->m_share * PAGE_SIZE_KB); return;
-   case ST_UID: snprintf(buffer, n, "%4d ", this->st_uid); break;
-   case USER: {
-      if (Process_getuid != (int) this->st_uid)
-         attr = CRT_colors[PROCESS_SHADOW];
-      if (this->user) {
-      snprintf(buffer, n, "%-8s ", this->user);
-      } else {
-      snprintf(buffer, n, "%-8d ", this->st_uid);
-      }
-      if (buffer[8] != '\0') {
-         buffer[8] = ' ';
-         buffer[9] = '\0';
-      }
-      break;
-   }
-   case UTIME: Process_printTime(str, this->utime); return;
-   case STIME: Process_printTime(str, this->stime); return;
-   case CUTIME: Process_printTime(str, this->cutime); return;
-   case CSTIME: Process_printTime(str, this->cstime); return;
-   case TIME: Process_printTime(str, this->utime + this->stime); return;
    case PERCENT_CPU: {
       if (this->percent_cpu > 999.9) {
          snprintf(buffer, n, "%4d ", (unsigned int)this->percent_cpu); 
@@ -435,80 +385,138 @@ static void Process_writeField(Process* this, RichString* str, ProcessField fiel
       }
       break;
    }
+   case COMM: {
+      if (this->settings->highlightThreads && Process_isThread(this)) {
+         attr = CRT_colors[PROCESS_THREAD];
+         baseattr = CRT_colors[PROCESS_THREAD_BASENAME];
+      }
+      if (!this->settings->treeView || this->indent == 0) {
+         Process_writeCommand(this, attr, baseattr, str);
+         return;
+      } else {
+         char* buf = buffer;
+         int maxIndent = 0;
+         bool lastItem = (this->indent < 0);
+         int indent = (this->indent < 0 ? -this->indent : this->indent);
+
+         for (int i = 0; i < 32; i++)
+            if (indent & (1U << i))
+               maxIndent = i+1;
+          for (int i = 0; i < maxIndent - 1; i++) {
+            int written;
+            if (indent & (1 << i))
+               written = snprintf(buf, n, "%s  ", CRT_treeStr[TREE_STR_VERT]);
+            else
+               written = snprintf(buf, n, "   ");
+            buf += written;
+            n -= written;
+         }
+         const char* draw = CRT_treeStr[lastItem ? (this->settings->direction == 1 ? TREE_STR_BEND : TREE_STR_TEND) : TREE_STR_RTEE];
+         snprintf(buf, n, "%s%s ", draw, this->showChildren ? CRT_treeStr[TREE_STR_SHUT] : CRT_treeStr[TREE_STR_OPEN] );
+         RichString_append(str, CRT_colors[PROCESS_TREE], buffer);
+         Process_writeCommand(this, attr, baseattr, str);
+         return;
+      }
+   }
+   case MAJFLT: Process_colorNumber(str, this->majflt, coloring); return;
+   case MINFLT: Process_colorNumber(str, this->minflt, coloring); return;
+   case M_RESIDENT: Process_humanNumber(str, this->m_resident * PAGE_SIZE_KB, coloring); return;
+   case M_SIZE: Process_humanNumber(str, this->m_size * PAGE_SIZE_KB, coloring); return;
+   case NICE: {
+      snprintf(buffer, n, "%3ld ", this->nice);
+      attr = this->nice < 0 ? CRT_colors[PROCESS_HIGH_PRIORITY]
+           : this->nice > 0 ? CRT_colors[PROCESS_LOW_PRIORITY]
+           : attr;
+      break;
+   }
+   case NLWP: snprintf(buffer, n, "%4ld ", this->nlwp); break;
+   case PGRP: snprintf(buffer, n, Process_pidFormat, this->pgrp); break;
+   case PID: snprintf(buffer, n, Process_pidFormat, this->pid); break;
+   case PPID: snprintf(buffer, n, Process_pidFormat, this->ppid); break;
+   case PRIORITY: {
+      if(this->priority <= -100)
+         snprintf(buffer, n, " RT ");
+      else
+         snprintf(buffer, n, "%3ld ", this->priority);
+      break;
+   }
+   case PROCESSOR: snprintf(buffer, n, "%3d ", Settings_cpuId(this->settings, this->processor)); break;
+   case SESSION: snprintf(buffer, n, Process_pidFormat, this->session); break;
    case STARTTIME: snprintf(buffer, n, "%s", this->starttime_show); break;
-   #ifdef HAVE_OPENVZ
-   case CTID: snprintf(buffer, n, "%5u ", this->ctid); break;
-   case VPID: snprintf(buffer, n, "%5u ", this->vpid); break;
-   #endif
-   #ifdef HAVE_VSERVER
-   case VXID: snprintf(buffer, n, "%5u ", this->vxid); break;
-   #endif
-   #ifdef HAVE_TASKSTATS
-   case RCHAR:  snprintf(buffer, n, "%10llu ", this->io_rchar); break;
-   case WCHAR:  snprintf(buffer, n, "%10llu ", this->io_wchar); break;   
-   case SYSCR:  snprintf(buffer, n, "%10llu ", this->io_syscr); break;   
-   case SYSCW:  snprintf(buffer, n, "%10llu ", this->io_syscw); break; 
-   case RBYTES: snprintf(buffer, n, "%10llu ", this->io_read_bytes); break; 
-   case WBYTES: snprintf(buffer, n, "%10llu ", this->io_write_bytes); break; 
-   case CNCLWB: snprintf(buffer, n, "%10llu ", this->io_cancelled_write_bytes); break; 
-   case IO_READ_RATE:  Process_outputRate(this, str, attr, buffer, n, this->io_rate_read_bps); return;
-   case IO_WRITE_RATE: Process_outputRate(this, str, attr, buffer, n, this->io_rate_write_bps); return;
-   case IO_RATE: Process_outputRate(this, str, attr, buffer, n, this->io_rate_read_bps + this->io_rate_write_bps); return;
-   #endif
-   #ifdef HAVE_CGROUP
-   case CGROUP: snprintf(buffer, n, "%-10s ", this->cgroup); break;
-   #endif
+   case STATE: {
+      snprintf(buffer, n, "%c ", this->state);
+      switch(this->state) {
+          case 'R':
+              attr = CRT_colors[PROCESS_R_STATE];
+              break;
+          case 'D':
+              attr = CRT_colors[PROCESS_D_STATE];
+              break;
+      }
+      break;
+   }
+   case ST_UID: snprintf(buffer, n, "%4d ", this->st_uid); break;
+   case TIME: Process_printTime(str, this->time); return;
+   case TGID: snprintf(buffer, n, Process_pidFormat, this->tgid); break;
+   case TPGID: snprintf(buffer, n, Process_pidFormat, this->tpgid); break;
+   case TTY_NR: snprintf(buffer, n, "%3u:%3u ", major(this->tty_nr), minor(this->tty_nr)); break;
+   case USER: {
+      if (Process_getuid != (int) this->st_uid)
+         attr = CRT_colors[PROCESS_SHADOW];
+      if (this->user) {
+         snprintf(buffer, n, "%-9s ", this->user);
+      } else {
+         snprintf(buffer, n, "%-9d ", this->st_uid);
+      }
+      if (buffer[9] != '\0') {
+         buffer[9] = ' ';
+         buffer[10] = '\0';
+      }
+      break;
+   }
    case SORTKEY: snprintf(buffer, n, "%4.1f ", this->my_sortkey); break;
-      
    default:
       snprintf(buffer, n, "- ");
    }
    RichString_append(str, attr, buffer);
 }
 
-static void Process_display(Object* cast, RichString* out) {
+void Process_display(Object* cast, RichString* out) {
    Process* this = (Process*) cast;
-   ProcessField* fields = this->pl->fields;
+   ProcessField* fields = this->settings->fields;
    RichString_prune(out);
    for (int i = 0; fields[i]; i++)
-      Process_writeField(this, out, fields[i]);
-   if (this->pl->shadowOtherUsers && (int)this->st_uid != Process_getuid)
+      As_Process(this)->writeField(this, out, fields[i]);
+   if (this->settings->shadowOtherUsers && (int)this->st_uid != Process_getuid)
       RichString_setAttr(out, CRT_colors[PROCESS_SHADOW]);
    if (this->tag == true)
       RichString_setAttr(out, CRT_colors[PROCESS_TAG]);
-   assert(out->len > 0);
+   assert(out->chlen > 0);
 }
 
-void Process_delete(Object* cast) {
-   Process* this = (Process*) cast;
+void Process_done(Process* this) {
    assert (this != NULL);
-   if (this->comm) free(this->comm);
-#ifdef HAVE_CGROUP
-   if (this->cgroup) free(this->cgroup);
-#endif
-   free(this);
+   free(this->comm);
 }
 
-Process* Process_new(struct ProcessList_ *pl) {
-   Process* this = calloc(sizeof(Process), 1);
-   Object_setClass(this, PROCESS_CLASS);
-   ((Object*)this)->display = Process_display;
-   ((Object*)this)->delete = Process_delete;
-   this->pid = 0;
-   this->pl = pl;
+ProcessClass Process_class = {
+   .super = {
+      .extends = Class(Object),
+      .display = Process_display,
+      .delete = Process_delete,
+      .compare = Process_compare
+   },
+   .writeField = Process_writeField,
+};
+
+void Process_init(Process* this, struct Settings_* settings) {
+   this->settings = settings;
    this->tag = false;
    this->showChildren = true;
    this->show = true;
    this->updated = false;
-   this->utime = 0;
-   this->stime = 0;
-   this->comm = NULL;
-   this->indent = 0;
-#ifdef HAVE_CGROUP
-   this->cgroup = NULL;
-#endif
+   this->basenameOffset = -1;
    if (Process_getuid == -1) Process_getuid = getuid();
-   return this;
 }
 
 void Process_toggleTag(Process* this) {
@@ -516,129 +524,99 @@ void Process_toggleTag(Process* this) {
 }
 
 bool Process_setPriority(Process* this, int priority) {
+   uid_t euid = geteuid();
+   (void) seteuid(getuid());
    int old_prio = getpriority(PRIO_PROCESS, this->pid);
    int err = setpriority(PRIO_PROCESS, this->pid, priority);
+   (void) seteuid(euid);
    if (err == 0 && old_prio != getpriority(PRIO_PROCESS, this->pid)) {
       this->nice = priority;
    }
    return (err == 0);
 }
 
-#ifdef HAVE_PLPA
-unsigned long Process_getAffinity(Process* this) {
-   unsigned long mask = 0;
-   plpa_sched_getaffinity(this->pid, sizeof(unsigned long), (plpa_cpu_set_t*) &mask);
-   return mask;
+bool Process_changePriorityBy(Process* this, size_t delta) {
+   return Process_setPriority(this, this->nice + delta);
 }
 
-bool Process_setAffinity(Process* this, unsigned long mask) {
-   return (plpa_sched_setaffinity(this->pid, sizeof(unsigned long), (plpa_cpu_set_t*) &mask) == 0);
-}
-#endif
-
-void Process_sendSignal(Process* this, int sgn) {
-   kill(this->pid, sgn);
+void Process_sendSignal(Process* this, size_t sgn) {
+   uid_t euid = geteuid();
+   (void) seteuid(getuid());
+   kill(this->pid, (int) sgn);
+   (void) seteuid(euid);
 }
 
-int Process_pidCompare(const void* v1, const void* v2) {
+long Process_pidCompare(const void* v1, const void* v2) {
    Process* p1 = (Process*)v1;
    Process* p2 = (Process*)v2;
    return (p1->pid - p2->pid);
 }
 
-int Process_compare(const void* v1, const void* v2) {
+long Process_compare(const void* v1, const void* v2) {
    Process *p1, *p2;
-   ProcessList *pl = ((Process*)v1)->pl;
-   if (pl->direction == 1) {
+   Settings *settings = ((Process*)v1)->settings;
+   if (settings->direction == 1) {
       p1 = (Process*)v1;
       p2 = (Process*)v2;
    } else {
       p2 = (Process*)v1;
       p1 = (Process*)v2;
    }
-   long long diff;
-   switch (pl->sortKey) {
+   switch (settings->sortKey) {
+   case PERCENT_CPU:
+      return (p2->percent_cpu > p1->percent_cpu ? 1 : -1);
+   case PERCENT_MEM:
+      return (p2->m_resident - p1->m_resident);
+   case COMM:
+      return strcmp(p1->comm, p2->comm);
+   case MAJFLT:
+      return (p2->majflt - p1->majflt);
+   case MINFLT:
+      return (p2->minflt - p1->minflt);
+   case M_RESIDENT:
+      return (p2->m_resident - p1->m_resident);
+   case M_SIZE:
+      return (p2->m_size - p1->m_size);
+   case NICE:
+      return (p1->nice - p2->nice);
+   case NLWP:
+      return (p1->nlwp - p2->nlwp);
+   case PGRP:
+      return (p1->pgrp - p2->pgrp);
    case PID:
       return (p1->pid - p2->pid);
    case PPID:
       return (p1->ppid - p2->ppid);
-   case USER:
-      return strcmp(p1->user ? p1->user : "", p2->user ? p2->user : "");
    case PRIORITY:
       return (p1->priority - p2->priority);
    case PROCESSOR:
       return (p1->processor - p2->processor);
    case SESSION:
       return (p1->session - p2->session);
-   case STATE:
-      return (p1->state - p2->state);
-   case NICE:
-      return (p1->nice - p2->nice);
-   case M_DRS:
-      return (p2->m_drs - p1->m_drs);
-   case M_DT:
-      return (p2->m_dt - p1->m_dt);
-   case M_LRS:
-      return (p2->m_lrs - p1->m_lrs);
-   case M_TRS:
-      return (p2->m_trs - p1->m_trs);
-   case M_SIZE:
-      return (p2->m_size - p1->m_size);
-   case M_RESIDENT:
-      return (p2->m_resident - p1->m_resident);
-   case M_SHARE:
-      return (p2->m_share - p1->m_share);
-   case PERCENT_CPU:
-      return (p2->percent_cpu > p1->percent_cpu ? 1 : -1);
-   case PERCENT_MEM:
-      return (p2->m_resident - p1->m_resident);
-   case UTIME:
-      return (p2->utime - p1->utime);
-   case STIME:
-      return (p2->stime - p1->stime);
-   case TIME:
-      return ((p2->utime+p2->stime) - (p1->utime+p1->stime));
-   case COMM:
-      return strcmp(p1->comm, p2->comm);
-   case NLWP:
-      return (p1->nlwp - p2->nlwp);
    case STARTTIME: {
       if (p1->starttime_ctime == p2->starttime_ctime)
          return (p1->pid - p2->pid);
       else
          return (p1->starttime_ctime - p2->starttime_ctime);
    }
-   #ifdef HAVE_OPENVZ
-   case CTID:
-      return (p1->ctid - p2->ctid);
-   case VPID:
-      return (p1->vpid - p2->vpid);
-   #endif
-   #ifdef HAVE_VSERVER
-   case VXID:
-      return (p1->vxid - p2->vxid);
-   #endif
-   #ifdef HAVE_TASKSTATS
-   case RCHAR:  diff = p2->io_rchar - p1->io_rchar; goto test_diff;
-   case WCHAR:  diff = p2->io_wchar - p1->io_wchar; goto test_diff;
-   case SYSCR:  diff = p2->io_syscr - p1->io_syscr; goto test_diff;
-   case SYSCW:  diff = p2->io_syscw - p1->io_syscw; goto test_diff;
-   case RBYTES: diff = p2->io_read_bytes - p1->io_read_bytes; goto test_diff;
-   case WBYTES: diff = p2->io_write_bytes - p1->io_write_bytes; goto test_diff;
-   case CNCLWB: diff = p2->io_cancelled_write_bytes - p1->io_cancelled_write_bytes; goto test_diff;
-   case IO_READ_RATE:  diff = p2->io_rate_read_bps - p1->io_rate_read_bps; goto test_diff;
-   case IO_WRITE_RATE: diff = p2->io_rate_write_bps - p1->io_rate_write_bps; goto test_diff;
-   case IO_RATE: diff = (p2->io_rate_read_bps + p2->io_rate_write_bps) - (p1->io_rate_read_bps + p1->io_rate_write_bps); goto test_diff;
-   #endif
-   #ifdef HAVE_CGROUP
-   case CGROUP:
-      return strcmp(p1->cgroup ? p1->cgroup : "", p2->cgroup ? p2->cgroup : "");
-   #endif
-   case SORTKEY: diff = 10000*(p2->my_sortkey - p1->my_sortkey); goto test_diff;
-
+   case SORTKEY: {
+        return 10000*(p2->my_sortkey - p1->my_sortkey);
+   }
+   case STATE:
+      return (p1->state - p2->state);
+   case ST_UID:
+      return (p1->st_uid - p2->st_uid);
+   case TIME:
+      return ((p2->time) - (p1->time));
+   case TGID:
+      return (p1->tgid - p2->tgid);
+   case TPGID:
+      return (p1->tpgid - p2->tpgid);
+   case TTY_NR:
+      return (p1->tty_nr - p2->tty_nr);
+   case USER:
+      return strcmp(p1->user ? p1->user : "", p2->user ? p2->user : "");
    default:
       return (p1->pid - p2->pid);
    }
-   test_diff:
-   return (diff > 0) ? 1 : (diff < 0 ? -1 : 0);
 }

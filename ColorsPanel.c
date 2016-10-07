@@ -1,22 +1,29 @@
+/*
+htop - ColorsPanel.c
+(C) 2004-2011 Hisham H. Muhammad
+Released under the GNU GPL, see the COPYING file
+in the source distribution for its full text.
+*/
 
-#include "CRT.h"
 #include "ColorsPanel.h"
 
-#include "Panel.h"
+#include "CRT.h"
 #include "CheckItem.h"
-#include "Settings.h"
-#include "ScreenManager.h"
 
-#include "debug.h"
 #include <assert.h>
+#include <stdlib.h>
+#include <string.h>
 
 // TO ADD A NEW SCHEME:
 // * Increment the size of bool check in ColorsPanel.h
-// * Add the entry in the ColorSchemes array below in the file
+// * Add the entry in the ColorSchemeNames array below in the file
 // * Add a define in CRT.h that matches the order of the array
 // * Add the colors in CRT_setColors
 
 /*{
+#include "Panel.h"
+#include "Settings.h"
+#include "ScreenManager.h"
 
 typedef struct ColorsPanel_ {
    Panel super;
@@ -27,13 +34,16 @@ typedef struct ColorsPanel_ {
 
 }*/
 
-static const char* ColorSchemes[] = {
+static const char* ColorsFunctions[] = {"      ", "      ", "      ", "      ", "      ", "      ", "      ", "      ", "      ", "Done  ", NULL};
+
+static const char* ColorSchemeNames[] = {
    "Default",
    "Monochromatic",
    "Black on White",
    "Light Terminal",
    "MC",
    "Black Night",
+   "Broken Gray",
    NULL
 };
 
@@ -44,7 +54,7 @@ static void ColorsPanel_delete(Object* object) {
    free(this);
 }
 
-static HandlerResult ColorsPanel_EventHandler(Panel* super, int ch) {
+static HandlerResult ColorsPanel_eventHandler(Panel* super, int ch) {
    ColorsPanel* this = (ColorsPanel*) super;
    
    HandlerResult result = IGNORED;
@@ -55,8 +65,9 @@ static HandlerResult ColorsPanel_EventHandler(Panel* super, int ch) {
    case 0x0d:
    case KEY_ENTER:
    case KEY_MOUSE:
+   case KEY_RECLICK:
    case ' ':
-      for (int i = 0; ColorSchemes[i] != NULL; i++)
+      for (int i = 0; ColorSchemeNames[i] != NULL; i++)
          CheckItem_set((CheckItem*)Panel_get(super, i), false);
       CheckItem_set((CheckItem*)Panel_get(super, mark), true);
       this->settings->colorScheme = mark;
@@ -65,9 +76,9 @@ static HandlerResult ColorsPanel_EventHandler(Panel* super, int ch) {
 
    if (result == HANDLED) {
       this->settings->changed = true;
-      Header* header = this->settings->header;
+      const Header* header = this->scr->header;
       CRT_setColors(mark);
-      Panel* menu = (Panel*) Vector_get(this->scr->items, 0);
+      Panel* menu = (Panel*) Vector_get(this->scr->panels, 0);
       Header_draw(header);
       RichString_setAttr(&(super->header), CRT_colors[PANEL_HEADER_FOCUS]);
       RichString_setAttr(&(menu->header), CRT_colors[PANEL_HEADER_UNFOCUS]);
@@ -76,19 +87,26 @@ static HandlerResult ColorsPanel_EventHandler(Panel* super, int ch) {
    return result;
 }
 
+PanelClass ColorsPanel_class = {
+   .super = {
+      .extends = Class(Panel),
+      .delete = ColorsPanel_delete
+   },
+   .eventHandler = ColorsPanel_eventHandler
+};
+
 ColorsPanel* ColorsPanel_new(Settings* settings, ScreenManager* scr) {
-   ColorsPanel* this = (ColorsPanel*) malloc(sizeof(ColorsPanel));
+   ColorsPanel* this = AllocThis(ColorsPanel);
    Panel* super = (Panel*) this;
-   Panel_init(super, 1, 1, 1, 1, CHECKITEM_CLASS, true);
-   ((Object*)this)->delete = ColorsPanel_delete;
+   FunctionBar* fuBar = FunctionBar_new(ColorsFunctions, NULL, NULL);
+   Panel_init(super, 1, 1, 1, 1, Class(CheckItem), true, fuBar);
 
    this->settings = settings;
    this->scr = scr;
-   super->eventHandler = ColorsPanel_EventHandler;
 
    Panel_setHeader(super, "Colors");
-   for (int i = 0; ColorSchemes[i] != NULL; i++) {
-      Panel_add(super, (Object*) CheckItem_new(String_copy(ColorSchemes[i]), NULL, false));
+   for (int i = 0; ColorSchemeNames[i] != NULL; i++) {
+      Panel_add(super, (Object*) CheckItem_newByVal(xStrdup(ColorSchemeNames[i]), false));
    }
    CheckItem_set((CheckItem*)Panel_get(super, settings->colorScheme), true);
    return this;

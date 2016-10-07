@@ -4,117 +4,110 @@
 #define HEADER_Process
 /*
 htop - Process.h
-(C) 2004-2010 Hisham H. Muhammad
+(C) 2004-2015 Hisham H. Muhammad
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
-#define _GNU_SOURCE
-#include "ProcessList.h"
-#include "Object.h"
-#include "CRT.h"
-#include "String.h"
-#include "RichString.h"
-
-#include "debug.h"
-
-#include <stdio.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/param.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include <signal.h>
-#include <string.h>
-#include <stdbool.h>
-#include <pwd.h>
-#include <sched.h>
-#include <time.h>
-
-#ifdef HAVE_PLPA
-#include <plpa.h>
+#ifdef __ANDROID__
+#define SYS_ioprio_get __NR_ioprio_get
+#define SYS_ioprio_set __NR_ioprio_set
 #endif
 
-// This works only with glibc 2.1+. On earlier versions
+// On Linux, this works only with glibc 2.1+. On earlier versions
 // the behavior is similar to have a hardcoded page size.
 #ifndef PAGE_SIZE
 #define PAGE_SIZE ( sysconf(_SC_PAGESIZE) )
 #endif
 #define PAGE_SIZE_KB ( PAGE_SIZE / ONE_K )
 
+#include "Object.h"
 
-#ifndef Process_isKernelThread
-#define Process_isKernelThread(_process) (_process->pgrp == 0)
-#endif
+#include <sys/types.h>
 
-#ifndef Process_isUserlandThread
-#define Process_isUserlandThread(_process) (_process->pid != _process->tgid)
-#endif
+#define PROCESS_FLAG_IO 0x0001
 
-#ifndef Process_isThread
-#define Process_isThread(_process) (Process_isUserlandThread(_process) || Process_isKernelThread(_process))
-#endif
-
-typedef enum ProcessField_ {
-   PID = 1, COMM, STATE, PPID, PGRP, SESSION, TTY_NR, TPGID, FLAGS, MINFLT, CMINFLT, MAJFLT, CMAJFLT, UTIME,
-   STIME, CUTIME, CSTIME, PRIORITY, NICE, ITREALVALUE, STARTTIME, VSIZE, RSS, RLIM, STARTCODE, ENDCODE,
-   STARTSTACK, KSTKESP, KSTKEIP, SIGNAL, BLOCKED, SSIGIGNORE, SIGCATCH, WCHAN, NSWAP, CNSWAP, EXIT_SIGNAL,
-   PROCESSOR, M_SIZE, M_RESIDENT, M_SHARE, M_TRS, M_DRS, M_LRS, M_DT, ST_UID, PERCENT_CPU, PERCENT_MEM,
-   USER, TIME, NLWP, TGID,
-   #ifdef HAVE_OPENVZ
-   CTID, VPID,
-   #endif
-   #ifdef HAVE_VSERVER
-   VXID,
-   #endif
-   #ifdef HAVE_TASKSTATS
-   RCHAR, WCHAR, SYSCR, SYSCW, RBYTES, WBYTES, CNCLWB, IO_READ_RATE, IO_WRITE_RATE, IO_RATE,
-   #endif
-   #ifdef HAVE_CGROUP
-   CGROUP,
-   #endif
-   SORTKEY,
-   LAST_PROCESSFIELD
+typedef enum ProcessFields {
+   NULL_PROCESSFIELD = 0,
+   PID = 1,
+   COMM = 2,
+   STATE = 3,
+   PPID = 4,
+   PGRP = 5,
+   SESSION = 6,
+   TTY_NR = 7,
+   TPGID = 8,
+   MINFLT = 10,
+   MAJFLT = 12,
+   PRIORITY = 18,
+   NICE = 19,
+   STARTTIME = 21,
+   PROCESSOR = 38,
+   M_SIZE = 39,
+   M_RESIDENT = 40,
+   ST_UID = 46,
+   PERCENT_CPU = 47,
+   PERCENT_MEM = 48,
+   USER = 49,
+   TIME = 50,
+   NLWP = 51,
+   TGID = 52,
+   SORTKEY = 53,
 } ProcessField;
 
-struct ProcessList_;
+typedef struct ProcessPidColumn_ {
+   int id;
+   char* label;
+} ProcessPidColumn;
 
 typedef struct Process_ {
    Object super;
 
-   struct ProcessList_ *pl;
+   struct Settings_* settings;
+
+   unsigned long long int time;
+   pid_t pid;
+   pid_t ppid;
+   pid_t tgid;
+   char* comm;
+   int commLen;
+   int indent;
+
+   int basenameOffset;
    bool updated;
 
-   pid_t pid;
-   char* comm;
-   int indent;
    char state;
    bool tag;
    bool showChildren;
    bool show;
-   pid_t ppid;
    unsigned int pgrp;
    unsigned int session;
    unsigned int tty_nr;
-   pid_t tgid;
    int tpgid;
+   uid_t st_uid;
    unsigned long int flags;
-   #ifdef DEBUG
-   unsigned long int minflt;
-   unsigned long int cminflt;
-   unsigned long int majflt;
-   unsigned long int cmajflt;
-   #endif
-   unsigned long int utime;
-   unsigned long int stime;
-   long int cutime;
-   long int cstime;
+   int processor;
+
+   float percent_cpu;
+   float percent_mem;
+   char* user;
+
    long int priority;
    long int nice;
    long int nlwp;
    char starttime_show[8];
    time_t starttime_ctime;
+
+   long m_size;
+   long m_resident;
+
+   int exit_signal;
+
+   unsigned long int minflt;
+   unsigned long int majflt;
+
+   double my_sortkey;
+
    #ifdef DEBUG
    long int itrealvalue;
    unsigned long int vsize;
@@ -133,78 +126,76 @@ typedef struct Process_ {
    unsigned long int nswap;
    unsigned long int cnswap;
    #endif
-   int exit_signal;
-   int processor;
-   int m_size;
-   int m_resident;
-   int m_share;
-   int m_trs;
-   int m_drs;
-   int m_lrs;
-   int m_dt;
-   uid_t st_uid;
-   float percent_cpu;
-   float percent_mem;
-   char* user;
-   #ifdef HAVE_OPENVZ
-   unsigned int ctid;
-   unsigned int vpid;
-   #endif
-   #ifdef HAVE_VSERVER
-   unsigned int vxid;
-   #endif
-   #ifdef HAVE_TASKSTATS
-   unsigned long long io_rchar;
-   unsigned long long io_wchar;
-   unsigned long long io_syscr;
-   unsigned long long io_syscw;
-   unsigned long long io_read_bytes;
-   unsigned long long io_write_bytes;
-   unsigned long long io_cancelled_write_bytes;
-   double io_rate_read_bps;
-   unsigned long long io_rate_read_time;
-   double io_rate_write_bps;
-   unsigned long long io_rate_write_time;   
-   #endif
-   #ifdef HAVE_CGROUP
-   char* cgroup;
-   #endif
-   double my_sortkey;
+
 } Process;
 
+typedef struct ProcessFieldData_ {
+   const char* name;
+   const char* title;
+   const char* description;
+   int flags;
+} ProcessFieldData;
 
-#ifdef DEBUG
-extern char* PROCESS_CLASS;
-#else
-#define PROCESS_CLASS NULL
-#endif
+// Implemented in platform-specific code:
+void Process_writeField(Process* this, RichString* str, ProcessField field);
+long Process_compare(const void* v1, const void* v2);
+void Process_delete(Object* cast);
+bool Process_isThread(Process* this);
+extern ProcessFieldData Process_fields[];
+extern ProcessPidColumn Process_pidColumns[];
+extern char Process_pidFormat[20];
 
-extern const char *Process_fieldNames[];
+typedef Process*(*Process_New)(struct Settings_*);
+typedef void (*Process_WriteField)(Process*, RichString*, ProcessField);
 
-extern const char *Process_fieldTitles[];
+typedef struct ProcessClass_ {
+   const ObjectClass super;
+   const Process_WriteField writeField;
+} ProcessClass;
 
-#define ONE_K 1024
+#define As_Process(this_)              ((ProcessClass*)((this_)->super.klass))
+
+
+#define ONE_K 1024L
 #define ONE_M (ONE_K * ONE_K)
 #define ONE_G (ONE_M * ONE_K)
 
-void Process_delete(Object* cast);
+#define ONE_DECIMAL_K 1000L
+#define ONE_DECIMAL_M (ONE_DECIMAL_K * ONE_DECIMAL_K)
+#define ONE_DECIMAL_G (ONE_DECIMAL_M * ONE_DECIMAL_K)
 
-Process* Process_new(struct ProcessList_ *pl);
+extern char Process_pidFormat[20];
+
+void Process_setupColumnWidths();
+
+void Process_humanNumber(RichString* str, unsigned long number, bool coloring);
+
+void Process_colorNumber(RichString* str, unsigned long long number, bool coloring);
+
+void Process_printTime(RichString* str, unsigned long long totalHundredths);
+
+void Process_outputRate(RichString* str, char* buffer, int n, double rate, int coloring);
+
+void Process_writeField(Process* this, RichString* str, ProcessField field);
+
+void Process_display(Object* cast, RichString* out);
+
+void Process_done(Process* this);
+
+extern ProcessClass Process_class;
+
+void Process_init(Process* this, struct Settings_* settings);
 
 void Process_toggleTag(Process* this);
 
 bool Process_setPriority(Process* this, int priority);
 
-#ifdef HAVE_PLPA
-unsigned long Process_getAffinity(Process* this);
+bool Process_changePriorityBy(Process* this, size_t delta);
 
-bool Process_setAffinity(Process* this, unsigned long mask);
-#endif
+void Process_sendSignal(Process* this, size_t sgn);
 
-void Process_sendSignal(Process* this, int sgn);
+long Process_pidCompare(const void* v1, const void* v2);
 
-int Process_pidCompare(const void* v1, const void* v2);
-
-int Process_compare(const void* v1, const void* v2);
+long Process_compare(const void* v1, const void* v2);
 
 #endif
