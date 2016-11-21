@@ -2,8 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.65)
-LT_PREREQ([2.4.2])
-AC_INIT([htop],[2.0.1],[hisham@gobolinux.org])
+LT_PREREQ([2.4.0])
+AC_INIT([htop],[2.0.2],[hisham@gobolinux.org])
 
 SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(date +%s)}"
 year=$(date -u -d "@$SOURCE_DATE_EPOCH" "+%Y" 2>/dev/null || date -u -r "$SOURCE_DATE_EPOCH" "+%Y" 2>/dev/null || date -u "+%Y")
@@ -152,7 +152,12 @@ fi
 # HTOP_CHECK_SCRIPT(LIBNAME, FUNCTION, DEFINE, CONFIG_SCRIPT, ELSE_PART)
 m4_define([HTOP_CHECK_SCRIPT],
 [
-   htop_config_script=$([$4] --libs 2> /dev/null)
+   if test ! -z "m4_toupper($HTOP_[$1]_CONFIG_SCRIPT)"; then
+      # to be used to set the path to ncurses*-config when cross-compiling
+      htop_config_script=$(m4_toupper($HTOP_[$1]_CONFIG_SCRIPT) --libs 2> /dev/null)
+   else
+      htop_config_script=$([$4] --libs 2> /dev/null)
+   fi
    htop_script_success=no
    htop_save_LDFLAGS="$LDFLAGS"
    if test ! "x$htop_config_script" = x; then
