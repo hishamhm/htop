@@ -150,34 +150,31 @@ static void LinuxProcessList_initTtyDrivers(LinuxProcessList* this) {
    ttyDrivers = malloc(sizeof(TtyDriver) * allocd);
    char* at = buf;
    while (*at != '\0') {
-      at = strchr(at, ' ');    // skip first token
-      while (*at == ' ') at++; // skip spaces
-      char* token = at;        // mark beginning of path
-      at = strchr(at, ' ');    // find end of path
-      *at = '\0'; at++;        // clear and skip
-      ttyDrivers[numDrivers].path = strdup(token); // save
-      while (*at == ' ') at++; // skip spaces
-      token = at;              // mark beginning of major
-      at = strchr(at, ' ');    // find end of major
-      *at = '\0'; at++;        // clear and skip
-      ttyDrivers[numDrivers].major = atoi(token); // save
-      while (*at == ' ') at++; // skip spaces
-      token = at;              // mark beginning of minorFrom
-      while (*at >= '0' && *at <= '9') at++; //find end of minorFrom
-      if (*at == '-') {        // if has range
-         *at = '\0'; at++;        // clear and skip
-         ttyDrivers[numDrivers].minorFrom = atoi(token); // save
-         token = at;              // mark beginning of minorTo
-         at = strchr(at, ' ');    // find end of minorTo
-         *at = '\0'; at++;        // clear and skip
-         ttyDrivers[numDrivers].minorTo = atoi(token); // save
-      } else {                 // no range
-         *at = '\0'; at++;        // clear and skip
-         ttyDrivers[numDrivers].minorFrom = atoi(token); // save
-         ttyDrivers[numDrivers].minorTo = atoi(token); // save
+      // See fs/proc/proc_tty.c in Linux source
+      // Skip field 1: "%-20s ", driver_name
+      at = strchr(at + 20, ' ');
+      at++;
+      // Field 2: "/dev/%-8s ", name
+      /* assert(String_startsWith(at, "/dev/")); */
+      char* token = at;
+      at = strchr(at + 5, ' ');
+      *at = '\0'; at++;
+      ttyDrivers[numDrivers].path = strdup(token);
+      // Field 3: "%3d ", major
+      ttyDrivers[numDrivers].major = (unsigned int) strtol(at, &at, 10);
+      /* assert(*at == ' '); */
+      // Field 4: ("%d-%d ", minorFrom, minorTo) or ("%7d ", minorFrom)
+      ttyDrivers[numDrivers].minorFrom = (unsigned int) strtol(at, &at, 10);
+      /* assert(*at == ' ' || *at == '-'); */
+      if (*at == '-') {
+         at++;
+         ttyDrivers[numDrivers].minorTo = (unsigned int) strtol(at, &at, 10);
+      } else {
+         ttyDrivers[numDrivers].minorTo = ttyDrivers[numDrivers].minorFrom;
       }
-      at = strchr(at, '\n');   // go to end of line
-      at++;                    // skip
+      // Skip field 5 (tty type) and go to end of line
+      at = strchr(at, '\n');
+      at++;
       numDrivers++;
       if (numDrivers == allocd) {
          allocd += 10;
