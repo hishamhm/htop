@@ -58,6 +58,7 @@ typedef struct Settings_ {
    bool updateProcessNames;
    bool accountGuestInCPUMeter;
    bool headerMargin;
+   bool showClockRate;
 
    bool changed;
 } Settings;
@@ -243,6 +244,8 @@ static bool Settings_read(Settings* this, const char* fileName) {
       } else if (String_eq(option[0], "right_meter_modes")) {
          Settings_readMeterModes(this, option[1], 1);
          readMeters = true;
+      } else if (String_eq(option[0], "show_clockrate")) {
+          this->showClockRate = atoi(option[1]);
       }
       String_freeArray(option);
    }
@@ -307,6 +310,7 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "cpu_count_from_zero=%d\n", (int) this->countCPUsFromZero);
    fprintf(fd, "update_process_names=%d\n", (int) this->updateProcessNames);
    fprintf(fd, "account_guest_in_cpu_meter=%d\n", (int) this->accountGuestInCPUMeter);
+   fprintf(fd, "show_clockrate=%d\n", (int) this->showClockRate);
    fprintf(fd, "color_scheme=%d\n", (int) this->colorScheme);
    fprintf(fd, "delay=%d\n", (int) this->delay);
    fprintf(fd, "left_meters="); writeMeters(this, fd, 0);
@@ -337,6 +341,7 @@ Settings* Settings_new(int cpuCount) {
    this->cpuCount = cpuCount;
    this->showProgramPath = true;
    this->highlightThreads = true;
+   this->showClockRate = false;
    
    this->fields = xCalloc(Platform_numberOfFields+1, sizeof(ProcessField));
    // TODO: turn 'fields' into a Vector,

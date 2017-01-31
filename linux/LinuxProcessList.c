@@ -57,6 +57,7 @@ typedef struct CPUData_ {
    unsigned long long int softIrqPeriod;
    unsigned long long int stealPeriod;
    unsigned long long int guestPeriod;
+   double clockRate;
 } CPUData;
 
 typedef struct TtyDriver_ {
@@ -86,6 +87,10 @@ typedef struct LinuxProcessList_ {
 #define PROCMEMINFOFILE PROCDIR "/meminfo"
 #endif
 
+#ifndef PROCCPUINFOFILE
+#define PROCCPUINFOFILE PROCDIR "/cpuinfo"
+#endif
+
 #ifndef PROCTTYDRIVERSFILE
 #define PROCTTYDRIVERSFILE PROCDIR "/tty/drivers"
 #endif
@@ -99,6 +104,8 @@ typedef struct LinuxProcessList_ {
 #ifndef CLAMP
 #define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
 #endif
+
+#define CLOCK_MASK "cpu MHz"
 
 static ssize_t xread(int fd, void *buf, size_t count) {
   // Read some bytes. Retry on EINTR and when we don't get as many bytes as we requested.
@@ -904,9 +911,39 @@ static inline double LinuxProcessList_scanCPUTime(LinuxProcessList* this) {
    return period;
 }
 
+static inline void LinuxProcessList_scanCPUClock(LinuxProcessList* this) {
+   ProcessList* pl = (ProcessList*) this;
+   Settings* settings = pl->settings;
+   if (settings->showClockRate) {
+      FILE* file;
+      file = fopen(PROCCPUINFOFILE, "r");
+      if (file == NULL) {
+         /* fall back to default */
+         settings->showClockRate = false;
+         return;
+      }
+      char buffer[100];
+      double clockrate;
+      int i = 1;
+      while(fgets(buffer, sizeof(buffer), file))
+      {
+         CPUData* cpuData = &(this->cpus[i]);
+         if (strlen(buffer) > strlen(CLOCK_MASK) && strncmp(buffer, CLOCK_MASK, strlen(CLOCK_MASK)) == 0)
+         {
+            sscanf(buffer,  CLOCK_MASK " : %lf", &clockrate);
+            cpuData->clockRate = clockrate;
+            i++;
+         }
+      }
+      fclose(file);
+   }
+}
+
+
 void ProcessList_goThroughEntries(ProcessList* super) {
    LinuxProcessList* this = (LinuxProcessList*) super;
 
+   LinuxProcessList_scanCPUClock(this);
    LinuxProcessList_scanMemoryInfo(super);
    double period = LinuxProcessList_scanCPUTime(this);
 

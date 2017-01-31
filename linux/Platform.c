@@ -166,6 +166,7 @@ int Platform_getMaxPid() {
 double Platform_setCPUValues(Meter* this, int cpu) {
    LinuxProcessList* pl = (LinuxProcessList*) this->pl;
    CPUData* cpuData = &(pl->cpus[cpu]);
+   this->clockRate = cpuData->clockRate;
    double total = (double) ( cpuData->totalPeriod == 0 ? 1 : cpuData->totalPeriod);
    double percent;
    double* v = this->values;

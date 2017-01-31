@@ -74,6 +74,7 @@ struct Meter_ {
    struct ProcessList_* pl;
    double* values;
    double total;
+   double clockRate;
 };
 
 typedef struct MeterMode_ {

@@ -63,7 +63,11 @@ static void CPUMeter_updateValues(Meter* this, char* buffer, int size) {
    }
    memset(this->values, 0, sizeof(double) * CPU_METER_ITEMCOUNT);
    double percent = Platform_setCPUValues(this, cpu);
-   snprintf(buffer, size, "%5.1f%%", percent);
+   if (this->pl->settings->showClockRate) {
+      snprintf(buffer, size, "%5.1lfMHz", this->clockRate);
+   } else {
+      snprintf(buffer, size, "%5.1f%%", percent);
+   }
 }
 
 static void CPUMeter_display(Object* cast, RichString* out) {
