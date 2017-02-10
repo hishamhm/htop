@@ -234,7 +234,7 @@ static void Battery_getSysData(double* level, ACPresence* isOnAC) {
             if (!energy) {
                continue;
             }
-            const char* value = (!full) ? match(energy, "FULL=") : NULL;
+            const char* value = (!full) ? match(energy, "FULL_DESIGN=") : NULL;
             if (value) {
                totalFull += atoi(value);
                full = true;
