@@ -78,7 +78,7 @@ static unsigned long int parseBatInfo(const char *fileName, const unsigned short
       const unsigned long int foundNum = atoi(foundNumStr);
       free(foundNumStr);
       free(line);
-      
+
       total += foundNum;
    }
 
@@ -180,7 +180,7 @@ static inline ssize_t xread(int fd, void *buf, size_t count) {
 }
 
 static void Battery_getSysData(double* level, ACPresence* isOnAC) {
-      
+
    *level = 0;
    *isOnAC = AC_ERROR;
 
@@ -201,7 +201,7 @@ static void Battery_getSysData(double* level, ACPresence* isOnAC) {
       const char filePath[50];
 
       if (entryName[0] == 'B' && entryName[1] == 'A' && entryName[2] == 'T') {
-         
+
          snprintf((char *) filePath, sizeof filePath, SYS_POWERSUPPLY_DIR "/%s/uevent", entryName);
          int fd = open(filePath, O_RDONLY);
          if (fd == -1) {
@@ -222,7 +222,7 @@ static void Battery_getSysData(double* level, ACPresence* isOnAC) {
          bool now = false;
          while ((line = strsep(&buf, "\n")) != NULL) {
    #define match(str,prefix) \
-           (String_startsWith(str,prefix) ? (str) + strlen(prefix) : NULL)
+           (String_startsWith(str,prefix) ? (str) + strlen((prefix)) : NULL)
             const char* ps = match(line, "POWER_SUPPLY_");
             if (!ps) {
                continue;
@@ -259,7 +259,7 @@ static void Battery_getSysData(double* level, ACPresence* isOnAC) {
          if (*isOnAC != AC_ERROR) {
             continue;
          }
-      
+
          snprintf((char *) filePath, sizeof filePath, SYS_POWERSUPPLY_DIR "/%s/online", entryName);
          int fd = open(filePath, O_RDONLY);
          if (fd == -1) {
