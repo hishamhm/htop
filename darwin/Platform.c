@@ -24,6 +24,7 @@ in the source distribution for its full text.
 #include "SignalsPanel.h"
 #include "CPUMeter.h"
 #include "BatteryMeter.h"
+#include "SignalsPanel.h"
 #include "DarwinProcess.h"
 }*/
 
