@@ -13,6 +13,7 @@ in the source distribution for its full text.
 #include "StringUtils.h"
 #include "ListItem.h"
 #include "Settings.h"
+#include "ProcessList.h"
 
 #include <math.h>
 #include <string.h>
@@ -20,6 +21,8 @@ in the source distribution for its full text.
 #include <stdarg.h>
 #include <assert.h>
 #include <sys/time.h>
+
+#define HAVE_LOAD_GRAPH
 
 #define METER_BUFFER_LEN 256
 
@@ -292,6 +295,37 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
    // First draw in the bar[] buffer...
    int offset = 0;
    int items = Meter_getItems(this);
+
+#ifdef HAVE_LOAD_GRAPH
+   // Experimental Load Average bar drawing
+   // TODO: Make it into a subroutine for better encapsulation.
+   if (strcmp(As_Meter(this)->name, "Load") == 0) {
+      // ':' for number of cpu cores point
+      if (bar[w / 2] == ' ') {
+         bar[w / 2] = ':';
+      }
+      assert(Meter_getItems(this) == 1);
+
+#ifndef M_PI_2
+# define M_PI_2 atan2(1,0)
+#endif
+      blockSizes[0] = (int)round(atan2(this->values[0], this->pl->cpuCount) *
+                                 w / M_PI_2);
+      for (int j = 0; j < blockSizes[0]; j++) {
+         if (bar[j] == ' ') {
+            bar[j] = '|';
+         }
+      }
+      attrset(CRT_colors[Meter_attributes(this)[0]]);
+      mvaddnstr(y, x, bar, blockSizes[0]);
+      if (blockSizes[0] < w) {
+         attrset(CRT_colors[BAR_SHADOW]);
+         mvaddnstr(y, x + blockSizes[0], bar + blockSizes[0], w - blockSizes[0]);
+      }
+      return;
+   }
+#endif
+
    for (int i = 0; i < items; i++) {
       double value = this->values[i];
       value = CLAMP(value, 0.0, this->total);
