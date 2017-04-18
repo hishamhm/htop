@@ -307,6 +307,7 @@ void ScreenManager_run(ScreenManager* this, Panel** lastFocus, int* lastKey) {
          if (Panel_size(panelFocus) == 0 && focus < this->panelCount - 1)
             goto tryRight;
          break;
+      case 4:
       case KEY_F(10):
       case 'q':
       case 27:
