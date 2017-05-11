@@ -58,6 +58,7 @@ typedef struct Settings_ {
    bool updateProcessNames;
    bool accountGuestInCPUMeter;
    bool headerMargin;
+   bool expandTrees;
 
    bool changed;
 } Settings;
@@ -243,6 +244,8 @@ static bool Settings_read(Settings* this, const char* fileName) {
       } else if (String_eq(option[0], "right_meter_modes")) {
          Settings_readMeterModes(this, option[1], 1);
          readMeters = true;
+      } else if (String_eq(option[0], "expand_tree")) {
+         this->expandTrees = atoi(option[1]);
       }
       String_freeArray(option);
    }
@@ -302,6 +305,7 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "highlight_megabytes=%d\n", (int) this->highlightMegabytes);
    fprintf(fd, "highlight_threads=%d\n", (int) this->highlightThreads);
    fprintf(fd, "tree_view=%d\n", (int) this->treeView);
+   fprintf(fd, "expand_tree=%d\n", (int) this->expandTrees);
    fprintf(fd, "header_margin=%d\n", (int) this->headerMargin);
    fprintf(fd, "detailed_cpu_time=%d\n", (int) this->detailedCPUTime);
    fprintf(fd, "cpu_count_from_zero=%d\n", (int) this->countCPUsFromZero);
@@ -337,7 +341,8 @@ Settings* Settings_new(int cpuCount) {
    this->cpuCount = cpuCount;
    this->showProgramPath = true;
    this->highlightThreads = true;
-   
+   this->expandTrees = true;
+
    this->fields = xCalloc(Platform_numberOfFields+1, sizeof(ProcessField));
    // TODO: turn 'fields' into a Vector,
    // (and ProcessFields into proper objects).
