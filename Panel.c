@@ -69,7 +69,7 @@ struct Panel_ {
    FunctionBar* currentBar;
    FunctionBar* defaultBar;
    RichString header;
-   int selectionColor;
+   unsigned int selectionColor;
 };
 
 #define Panel_setDefaultBar(this_) do{ (this_)->currentBar = (this_)->defaultBar; }while(0)
@@ -275,7 +275,7 @@ void Panel_draw(Panel* this, bool focus) {
 
    int headerLen = RichString_sizeVal(this->header);
    if (headerLen > 0) {
-      int attr = focus
+      unsigned int attr = focus
                ? CRT_colors[PANEL_HEADER_FOCUS]
                : CRT_colors[PANEL_HEADER_UNFOCUS];
       attrset(attr);
@@ -308,7 +308,7 @@ void Panel_draw(Panel* this, bool focus) {
    int first = this->scrollV;
    int upTo = MIN(first + h, size);
 
-   int selectionColor = focus
+   unsigned int selectionColor = focus
                  ? this->selectionColor
                  : CRT_colors[PANEL_SELECTION_UNFOCUS];
 

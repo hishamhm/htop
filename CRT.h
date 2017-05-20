@@ -132,9 +132,9 @@ extern const char **CRT_treeStr;
 
 extern int CRT_delay;
 
-int* CRT_colors;
+unsigned int *CRT_colors;
 
-extern int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT];
+extern unsigned int CRT_colorSchemes[LAST_COLORSCHEME][LAST_COLORELEMENT];
 
 extern int CRT_cursorX;
 

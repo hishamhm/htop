@@ -357,8 +357,8 @@ void Process_outputRate(RichString* str, char* buffer, int n, double rate, int c
 
 void Process_writeField(Process* this, RichString* str, ProcessField field) {
    char buffer[256]; buffer[255] = '\0';
-   int attr = CRT_colors[DEFAULT_COLOR];
-   int baseattr = CRT_colors[PROCESS_BASENAME];
+   unsigned int attr = CRT_colors[DEFAULT_COLOR];
+   unsigned int baseattr = CRT_colors[PROCESS_BASENAME];
    int n = sizeof(buffer) - 1;
    bool coloring = this->settings->highlightMegabytes;
 
