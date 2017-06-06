@@ -15,7 +15,8 @@ void CRT_handleSIGSEGV(int sgn) {
    (void) sgn;
    CRT_done();
    #ifdef __APPLE__
-   fprintf(stderr, "\n\nhtop " VERSION " aborting. Please report bug at http://hisham.hm/htop\n");
+   fprintf(stderr, "\n\nhtop " VERSION " aborting. Please visit http://hisham.hm/htop\n");
+   fprintf(stderr, "\n\nor report a bug at https://github.com/hishamhm/htop/issues\n");
    #ifdef HAVE_EXECINFO_H
    size_t size = backtrace(backtraceArray, sizeof(backtraceArray) / sizeof(void *));
    fprintf(stderr, "\n Please include in your report the following backtrace: \n");
