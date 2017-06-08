@@ -40,16 +40,26 @@ Panel* SignalsPanel_new() {
       }
    }
    #if (defined(SIGRTMIN) && defined(SIGRTMAX))
-   if (SIGRTMAX - SIGRTMIN <= 100) {
-      static char buf[15];
-      for (int sig = SIGRTMIN; sig <= SIGRTMAX; i++, sig++) {
+   // Real-time signals. SIGRTMIN and SIGRTMAX may expand to libc internal
+   // functions and so grab their numbers at runtime.
+   static char buf[15];
+   for (int sig = SIGRTMIN; sig <= 99; i++, sig++) {
+      // Every signal between SIGRTMIN and SIGRTMAX are denoted in "SIGRTMIN+n"
+      // notation. This matches glibc's strsignal(3) behavior.
+      // We deviate from behaviors of Bash, ksh and Solaris intentionally.
+      int rtmax = SIGRTMAX;
+      if (sig > rtmax) {
+         break;
+      } else if (sig == rtmax) {
+         snprintf(buf, 15, "%2d SIGRTMAX", sig);
+      } else {
          int n = sig - SIGRTMIN;
-         snprintf(buf, 15, "%2d SIGRTMIN%-+3d", sig, n);
+         snprintf(buf, 15, "%2d SIGRTMIN%+d", sig, n);
          if (n == 0) {
             buf[11] = '\0';
          }
-         Panel_set(this, i, (Object*) ListItem_new(buf, sig));
       }
+      Panel_set(this, i, (Object*) ListItem_new(buf, sig));
    }
    #endif
    Panel_setHeader(this, "Send signal:");
