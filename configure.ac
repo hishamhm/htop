@@ -51,6 +51,15 @@ darwin*)
    ;;
 esac
 
+dnl Signal tables for these architectures differ from other common ones
+dnl (x86, arm, and others) in Linux. Reject for now.
+dnl Hopefully htop can support them in the future.
+case "$target" in
+alpha*-linux* | sparc*-linux* | mips*-linux* | parisc*-linux*)
+   AC_MSG_ERROR([Target is not supported: $target])
+   ;;
+esac
+
 # Checks for libraries.
 # ----------------------------------------------------------------------
 AC_CHECK_LIB([m], [ceil], [], [missing_libraries="$missing_libraries libm"])
