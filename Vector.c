@@ -7,7 +7,6 @@ in the source distribution for its full text.
 
 #include "Vector.h"
 
-#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
@@ -15,7 +14,7 @@ in the source distribution for its full text.
 /*{
 #include "Object.h"
 
-#define swap(a_,x_,y_) do{ void* tmp_ = a_[x_]; a_[x_] = a_[y_]; a_[y_] = tmp_; }while(0)
+#include <assert.h>
 
 #ifndef DEFAULT_SIZE
 #define DEFAULT_SIZE -1
@@ -96,6 +95,12 @@ void Vector_prune(Vector* this) {
 }
 
 static int comparisons = 0;
+
+static inline void swap(Object** array, int idx1, int idx2) {
+   Object* tmp = array[idx1];
+   array[idx1] = array[idx2];
+   array[idx2] = tmp;
+}
 
 static int partition(Object** array, int left, int right, int pivotIndex, Object_Compare compare) {
    void* pivotValue = array[pivotIndex];
@@ -270,19 +275,12 @@ void Vector_set(Vector* this, int idx, void* data_) {
    assert(Vector_isConsistent(this));
 }
 
-#ifdef DEBUG
-
-inline Object* Vector_get(Vector* this, int idx) {
-   assert(idx < this->items);
-   assert(Vector_isConsistent(this));
-   return this->array[idx];
-}
-
-#else
-
-#define Vector_get(v_, idx_) ((v_)->array[idx_])
-
-#endif
+// Prototype:
+// inline Object* Vector_get(Vector* this, int idx);
+#define Vector_get(this_, idx_) \
+           (assert((idx_) < (this_)->items), \
+            assert(Vector_isConsistent(this_)), \
+            (this_)->array[idx_])
 
 inline int Vector_size(Vector* this) {
    assert(Vector_isConsistent(this));
