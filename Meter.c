@@ -30,6 +30,7 @@ in the source distribution for its full text.
 /*{
 #include "ListItem.h"
 
+#include <limits.h>
 #include <sys/time.h>
 
 typedef struct Meter_ Meter;
@@ -121,6 +122,21 @@ typedef struct GraphData_ {
 #define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
 #endif
 
+#ifndef __has_builtin
+# define __has_builtin(x) 0
+#endif
+#if (__has_builtin(__builtin_clz) || \
+    ((__GNUC__ > 3) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)))
+# define HAS_BUILTIN_CLZ 1
+/*
+ * ulog2(x): base-2 logarithm of (unsigned int) x, rounded down, but
+ *           ulog2(0U) will be undefined behavior.
+ * (You may use ulog2(x | 1) to define the (x == 0) behavior.)
+ */
+# define ulog2(x)   (CHAR_BIT*sizeof(unsigned int)-1-__builtin_clz(x))
+# define ullog2(x)  (CHAR_BIT*sizeof(unsigned long)-1-__builtin_clzl(x))
+#endif // __has_builtin(__builtin_clz) || GNU C 3.4 or later
+
 MeterClass Meter_class = {
    .super = {
       .extends = Class(Object)
@@ -144,33 +160,43 @@ Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type) {
 }
 
 int Meter_humanUnit(char* buffer, unsigned long int value, int size) {
-   const char * prefix = "KMGTPEZY";
-   unsigned long int powi = 1;
-   unsigned int written, powj = 1, precision = 2;
+   // The value argument should be in kibibytes!
+   const char* prefix = "KMGTPEZY";
+   unsigned long int power = 1;
 
-   for(;;) {
-      if (value / 1024 < powi)
-         break;
+   // For a 64-bit long int, 'Y' prefix will never be used.
+   // (2^64 kibibytes = 16 zebibytes < 1 yobibyte)
 
-      if (prefix[1] == 0)
-         break;
+   #if HAS_BUILTIN_CLZ && defined(ullog2)
+   // Note: this code using __builtin_clzl is 64 bytes larger than the loop
+   // version below in x86_64. You may disable this version if you concern
+   // about size. :)
+   assert(ullog2(value | 1) / 10 <= 6);
+   prefix += (ullog2(value | 1) / 10);
+   power = 1 << ((ullog2(value | 1) / 10) * 10);
+   #else
+   for (power = 1; power * 1024 <= value; ++prefix, power *= 1024)
+      continue;
+   #endif
 
-      powi *= 1024;
-      ++prefix;
+   int written;
+   static char format[] = "%.0f%c";
+
+   if (power == 1) {
+      format[2] = '0';
+   } else if ((double) value / power >= 99.95) {
+      // 99.95 is represented as (double)0x1.8fccccccccccdp+6 > (decimal)99.95
+      // 99.95 rounds to 100.0 when printed with format "%.1f".
+      format[2] = '0';
+   } else if ((double) value / power > 9.995) {
+      // 9.995 is represented as (double)0x1.3fd70a3d70a3dp+3 < (decimal)9.995
+      // 9.995 rounds to 9.99 when printed with format "%.2f".
+      format[2] = '1';
+   } else {
+      format[2] = '2';
    }
 
-   if (*prefix == 'K')
-      precision = 0;
-
-   for (; precision > 0; precision--) {
-      powj *= 10;
-      if (value / powi < powj)
-         break;
-   }
-
-   written = snprintf(buffer, size, "%.*f%c",
-      precision, (double) value / powi, *prefix);
-
+   written = snprintf(buffer, size, format, (double) value / power, *prefix);
    return written;
 }
 
