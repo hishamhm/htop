@@ -1,13 +1,14 @@
 /*
-htop - FreeBSDProcess.c
+htop - dragonflybsd/DragonFlyBSDProcess.c
 (C) 2015 Hisham H. Muhammad
+(C) 2017 Diederik de Groot
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
 #include "Process.h"
 #include "ProcessList.h"
-#include "FreeBSDProcess.h"
+#include "DragonFlyBSDProcess.h"
 #include "Platform.h"
 #include "CRT.h"
 
@@ -18,20 +19,20 @@ in the source distribution for its full text.
 
 /*{
 
-typedef enum FreeBSDProcessFields {
+typedef enum DragonFlyBSDProcessFields {
    // Add platform-specific fields here, with ids >= 100
    JID   = 100,
    JAIL  = 101,
    LAST_PROCESSFIELD = 102,
-} FreeBSDProcessField;
+} DragonFlyBSDProcessField;
 
 
-typedef struct FreeBSDProcess_ {
+typedef struct DragonFlyBSDProcess_ {
    Process super;
    int   kernel;
    int   jid;
    char* jname;
-} FreeBSDProcess;
+} DragonFlyBSDProcess;
 
 
 #ifndef Process_isKernelThread
@@ -39,26 +40,27 @@ typedef struct FreeBSDProcess_ {
 #endif
 
 #ifndef Process_isUserlandThread
-#define Process_isUserlandThread(_process) (_process->pid != _process->tgid)
+//#define Process_isUserlandThread(_process) (_process->pid != _process->tgid)
+#define Process_isUserlandThread(_process) (_process->nlwp > 1)
 #endif
 
 }*/
 
-ProcessClass FreeBSDProcess_class = {
+ProcessClass DragonFlyBSDProcess_class = {
    .super = {
       .extends = Class(Process),
       .display = Process_display,
       .delete = Process_delete,
-      .compare = FreeBSDProcess_compare
+      .compare = DragonFlyBSDProcess_compare
    },
-   .writeField = (Process_WriteField) FreeBSDProcess_writeField,
+   .writeField = (Process_WriteField) DragonFlyBSDProcess_writeField,
 };
 
 ProcessFieldData Process_fields[] = {
    [0] = { .name = "", .title = NULL, .description = NULL, .flags = 0, },
    [PID] = { .name = "PID", .title = "    PID ", .description = "Process/thread ID", .flags = 0, },
    [COMM] = { .name = "Command", .title = "Command ", .description = "Command line", .flags = 0, },
-   [STATE] = { .name = "STATE", .title = "S ", .description = "Process state (S sleeping, R running, D disk, Z zombie, T traced, W paging)", .flags = 0, },
+   [STATE] = { .name = "STATE", .title = "S ", .description = "Process state (S sleeping (<20s), I Idle, Q Queued for Run, R running, D disk, Z zombie, T traced, W paging, B Blocked, A AskedPage, C Core, J Jailed)", .flags = 0, },
    [PPID] = { .name = "PPID", .title = "   PPID ", .description = "Parent process ID", .flags = 0, },
    [PGRP] = { .name = "PGRP", .title = "   PGRP ", .description = "Process group ID", .flags = 0, },
    [SESSION] = { .name = "SESSION", .title = "    SID ", .description = "Process's session ID", .flags = 0, },
@@ -69,7 +71,6 @@ ProcessFieldData Process_fields[] = {
    [PRIORITY] = { .name = "PRIORITY", .title = "PRI ", .description = "Kernel's internal priority for the process", .flags = 0, },
    [NICE] = { .name = "NICE", .title = " NI ", .description = "Nice value (the higher the value, the more it lets other processes take priority)", .flags = 0, },
    [STARTTIME] = { .name = "STARTTIME", .title = "START ", .description = "Time the process was started", .flags = 0, },
-
    [PROCESSOR] = { .name = "PROCESSOR", .title = "CPU ", .description = "Id of the CPU the process last executed on", .flags = 0, },
    [M_SIZE] = { .name = "M_SIZE", .title = " VIRT ", .description = "Total program size in virtual memory", .flags = 0, },
    [M_RESIDENT] = { .name = "M_RESIDENT", .title = "  RES ", .description = "Resident set size, size of the text and data sections, plus stack usage", .flags = 0, },
@@ -96,27 +97,28 @@ ProcessPidColumn Process_pidColumns[] = {
    { .id = 0, .label = NULL },
 };
 
-FreeBSDProcess* FreeBSDProcess_new(Settings* settings) {
-   FreeBSDProcess* this = xCalloc(1, sizeof(FreeBSDProcess));
-   Object_setClass(this, Class(FreeBSDProcess));
+DragonFlyBSDProcess* DragonFlyBSDProcess_new(Settings* settings) {
+   DragonFlyBSDProcess* this = xCalloc(1, sizeof(DragonFlyBSDProcess));
+   Object_setClass(this, Class(DragonFlyBSDProcess));
    Process_init(&this->super, settings);
    return this;
 }
 
 void Process_delete(Object* cast) {
-   FreeBSDProcess* this = (FreeBSDProcess*) cast;
+   DragonFlyBSDProcess* this = (DragonFlyBSDProcess*) cast;
    Process_done((Process*)cast);
    free(this->jname);
    free(this);
 }
 
-void FreeBSDProcess_writeField(Process* this, RichString* str, ProcessField field) {
-   FreeBSDProcess* fp = (FreeBSDProcess*) this;
+void DragonFlyBSDProcess_writeField(Process* this, RichString* str, ProcessField field) {
+   DragonFlyBSDProcess* fp = (DragonFlyBSDProcess*) this;
    char buffer[256]; buffer[255] = '\0';
    int attr = CRT_colors[DEFAULT_COLOR];
    int n = sizeof(buffer) - 1;
    switch ((int) field) {
-   // add FreeBSD-specific fields here
+   // add Platform-specific fields here
+   case PID: snprintf(buffer, n, Process_pidFormat, (fp->kernel ? -1 : this->pid)); break;
    case JID: snprintf(buffer, n, Process_pidFormat, fp->jid); break;
    case JAIL:{
       snprintf(buffer, n, "%-11s ", fp->jname); break;
@@ -133,18 +135,18 @@ void FreeBSDProcess_writeField(Process* this, RichString* str, ProcessField fiel
    RichString_append(str, attr, buffer);
 }
 
-long FreeBSDProcess_compare(const void* v1, const void* v2) {
-   FreeBSDProcess *p1, *p2;
+long DragonFlyBSDProcess_compare(const void* v1, const void* v2) {
+   DragonFlyBSDProcess *p1, *p2;
    Settings *settings = ((Process*)v1)->settings;
    if (settings->direction == 1) {
-      p1 = (FreeBSDProcess*)v1;
-      p2 = (FreeBSDProcess*)v2;
+      p1 = (DragonFlyBSDProcess*)v1;
+      p2 = (DragonFlyBSDProcess*)v2;
    } else {
-      p2 = (FreeBSDProcess*)v1;
-      p1 = (FreeBSDProcess*)v2;
+      p2 = (DragonFlyBSDProcess*)v1;
+      p1 = (DragonFlyBSDProcess*)v2;
    }
    switch ((int) settings->sortKey) {
-   // add FreeBSD-specific fields here
+   // add Platform-specific fields here
    case JID:
       return (p1->jid - p2->jid);
    case JAIL:
@@ -155,7 +157,7 @@ long FreeBSDProcess_compare(const void* v1, const void* v2) {
 }
 
 bool Process_isThread(Process* this) {
-   FreeBSDProcess* fp = (FreeBSDProcess*) this;
+   DragonFlyBSDProcess* fp = (DragonFlyBSDProcess*) this;
 
    if (fp->kernel == 1 )
       return 1;
