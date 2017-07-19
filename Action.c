@@ -137,14 +137,12 @@ bool Action_setUserOnly(const char* userName, uid_t* userId) {
    return false;
 }
 
-static void tagAllChildren(Panel* panel, Process* parent) {
-   parent->tag = true;
+static void tagAllChildren(Panel* panel, Process* parent, bool value) {
+   parent->tag = value;
    pid_t ppid = parent->pid;
    for (int i = 0; i < Panel_size(panel); i++) {
       Process* p = (Process*) Panel_get(panel, i);
-      if (!p->tag && p->ppid == ppid) {
-         tagAllChildren(panel, p);
-      }
+      if (p->ppid == ppid) tagAllChildren(panel, p, value);
    }
 }
 
@@ -505,7 +503,7 @@ static Htop_Reaction actionUntagAll(State* st) {
 static Htop_Reaction actionTagAllChildren(State* st) {
    Process* p = (Process*) Panel_getSelected(st->panel);
    if (!p) return HTOP_OK;
-   tagAllChildren(st->panel, p);
+   tagAllChildren(st->panel, p, !p->tag);
    return HTOP_OK;
 }
 
