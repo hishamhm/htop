@@ -38,6 +38,7 @@ typedef struct CPUData_ {
    unsigned long long int softIrqPeriod;
    unsigned long long int stealPeriod;
    unsigned long long int guestPeriod;
+   double clockRate;
 } CPUData;
 
 typedef struct TtyDriver_ {
@@ -67,6 +68,10 @@ typedef struct LinuxProcessList_ {
 #define PROCMEMINFOFILE PROCDIR "/meminfo"
 #endif
 
+#ifndef PROCCPUINFOFILE
+#define PROCCPUINFOFILE PROCDIR "/cpuinfo"
+#endif
+
 #ifndef PROCTTYDRIVERSFILE
 #define PROCTTYDRIVERSFILE PROCDIR "/tty/drivers"
 #endif
@@ -79,6 +84,8 @@ typedef struct LinuxProcessList_ {
 #ifndef CLAMP
 #define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
 #endif
+
+#define CLOCK_MASK "cpu MHz"
 
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId);
 
@@ -100,6 +107,7 @@ void ProcessList_delete(ProcessList* pl);
 #ifdef HAVE_VSERVER
 
 #endif
+
 
 void ProcessList_goThroughEntries(ProcessList* super);
 
