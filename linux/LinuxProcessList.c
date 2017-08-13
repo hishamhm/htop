@@ -82,6 +82,10 @@ typedef struct LinuxProcessList_ {
    CPUData* cpus;
    TtyDriver* ttyDrivers;
    
+   #ifdef HAVE_DELAYACCT
+   struct nl_sock *netlink_socket;
+   int netlink_family;
+   #endif
 } LinuxProcessList;
 
 #ifndef PROCDIR
@@ -202,12 +206,29 @@ static void LinuxProcessList_initTtyDrivers(LinuxProcessList* this) {
    this->ttyDrivers = ttyDrivers;
 }
 
+#ifdef HAVE_DELAYACCT
+
+static void LinuxProcessList_initNetlinkSocket(LinuxProcessList* this) {
+  this->netlink_socket = nl_socket_alloc();
+  if (this->netlink_socket == NULL)
+    return;
+  if (nl_connect(this->netlink_socket, NETLINK_GENERIC) < 0)
+    return;
+  this->netlink_family = genl_ctrl_resolve(this->netlink_socket, TASKSTATS_GENL_NAME);
+}
+
+#endif
+
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId) {
    LinuxProcessList* this = xCalloc(1, sizeof(LinuxProcessList));
    ProcessList* pl = &(this->super);
    ProcessList_init(pl, Class(LinuxProcess), usersTable, pidWhiteList, userId);
    
    LinuxProcessList_initTtyDrivers(this);
+
+   #ifdef HAVE_DELAYACCT
+   LinuxProcessList_initNetlinkSocket(this);
+   #endif
 
    // Update CPU count:
    FILE* file = fopen(PROCSTATFILE, "r");
@@ -244,6 +265,12 @@ void ProcessList_delete(ProcessList* pl) {
       }
       free(this->ttyDrivers);
    }
+   #ifdef HAVE_DELAYACCT
+   if (this->netlink_socket) {
+      nl_close(this->netlink_socket);
+      nl_socket_free(this->netlink_socket);
+   }
+   #endif
    free(this);
 }
 
@@ -564,60 +591,49 @@ static void LinuxProcessList_readOomData(LinuxProcess* process, const char* dirn
 
 #ifdef HAVE_DELAYACCT
 
-static int callback_message(struct nl_msg *nlmsg, void *arg) {
+static int handleNetlinkMsg(struct nl_msg *nlmsg, void *linuxProcess) {
   struct nlmsghdr *nlhdr;
   struct nlattr *nlattrs[TASKSTATS_TYPE_MAX + 1];
   struct nlattr *nlattr;
   struct taskstats *stats;
   int rem;
-  LinuxProcess* lp = (LinuxProcess*) arg;
+  LinuxProcess* lp = (LinuxProcess*) linuxProcess;
 
   nlhdr = nlmsg_hdr(nlmsg);
-  
+
   if (genlmsg_parse(nlhdr, 0, nlattrs, TASKSTATS_TYPE_MAX, NULL) < 0)
-      return -1;
+      return NL_SKIP;
 
   if ((nlattr = nlattrs[TASKSTATS_TYPE_AGGR_PID]) || (nlattr = nlattrs[TASKSTATS_TYPE_NULL])) {
       stats = nla_data(nla_next(nla_data(nlattr), &rem));
+      assert(lp->super.pid == stats->ac_pid);
       lp->cpu_delay_total = stats->cpu_delay_total / 10000000; // nano to hundreths
   }
-  return 0;
+  return NL_OK;
 }
 
-static void LinuxProcessList_readDelayAcctData(LinuxProcess* process) {
+static void LinuxProcessList_readDelayAcctData(LinuxProcessList* this, LinuxProcess* process) {
   struct nl_msg *msg;
-  struct nl_sock *sk;
-  int family;
-  sk = nl_socket_alloc();
-  if (sk == NULL) {
-    goto teardown;
-  }
-  if (nl_connect(sk, NETLINK_GENERIC) < 0)
-    goto teardown;
 
-  if ((family = genl_ctrl_resolve(sk, TASKSTATS_GENL_NAME)) == 0)
-    goto teardown;
-
-  if (nl_socket_modify_cb(sk, NL_CB_VALID, NL_CB_CUSTOM, callback_message, process) < 0)
-    goto teardown;
+  if (nl_socket_modify_cb(this->netlink_socket, NL_CB_VALID, NL_CB_CUSTOM, handleNetlinkMsg, process) < 0)
+    return;
 
   if (! (msg = nlmsg_alloc())) 
-    goto teardown;
+    return;
 
-  if (! genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, 
+  if (! genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, this->netlink_family, 0, 
       NLM_F_REQUEST, TASKSTATS_CMD_GET, TASKSTATS_VERSION))
         goto teardown;
 
   if (nla_put_u32(msg, TASKSTATS_CMD_ATTR_PID, process->super.pid) < 0)
     goto teardown;
-  
-  if (nl_send_auto(sk, msg) < 0)
+
+  if (nl_send_auto(this->netlink_socket, msg) < 0)
     goto teardown;
 
-  nl_recvmsgs_default(sk);
+  nl_wait_for_ack(this->netlink_socket);
+  nl_recvmsgs_default(this->netlink_socket);
 teardown:
-  nl_close(sk);
-  nl_socket_free(sk);
   nlmsg_free(msg);
 }
 
@@ -823,7 +839,7 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
 
       #ifdef HAVE_DELAYACCT
         unsigned long long int lastdelay = lp->cpu_delay_total;
-        LinuxProcessList_readDelayAcctData(lp);
+        LinuxProcessList_readDelayAcctData(this, lp);
         lp->cpu_delay_percent = ((float) lp->cpu_delay_total - lastdelay) / (proc->time - lasttimes);
         if (isnan(lp->cpu_delay_percent)) lp->cpu_delay_percent = 0.0;
       #endif

@@ -56,6 +56,10 @@ typedef struct LinuxProcessList_ {
    CPUData* cpus;
    TtyDriver* ttyDrivers;
    
+   #ifdef HAVE_DELAYACCT
+   struct nl_sock *netlink_socket;
+   int netlink_family;
+   #endif
 } LinuxProcessList;
 
 #ifndef PROCDIR
@@ -81,6 +85,10 @@ typedef struct LinuxProcessList_ {
 
 #ifndef CLAMP
 #define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
+#endif
+
+#ifdef HAVE_DELAYACCT
+
 #endif
 
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId);
