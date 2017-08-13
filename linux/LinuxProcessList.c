@@ -27,6 +27,16 @@ in the source distribution for its full text.
 #include <sys/types.h>
 #include <fcntl.h>
 
+#ifdef HAVE_DELAYACCT
+#include <netlink/attr.h>
+#include <netlink/netlink.h>
+#include <netlink/genl/genl.h>
+#include <netlink/genl/ctrl.h>
+#include <netlink/socket.h>
+#include <netlink/msg.h>
+#include <linux/taskstats.h>
+#endif
+
 /*{
 
 #include "ProcessList.h"
@@ -552,6 +562,67 @@ static void LinuxProcessList_readOomData(LinuxProcess* process, const char* dirn
    fclose(file);
 }
 
+#ifdef HAVE_DELAYACCT
+
+static int callback_message(struct nl_msg *nlmsg, void *arg) {
+  struct nlmsghdr *nlhdr;
+  struct nlattr *nlattrs[TASKSTATS_TYPE_MAX + 1];
+  struct nlattr *nlattr;
+  struct taskstats *stats;
+  int rem;
+  LinuxProcess* lp = (LinuxProcess*) arg;
+
+  nlhdr = nlmsg_hdr(nlmsg);
+  
+  if (genlmsg_parse(nlhdr, 0, nlattrs, TASKSTATS_TYPE_MAX, NULL) < 0)
+      return -1;
+
+  if ((nlattr = nlattrs[TASKSTATS_TYPE_AGGR_PID]) || (nlattr = nlattrs[TASKSTATS_TYPE_NULL])) {
+      stats = nla_data(nla_next(nla_data(nlattr), &rem));
+      lp->cpu_delay_total = stats->cpu_delay_total / 10000000; // nano to hundreths
+  }
+  return 0;
+}
+
+static void LinuxProcessList_readDelayAcctData(LinuxProcess* process) {
+  struct nl_msg *msg;
+  struct nl_sock *sk;
+  int family;
+  sk = nl_socket_alloc();
+  if (sk == NULL) {
+    goto teardown;
+  }
+  if (nl_connect(sk, NETLINK_GENERIC) < 0)
+    goto teardown;
+
+  if ((family = genl_ctrl_resolve(sk, TASKSTATS_GENL_NAME)) == 0)
+    goto teardown;
+
+  if (nl_socket_modify_cb(sk, NL_CB_VALID, NL_CB_CUSTOM, callback_message, process) < 0)
+    goto teardown;
+
+  if (! (msg = nlmsg_alloc())) 
+    goto teardown;
+
+  if (! genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, family, 0, 
+      NLM_F_REQUEST, TASKSTATS_CMD_GET, TASKSTATS_VERSION))
+        goto teardown;
+
+  if (nla_put_u32(msg, TASKSTATS_CMD_ATTR_PID, process->super.pid) < 0)
+    goto teardown;
+  
+  if (nl_send_auto(sk, msg) < 0)
+    goto teardown;
+
+  nl_recvmsgs_default(sk);
+teardown:
+  nl_close(sk);
+  nl_socket_free(sk);
+  nlmsg_free(msg);
+}
+
+#endif
+
 static void setCommand(Process* process, const char* command, int len) {
    if (process->comm && process->commLen >= len) {
       strncpy(process->comm, command, len + 1);
@@ -749,6 +820,13 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
             }
          }
       }
+
+      #ifdef HAVE_DELAYACCT
+        unsigned long long int lastdelay = lp->cpu_delay_total;
+        LinuxProcessList_readDelayAcctData(lp);
+        lp->cpu_delay_percent = ((float) lp->cpu_delay_total - lastdelay) / (proc->time - lasttimes);
+        if (isnan(lp->cpu_delay_percent)) lp->cpu_delay_percent = 0.0;
+      #endif
 
       #ifdef HAVE_CGROUP
       if (settings->flags & PROCESS_FLAG_LINUX_CGROUP)

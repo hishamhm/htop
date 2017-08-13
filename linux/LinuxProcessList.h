@@ -9,6 +9,9 @@ Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
+#ifdef HAVE_DELAYACCT
+#endif
+
 
 #include "ProcessList.h"
 
@@ -98,6 +101,10 @@ void ProcessList_delete(ProcessList* pl);
 #endif
 
 #ifdef HAVE_VSERVER
+
+#endif
+
+#ifdef HAVE_DELAYACCT
 
 #endif
 

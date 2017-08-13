@@ -73,7 +73,10 @@ typedef enum LinuxProcessFields {
    #endif
    OOM = 114,
    IO_PRIORITY = 115,
-   LAST_PROCESSFIELD = 116,
+   #ifdef HAVE_DELAYACCT
+   PERCENT_DELAY = 116,
+   #endif
+   LAST_PROCESSFIELD = 117,
 } LinuxProcessField;
 
 #include "IOPriority.h"
@@ -117,6 +120,10 @@ typedef struct LinuxProcess_ {
    #endif
    unsigned int oom;
    char* ttyDevice;
+   #ifdef HAVE_DELAYACCT
+   unsigned long long cpu_delay_total;
+   float cpu_delay_percent;
+   #endif
 } LinuxProcess;
 
 #ifndef Process_isKernelThread
