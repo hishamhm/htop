@@ -259,6 +259,17 @@ then
    AC_DEFINE(HAVE_SETUID_ENABLED, 1, [Define if setuid support should be enabled.])
 fi
 
+AC_ARG_ENABLE(netlink, [AS_HELP_STRING([--enable-netlink], [enable netlink support for Delay accounting])],, enable_netlink="no")
+if test "x$enable_netlink" = xyes
+then
+   AC_CHECK_LIB([nl-genl-3], [genlmsg_put], [], [missing_libraries="$missing_libraries libnl-genl-3"])
+   AC_CHECK_LIB([nl-3], [nl_socket_alloc], [], [missing_libraries="$missing_libraries libnl-3"])
+   AC_CHECK_HEADERS([netlink/netlink.h],[:], [missing_headers="$missing_headers $ac_header"])
+   AC_CHECK_HEADERS([linux/taskstats.h],[:], [missing_headers="$missing_headers $ac_header"])
+   AC_DEFINE(HAVE_DELAYACCT, 1, [Define if delay accounting support should be enabled.])
+fi
+
+
 # Bail out on errors.
 # ----------------------------------------------------------------------
 if test ! -z "$missing_libraries"; then
