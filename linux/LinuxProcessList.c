@@ -623,18 +623,15 @@ static void LinuxProcessList_readDelayAcctData(LinuxProcessList* this, LinuxProc
 
   if (! genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, this->netlink_family, 0, 
       NLM_F_REQUEST, TASKSTATS_CMD_GET, TASKSTATS_VERSION))
-        goto teardown;
+      nlmsg_free(msg);
 
   if (nla_put_u32(msg, TASKSTATS_CMD_ATTR_PID, process->super.pid) < 0)
-    goto teardown;
+    nlmsg_free(msg);
 
-  if (nl_send_auto(this->netlink_socket, msg) < 0)
-    goto teardown;
+  if (nl_send_sync(this->netlink_socket, msg) < 0)
+    return;
 
-  nl_wait_for_ack(this->netlink_socket);
   nl_recvmsgs_default(this->netlink_socket);
-teardown:
-  nlmsg_free(msg);
 }
 
 #endif
@@ -838,10 +835,10 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
       }
 
       #ifdef HAVE_DELAYACCT
-        unsigned long long int lastdelay = lp->cpu_delay_total;
-        LinuxProcessList_readDelayAcctData(this, lp);
-        lp->cpu_delay_percent = ((float) lp->cpu_delay_total - lastdelay) / (proc->time - lasttimes);
-        if (isnan(lp->cpu_delay_percent)) lp->cpu_delay_percent = 0.0;
+      unsigned long long int lastdelay = lp->cpu_delay_total;
+      LinuxProcessList_readDelayAcctData(this, lp);
+      lp->cpu_delay_percent = ((float) lp->cpu_delay_total - lastdelay) / (proc->time - lasttimes);
+      if (isnan(lp->cpu_delay_percent)) lp->cpu_delay_percent = 0.0;
       #endif
 
       #ifdef HAVE_CGROUP
