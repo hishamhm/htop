@@ -607,7 +607,11 @@ static int handleNetlinkMsg(struct nl_msg *nlmsg, void *linuxProcess) {
   if ((nlattr = nlattrs[TASKSTATS_TYPE_AGGR_PID]) || (nlattr = nlattrs[TASKSTATS_TYPE_NULL])) {
       stats = nla_data(nla_next(nla_data(nlattr), &rem));
       assert(lp->super.pid == stats->ac_pid);
-      lp->cpu_delay_total = stats->cpu_delay_total / 10000000; // nano to hundreths
+      lp->cpu_delay_percent = (float) (stats->cpu_delay_total - lp->cpu_delay_total) / (stats->ac_etime*1000 - lp->delay_read_time) * 100;
+      if (isnan(lp->cpu_delay_percent)) lp->cpu_delay_percent = 0.0;
+      if (lp->cpu_delay_percent > 100) lp->cpu_delay_percent = 100;
+      lp->cpu_delay_total = stats->cpu_delay_total;
+      lp->delay_read_time = stats->ac_etime*1000;
   }
   return NL_OK;
 }
@@ -631,7 +635,8 @@ static void LinuxProcessList_readDelayAcctData(LinuxProcessList* this, LinuxProc
   if (nl_send_sync(this->netlink_socket, msg) < 0)
     return;
 
-  nl_recvmsgs_default(this->netlink_socket);
+  if (nl_recvmsgs_default(this->netlink_socket) < 0)
+    return;
 }
 
 #endif
@@ -835,10 +840,7 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
       }
 
       #ifdef HAVE_DELAYACCT
-      unsigned long long int lastdelay = lp->cpu_delay_total;
       LinuxProcessList_readDelayAcctData(this, lp);
-      lp->cpu_delay_percent = ((float) lp->cpu_delay_total - lastdelay) / (proc->time - lasttimes);
-      if (isnan(lp->cpu_delay_percent)) lp->cpu_delay_percent = 0.0;
       #endif
 
       #ifdef HAVE_CGROUP
