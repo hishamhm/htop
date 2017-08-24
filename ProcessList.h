@@ -61,6 +61,9 @@ typedef struct ProcessList_ {
    unsigned long long int totalSwap;
    unsigned long long int usedSwap;
    unsigned long long int freeSwap;
+   unsigned long long int totalZswap;
+   unsigned long long int usedZswap;
+   unsigned long long int cachedZswap;
 
    int cpuCount;
 

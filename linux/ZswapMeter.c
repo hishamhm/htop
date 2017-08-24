@@ -1,11 +1,11 @@
 /*
-htop - SwapMeter.c
+htop - ZswapMeter.c
 (C) 2004-2011 Hisham H. Muhammad
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
-#include "SwapMeter.h"
+#include "ZswapMeter.h"
 
 #include "CRT.h"
 #include "Platform.h"
@@ -20,15 +20,15 @@ in the source distribution for its full text.
 #include "Meter.h"
 }*/
 
-int SwapMeter_attributes[] = {
-   SWAP, ZSWAP_CACHED
+int ZswapMeter_attributes[] = {
+   ZSWAP_USED
 };
 
-static void SwapMeter_updateValues(Meter* this, char* buffer, int size) {
+static void ZswapMeter_updateValues(Meter* this, char* buffer, int size) {
    int written;
-   Platform_setSwapValues(this);
+   Platform_setZswapValues(this);
 
-   written = Meter_humanUnit(buffer, this->values[0] + this->values[1], size);
+   written = Meter_humanUnit(buffer, this->values[0], size);
    buffer += written;
    if ((size -= written) > 0) {
       *buffer++ = '/';
@@ -37,7 +37,7 @@ static void SwapMeter_updateValues(Meter* this, char* buffer, int size) {
    }
 }
 
-static void SwapMeter_display(Object* cast, RichString* out) {
+static void ZswapMeter_display(Object* cast, RichString* out) {
    char buffer[50];
    Meter* this = (Meter*)cast;
    RichString_write(out, CRT_colors[METER_TEXT], ":");
@@ -46,26 +46,20 @@ static void SwapMeter_display(Object* cast, RichString* out) {
    Meter_humanUnit(buffer, this->values[0], 50);
    RichString_append(out, CRT_colors[METER_TEXT], " used:");
    RichString_append(out, CRT_colors[METER_VALUE], buffer);
-   /* only show zswap in the text output if it is enabled */
-   if (this->pl->totalZswap) {
-      Meter_humanUnit(buffer, this->values[1], 50);
-      RichString_append(out, CRT_colors[METER_TEXT], " cached:");
-      RichString_append(out, CRT_colors[METER_VALUE], buffer);
-   }
 }
 
-MeterClass SwapMeter_class = {
+MeterClass ZswapMeter_class = {
    .super = {
       .extends = Class(Meter),
       .delete = Meter_delete,
-      .display = SwapMeter_display,
+      .display = ZswapMeter_display,
    },
-   .updateValues = SwapMeter_updateValues,
+   .updateValues = ZswapMeter_updateValues,
    .defaultMode = BAR_METERMODE,
-   .maxItems = 2,
+   .maxItems = 1,
    .total = 100.0,
-   .attributes = SwapMeter_attributes,
-   .name = "Swap",
-   .uiName = "Swap",
-   .caption = "Swp"
+   .attributes = ZswapMeter_attributes,
+   .name = "Zswap",
+   .uiName = "Zswap",
+   .caption = "ZSw"
 };

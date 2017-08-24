@@ -16,6 +16,7 @@ in the source distribution for its full text.
 #include "CPUMeter.h"
 #include "MemoryMeter.h"
 #include "SwapMeter.h"
+#include "ZswapMeter.h"
 #include "TasksMeter.h"
 #include "LoadAverageMeter.h"
 #include "UptimeMeter.h"
@@ -115,6 +116,7 @@ MeterClass* Platform_meterTypes[] = {
    &LoadMeter_class,
    &MemoryMeter_class,
    &SwapMeter_class,
+   &ZswapMeter_class,
    &TasksMeter_class,
    &UptimeMeter_class,
    &BatteryMeter_class,
@@ -210,7 +212,8 @@ void Platform_setMemoryValues(Meter* this) {
 void Platform_setSwapValues(Meter* this) {
    ProcessList* pl = (ProcessList*) this->pl;
    this->total = pl->totalSwap;
-   this->values[0] = pl->usedSwap;
+   this->values[0] = pl->usedSwap - pl->cachedZswap;
+   this->values[1] = pl->cachedZswap;
 }
 
 char* Platform_getProcessEnv(pid_t pid) {
@@ -236,4 +239,10 @@ char* Platform_getProcessEnv(pid_t pid) {
       }
    }
    return env;
+}
+
+void Platform_setZswapValues(Meter* this) {
+   ProcessList* pl = (ProcessList*) this->pl;
+   this->total = pl->totalZswap;
+   this->values[0] = pl->usedZswap;
 }

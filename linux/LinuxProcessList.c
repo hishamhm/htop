@@ -844,6 +844,41 @@ static inline void LinuxProcessList_scanMemoryInfo(ProcessList* this) {
    fclose(file);
 }
 
+static inline void LinuxProcessList_scanZswapInfo(ProcessList* this) {
+   FILE* file;
+
+   int max_pool_percent = 0;
+   unsigned long long int stored_pages = 0;
+   unsigned long long int pool_total_size = 0;
+
+   file = fopen("/sys/module/zswap/parameters/max_pool_percent", "r");
+   if (file != NULL) {
+      fscanf(file, "%32d", &max_pool_percent);
+      fclose(file);
+
+      file = fopen("/sys/kernel/debug/zswap/stored_pages", "r");
+      if (file != NULL) {
+         fscanf(file, "%64llu", &stored_pages);
+         fclose(file);
+
+         file = fopen("/sys/kernel/debug/zswap/pool_total_size", "r");
+         if (file != NULL) {
+            fscanf(file, "%64llu", &pool_total_size);
+	    fclose(file);
+         }
+      }
+   }
+
+   if (pool_total_size == 0) {
+      max_pool_percent = 0;
+      stored_pages = 0;
+   }
+
+   this->totalZswap = this->totalMem * max_pool_percent / 100;
+   this->usedZswap = pool_total_size / 1024;
+   this->cachedZswap = stored_pages * PAGE_SIZE_KB;
+}
+
 static inline double LinuxProcessList_scanCPUTime(LinuxProcessList* this) {
 
    FILE* file = fopen(PROCSTATFILE, "r");
@@ -918,6 +953,7 @@ void ProcessList_goThroughEntries(ProcessList* super) {
    LinuxProcessList* this = (LinuxProcessList*) super;
 
    LinuxProcessList_scanMemoryInfo(super);
+   LinuxProcessList_scanZswapInfo(super);
    double period = LinuxProcessList_scanCPUTime(this);
 
    struct timeval tv;
