@@ -82,9 +82,11 @@ typedef enum LinuxProcessFields {
    OOM = 114,
    IO_PRIORITY = 115,
    #ifdef HAVE_DELAYACCT
-   PERCENT_DELAY = 116,
+   PERCENT_CPU_DELAY = 116,
+   PERCENT_IO_DELAY = 117,
+   PERCENT_SWAP_DELAY = 118,
    #endif
-   LAST_PROCESSFIELD = 117,
+   LAST_PROCESSFIELD = 119,
 } LinuxProcessField;
 
 #include "IOPriority.h"
@@ -131,7 +133,11 @@ typedef struct LinuxProcess_ {
    #ifdef HAVE_DELAYACCT
    unsigned long long int delay_read_time;
    unsigned long long cpu_delay_total;
+   unsigned long long blkio_delay_total;
+   unsigned long long swapin_delay_total;
    float cpu_delay_percent;
+   float blkio_delay_percent;
+   float swapin_delay_percent;
    #endif
 } LinuxProcess;
 
@@ -224,7 +230,9 @@ ProcessFieldData Process_fields[] = {
    [OOM] = { .name = "OOM", .title = "    OOM ", .description = "OOM (Out-of-Memory) killer score", .flags = PROCESS_FLAG_LINUX_OOM, },
    [IO_PRIORITY] = { .name = "IO_PRIORITY", .title = "IO ", .description = "I/O priority", .flags = PROCESS_FLAG_LINUX_IOPRIO, },
 #ifdef HAVE_DELAYACCT
-   [PERCENT_DELAY] = { .name = "PERCENT_DELAY", .title = "DEL% ", .description = "Delay % accounting", .flags = 0, },
+   [PERCENT_CPU_DELAY] = { .name = "PERCENT_CPU_DELAY", .title = "CPUD% ", .description = "CPU delay %", .flags = 0, },
+   [PERCENT_IO_DELAY] = { .name = "PERCENT_IO_DELAY", .title = "IOD% ", .description = "Block I/O delay %", .flags = 0, },
+   [PERCENT_SWAP_DELAY] = { .name = "PERCENT_SWAP_DELAY", .title = "SWAPD% ", .description = "Swapin delay %", .flags = 0, },
 #endif
    [LAST_PROCESSFIELD] = { .name = "*** report bug! ***", .title = NULL, .description = NULL, .flags = 0, },
 };
@@ -372,16 +380,9 @@ void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field)
       break;
     }
    #ifdef HAVE_DELAYACCT
-   case PERCENT_DELAY: {
-      if (lp->cpu_delay_percent > 999.9) {
-        xSnprintf(buffer, n, "%4d ", (unsigned int)lp->cpu_delay_percent); 
-      } else if (lp->cpu_delay_percent > 99.9) {
-        xSnprintf(buffer, n, "%3d. ", (unsigned int)lp->cpu_delay_percent); 
-      } else {
-        xSnprintf(buffer, n, "%4.1f ", lp->cpu_delay_percent);
-      }
-      break;
-    }
+   case PERCENT_CPU_DELAY: xSnprintf(buffer, n, "%4.1f ", lp->cpu_delay_percent); break;
+   case PERCENT_IO_DELAY: xSnprintf(buffer, n, "%4.1f ", lp->blkio_delay_percent); break;
+   case PERCENT_SWAP_DELAY: xSnprintf(buffer, n, "%4.1f ", lp->swapin_delay_percent); break;
    #endif
    default:
       Process_writeField((Process*)this, str, field);
@@ -445,8 +446,12 @@ long LinuxProcess_compare(const void* v1, const void* v2) {
    case OOM:
       return (p2->oom - p1->oom);
    #ifdef HAVE_DELAYACCT
-   case PERCENT_DELAY:
+   case PERCENT_CPU_DELAY:
       return (p2->cpu_delay_percent - p1->cpu_delay_percent);
+  case PERCENT_IO_DELAY:
+      return (p2->blkio_delay_percent - p1->blkio_delay_percent);
+  case PERCENT_SWAP_DELAY:
+      return (p2->swapin_delay_percent - p1->swapin_delay_percent);
    #endif
    case IO_PRIORITY:
       return LinuxProcess_effectiveIOPriority(p1) - LinuxProcess_effectiveIOPriority(p2);

@@ -74,9 +74,11 @@ typedef enum LinuxProcessFields {
    OOM = 114,
    IO_PRIORITY = 115,
    #ifdef HAVE_DELAYACCT
-   PERCENT_DELAY = 116,
+   PERCENT_CPU_DELAY = 116,
+   PERCENT_IO_DELAY = 117,
+   PERCENT_SWAP_DELAY = 118,
    #endif
-   LAST_PROCESSFIELD = 117,
+   LAST_PROCESSFIELD = 119,
 } LinuxProcessField;
 
 #include "IOPriority.h"
@@ -123,7 +125,11 @@ typedef struct LinuxProcess_ {
    #ifdef HAVE_DELAYACCT
    unsigned long long int delay_read_time;
    unsigned long long cpu_delay_total;
+   unsigned long long blkio_delay_total;
+   unsigned long long swapin_delay_total;
    float cpu_delay_percent;
+   float blkio_delay_percent;
+   float swapin_delay_percent;
    #endif
 } LinuxProcess;
 
