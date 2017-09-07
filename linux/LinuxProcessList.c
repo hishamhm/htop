@@ -635,14 +635,18 @@ static void LinuxProcessList_readDelayAcctData(LinuxProcessList* this, LinuxProc
 
   if (! genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, this->netlink_family, 0, 
       NLM_F_REQUEST, TASKSTATS_CMD_GET, TASKSTATS_VERSION))
-      nlmsg_free(msg);
+    nlmsg_free(msg);
 
   if (nla_put_u32(msg, TASKSTATS_CMD_ATTR_PID, process->super.pid) < 0)
     nlmsg_free(msg);
 
-  if (nl_send_sync(this->netlink_socket, msg) < 0)
+  if (nl_send_sync(this->netlink_socket, msg) < 0) {
+    process->swapin_delay_percent = -1LL;
+    process->blkio_delay_percent = -1LL;
+    process->cpu_delay_percent = -1LL;
     return;
-
+  }
+    
   if (nl_recvmsgs_default(this->netlink_socket) < 0)
     return;
 }

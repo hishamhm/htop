@@ -306,6 +306,15 @@ bool LinuxProcess_setIOPriority(LinuxProcess* this, IOPriority ioprio) {
    return (LinuxProcess_updateIOPriority(this) == ioprio);
 }
 
+#ifdef HAVE_DELAYACCT
+void LinuxProcess_printDelay(float delay_percent, char* buffer, int n) {
+  if (delay_percent == -1LL)
+    xSnprintf(buffer, n, " N/A  ");
+  else
+    xSnprintf(buffer, n, "%4.1f ", delay_percent);
+}
+#endif
+
 void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field) {
    LinuxProcess* lp = (LinuxProcess*) this;
    bool coloring = this->settings->highlightMegabytes;
@@ -380,9 +389,9 @@ void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field)
       break;
     }
    #ifdef HAVE_DELAYACCT
-   case PERCENT_CPU_DELAY: xSnprintf(buffer, n, "%4.1f ", lp->cpu_delay_percent); break;
-   case PERCENT_IO_DELAY: xSnprintf(buffer, n, "%4.1f ", lp->blkio_delay_percent); break;
-   case PERCENT_SWAP_DELAY: xSnprintf(buffer, n, "%4.1f ", lp->swapin_delay_percent); break;
+   case PERCENT_CPU_DELAY: LinuxProcess_printDelay(lp->cpu_delay_percent, buffer, n); break;
+   case PERCENT_IO_DELAY: LinuxProcess_printDelay(lp->blkio_delay_percent, buffer, n); break;
+   case PERCENT_SWAP_DELAY: LinuxProcess_printDelay(lp->swapin_delay_percent, buffer, n); break;
    #endif
    default:
       Process_writeField((Process*)this, str, field);
