@@ -387,7 +387,7 @@ void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field)
          xSnprintf(buffer, n, "?? ");
       }
       break;
-    }
+   }
    #ifdef HAVE_DELAYACCT
    case PERCENT_CPU_DELAY: LinuxProcess_printDelay(lp->cpu_delay_percent, buffer, n); break;
    case PERCENT_IO_DELAY: LinuxProcess_printDelay(lp->blkio_delay_percent, buffer, n); break;
@@ -457,9 +457,9 @@ long LinuxProcess_compare(const void* v1, const void* v2) {
    #ifdef HAVE_DELAYACCT
    case PERCENT_CPU_DELAY:
       return (p2->cpu_delay_percent - p1->cpu_delay_percent);
-  case PERCENT_IO_DELAY:
+   case PERCENT_IO_DELAY:
       return (p2->blkio_delay_percent - p1->blkio_delay_percent);
-  case PERCENT_SWAP_DELAY:
+   case PERCENT_SWAP_DELAY:
       return (p2->swapin_delay_percent - p1->swapin_delay_percent);
    #endif
    case IO_PRIORITY:

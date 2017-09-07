@@ -603,23 +603,23 @@ static int handleNetlinkMsg(struct nl_msg *nlmsg, void *linuxProcess) {
   nlhdr = nlmsg_hdr(nlmsg);
 
   if (genlmsg_parse(nlhdr, 0, nlattrs, TASKSTATS_TYPE_MAX, NULL) < 0)
-      return NL_SKIP;
+    return NL_SKIP;
 
   if ((nlattr = nlattrs[TASKSTATS_TYPE_AGGR_PID]) || (nlattr = nlattrs[TASKSTATS_TYPE_NULL])) {
-      stats = nla_data(nla_next(nla_data(nlattr), &rem));
-      assert(lp->super.pid == stats->ac_pid);
-      timeDelta = (stats->ac_etime*1000 - lp->delay_read_time);
-      #define BOUNDS(x) isnan(x) ? 0.0 : (x > 100) ? 100.0 : x;
-      #define DELTAPERC(x,y) BOUNDS((float) (x - y) / timeDelta * 100);
-      lp->cpu_delay_percent = DELTAPERC(stats->cpu_delay_total, lp->cpu_delay_total);
-      lp->blkio_delay_percent = DELTAPERC(stats->blkio_delay_total, lp->blkio_delay_total);
-      lp->swapin_delay_percent = DELTAPERC(stats->swapin_delay_total, lp->swapin_delay_total);
-      #undef DELTAPERC
-      #undef BOUNDS
-      lp->swapin_delay_total = stats->swapin_delay_total;
-      lp->blkio_delay_total = stats->blkio_delay_total;
-      lp->cpu_delay_total = stats->cpu_delay_total;
-      lp->delay_read_time = stats->ac_etime*1000;
+    stats = nla_data(nla_next(nla_data(nlattr), &rem));
+    assert(lp->super.pid == stats->ac_pid);
+    timeDelta = (stats->ac_etime*1000 - lp->delay_read_time);
+    #define BOUNDS(x) isnan(x) ? 0.0 : (x > 100) ? 100.0 : x;
+    #define DELTAPERC(x,y) BOUNDS((float) (x - y) / timeDelta * 100);
+    lp->cpu_delay_percent = DELTAPERC(stats->cpu_delay_total, lp->cpu_delay_total);
+    lp->blkio_delay_percent = DELTAPERC(stats->blkio_delay_total, lp->blkio_delay_total);
+    lp->swapin_delay_percent = DELTAPERC(stats->swapin_delay_total, lp->swapin_delay_total);
+    #undef DELTAPERC
+    #undef BOUNDS
+    lp->swapin_delay_total = stats->swapin_delay_total;
+    lp->blkio_delay_total = stats->blkio_delay_total;
+    lp->cpu_delay_total = stats->cpu_delay_total;
+    lp->delay_read_time = stats->ac_etime*1000;
   }
   return NL_OK;
 }
@@ -630,11 +630,10 @@ static void LinuxProcessList_readDelayAcctData(LinuxProcessList* this, LinuxProc
   if (nl_socket_modify_cb(this->netlink_socket, NL_CB_VALID, NL_CB_CUSTOM, handleNetlinkMsg, process) < 0)
     return;
 
-  if (! (msg = nlmsg_alloc())) 
+  if (! (msg = nlmsg_alloc()))
     return;
 
-  if (! genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, this->netlink_family, 0, 
-      NLM_F_REQUEST, TASKSTATS_CMD_GET, TASKSTATS_VERSION))
+  if (! genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, this->netlink_family, 0, NLM_F_REQUEST, TASKSTATS_CMD_GET, TASKSTATS_VERSION))
     nlmsg_free(msg);
 
   if (nla_put_u32(msg, TASKSTATS_CMD_ATTR_PID, process->super.pid) < 0)
@@ -646,7 +645,7 @@ static void LinuxProcessList_readDelayAcctData(LinuxProcessList* this, LinuxProc
     process->cpu_delay_percent = -1LL;
     return;
   }
-    
+ 
   if (nl_recvmsgs_default(this->netlink_socket) < 0)
     return;
 }
