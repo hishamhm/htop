@@ -16,6 +16,7 @@ in the source distribution for its full text.
 #include <stdio.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/sysmacros.h>
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -204,7 +205,7 @@ void Process_setupColumnWidths() {
 void Process_humanNumber(RichString* str, unsigned long number, bool coloring) {
    char buffer[11];
    int len;
-   
+
    int largeNumberColor = CRT_colors[LARGE_NUMBER];
    int processMegabytesColor = CRT_colors[PROCESS_MEGABYTES];
    int processColor = CRT_colors[PROCESS];
@@ -212,7 +213,7 @@ void Process_humanNumber(RichString* str, unsigned long number, bool coloring) {
       largeNumberColor = CRT_colors[PROCESS];
       processMegabytesColor = CRT_colors[PROCESS];
    }
- 
+
    if(number >= (10 * ONE_DECIMAL_M)) {
       #ifdef __LP64__
       if(number >= (100 * ONE_DECIMAL_G)) {
@@ -368,9 +369,9 @@ void Process_writeField(Process* this, RichString* str, ProcessField field) {
    switch (field) {
    case PERCENT_CPU: {
       if (this->percent_cpu > 999.9) {
-         xSnprintf(buffer, n, "%4d ", (unsigned int)this->percent_cpu); 
+         xSnprintf(buffer, n, "%4d ", (unsigned int)this->percent_cpu);
       } else if (this->percent_cpu > 99.9) {
-         xSnprintf(buffer, n, "%3d. ", (unsigned int)this->percent_cpu); 
+         xSnprintf(buffer, n, "%3d. ", (unsigned int)this->percent_cpu);
       } else {
          xSnprintf(buffer, n, "%4.1f ", this->percent_cpu);
       }
@@ -378,7 +379,7 @@ void Process_writeField(Process* this, RichString* str, ProcessField field) {
    }
    case PERCENT_MEM: {
       if (this->percent_mem > 99.9) {
-         xSnprintf(buffer, n, "100. "); 
+         xSnprintf(buffer, n, "100. ");
       } else {
          xSnprintf(buffer, n, "%4.1f ", this->percent_mem);
       }
