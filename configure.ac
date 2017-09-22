@@ -100,6 +100,19 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])],[
 CFLAGS="$save_cflags"
 AC_SUBST(wextra_flag)
 
+save_cflags="${CFLAGS}"
+CFLAGS="$CFLAGS -fvisibility=hidden"
+AC_MSG_CHECKING([if compiler supports -fvisibility=hidden])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([], [])],[
+   fvisibility_flag=-fvisibility=hidden
+   AC_MSG_RESULT([yes])
+],[
+   fvisibility_flag=
+   AC_MSG_RESULT([no])
+])
+CFLAGS="$save_cflags"
+AC_SUBST(fvisibility_flag)
+
 # Checks for features and flags.
 # ----------------------------------------------------------------------
 PROCDIR=/proc
