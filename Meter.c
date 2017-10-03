@@ -225,16 +225,16 @@ void Meter_setMode(Meter* this, int modeIndex) {
 ListItem* Meter_toListItem(Meter* this, bool moving) {
    char mode[21];
    if (this->mode)
-      snprintf(mode, 20, " [%s]", Meter_modes[this->mode]->uiName);
+      xSnprintf(mode, 20, " [%s]", Meter_modes[this->mode]->uiName);
    else
       mode[0] = '\0';
    char number[11];
    if (this->param > 0)
-      snprintf(number, 10, " %d", this->param);
+      xSnprintf(number, 10, " %d", this->param);
    else
       number[0] = '\0';
    char buffer[51];
-   snprintf(buffer, 50, "%s%s%s", Meter_uiName(this), number, mode);
+   xSnprintf(buffer, 50, "%s%s%s", Meter_uiName(this), number, mode);
    ListItem* li = ListItem_new(buffer, 0);
    li->moving = moving;
    return li;
@@ -287,7 +287,7 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
    
    int blockSizes[10];
 
-   snprintf(bar, w + 1, "%*s", w, buffer);
+   xSnprintf(bar, w + 1, "%*s", w, buffer);
 
    // First draw in the bar[] buffer...
    int offset = 0;
@@ -336,7 +336,7 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
 #ifdef HAVE_LIBNCURSESW
 
 #define PIXPERROW_UTF8 4
-static const char* GraphMeterMode_dotsUtf8[] = {
+static const char* const GraphMeterMode_dotsUtf8[] = {
    /*00*/" ", /*01*/"⢀", /*02*/"⢠", /*03*/"⢰", /*04*/ "⢸",
    /*10*/"⡀", /*11*/"⣀", /*12*/"⣠", /*13*/"⣰", /*14*/ "⣸",
    /*20*/"⡄", /*21*/"⣄", /*22*/"⣤", /*23*/"⣴", /*24*/ "⣼",
@@ -347,13 +347,13 @@ static const char* GraphMeterMode_dotsUtf8[] = {
 #endif
 
 #define PIXPERROW_ASCII 2
-static const char* GraphMeterMode_dotsAscii[] = {
+static const char* const GraphMeterMode_dotsAscii[] = {
    /*00*/" ", /*01*/".", /*02*/":",
    /*10*/".", /*11*/".", /*12*/":",
    /*20*/":", /*21*/":", /*22*/":"
 };
 
-static const char** GraphMeterMode_dots;
+static const char* const* GraphMeterMode_dots;
 static int GraphMeterMode_pixPerRow;
 
 static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
@@ -406,8 +406,8 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
    }
    for (; i < nValues; i+=2, k++) {
       int pix = GraphMeterMode_pixPerRow * GRAPH_HEIGHT;
-      int v1 = CLAMP(data->values[i] * pix, 1, pix);
-      int v2 = CLAMP(data->values[i+1] * pix, 1, pix);
+      int v1 = CLAMP((int) lround(data->values[i] * pix), 1, pix);
+      int v2 = CLAMP((int) lround(data->values[i+1] * pix), 1, pix);
 
       int colorIdx = GRAPH_1;
       for (int line = 0; line < GRAPH_HEIGHT; line++) {
@@ -424,7 +424,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
 
 /* ---------- LEDMeterMode ---------- */
 
-static const char* LEDMeterMode_digitsAscii[] = {
+static const char* const LEDMeterMode_digitsAscii[] = {
    " __ ","    "," __ "," __ ","    "," __ "," __ "," __ "," __ "," __ ",
    "|  |","   |"," __|"," __|","|__|","|__ ","|__ ","   |","|__|","|__|",
    "|__|","   |","|__ "," __|","   |"," __|","|__|","   |","|__|"," __|"
@@ -432,7 +432,7 @@ static const char* LEDMeterMode_digitsAscii[] = {
 
 #ifdef HAVE_LIBNCURSESW
 
-static const char* LEDMeterMode_digitsUtf8[] = {
+static const char* const LEDMeterMode_digitsUtf8[] = {
    "┌──┐","  ┐ ","╶──┐","╶──┐","╷  ╷","┌──╴","┌──╴","╶──┐","┌──┐","┌──┐",
    "│  │","  │ ","┌──┘"," ──┤","└──┤","└──┐","├──┐","   │","├──┤","└──┤",
    "└──┘","  ╵ ","└──╴","╶──┘","   ╵","╶──┘","└──┘","   ╵","└──┘"," ──┘"
@@ -440,7 +440,7 @@ static const char* LEDMeterMode_digitsUtf8[] = {
 
 #endif
 
-static const char** LEDMeterMode_digits;
+static const char* const* LEDMeterMode_digits;
 
 static void LEDMeterMode_drawDigit(int x, int y, int n) {
    for (int i = 0; i < 3; i++)

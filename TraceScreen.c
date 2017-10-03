@@ -43,9 +43,9 @@ typedef struct TraceScreen_ {
 
 }*/
 
-static const char* TraceScreenFunctions[] = {"Search ", "Filter ", "AutoScroll ", "Stop Tracing   ", "Done   ", NULL};
+static const char* const TraceScreenFunctions[] = {"Search ", "Filter ", "AutoScroll ", "Stop Tracing   ", "Done   ", NULL};
 
-static const char* TraceScreenKeys[] = {"F3", "F4", "F8", "F9", "Esc"};
+static const char* const TraceScreenKeys[] = {"F3", "F4", "F8", "F9", "Esc"};
 
 static int TraceScreenEvents[] = {KEY_F(3), KEY_F(4), KEY_F(8), KEY_F(9), 27};
 
@@ -91,16 +91,16 @@ void TraceScreen_draw(InfoScreen* this) {
 
 bool TraceScreen_forkTracer(TraceScreen* this) {
    char buffer[1001];
-   int err = pipe(this->fdpair);
-   if (err == -1) return false;
+   int error = pipe(this->fdpair);
+   if (error == -1) return false;
    this->child = fork();
    if (this->child == -1) return false;
    if (this->child == 0) {
-      (void) seteuid(getuid());
+      CRT_dropPrivileges();
       dup2(this->fdpair[1], STDERR_FILENO);
       int ok = fcntl(this->fdpair[1], F_SETFL, O_NONBLOCK);
       if (ok != -1) {
-         snprintf(buffer, sizeof(buffer), "%d", this->super.process->pid);
+         xSnprintf(buffer, sizeof(buffer), "%d", this->super.process->pid);
          execlp("strace", "strace", "-p", buffer, NULL);
       }
       const char* message = "Could not execute 'strace'. Please make sure it is available in your $PATH.";

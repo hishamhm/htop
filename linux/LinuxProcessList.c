@@ -248,7 +248,7 @@ static inline unsigned long long LinuxProcess_adjustTime(unsigned long long t) {
 static bool LinuxProcessList_readStatFile(Process *process, const char* dirname, const char* name, char* command, int* commLen) {
    LinuxProcess* lp = (LinuxProcess*) process;
    char filename[MAX_NAME+1];
-   snprintf(filename, MAX_NAME, "%s/%s/stat", dirname, name);
+   xSnprintf(filename, MAX_NAME, "%s/%s/stat", dirname, name);
    int fd = open(filename, O_RDONLY);
    if (fd == -1)
       return false;
@@ -326,7 +326,7 @@ static bool LinuxProcessList_statProcessDir(Process* process, const char* dirnam
    char filename[MAX_NAME+1];
    filename[MAX_NAME] = '\0';
 
-   snprintf(filename, MAX_NAME, "%s/%s", dirname, name);
+   xSnprintf(filename, MAX_NAME, "%s/%s", dirname, name);
    struct stat sstat;
    int statok = stat(filename, &sstat);
    if (statok == -1)
@@ -348,11 +348,20 @@ static void LinuxProcessList_readIoFile(LinuxProcess* process, const char* dirna
    char filename[MAX_NAME+1];
    filename[MAX_NAME] = '\0';
 
-   snprintf(filename, MAX_NAME, "%s/%s/io", dirname, name);
+   xSnprintf(filename, MAX_NAME, "%s/%s/io", dirname, name);
    int fd = open(filename, O_RDONLY);
    if (fd == -1) {
       process->io_rate_read_bps = -1;
       process->io_rate_write_bps = -1;
+      process->io_rchar = -1LL;
+      process->io_wchar = -1LL;
+      process->io_syscr = -1LL;
+      process->io_syscw = -1LL;
+      process->io_read_bytes = -1LL;
+      process->io_write_bytes = -1LL;
+      process->io_cancelled_write_bytes = -1LL;
+      process->io_rate_read_time = -1LL;
+      process->io_rate_write_time = -1LL;
       return;
    }
    
@@ -408,7 +417,7 @@ static void LinuxProcessList_readIoFile(LinuxProcess* process, const char* dirna
 
 static bool LinuxProcessList_readStatmFile(LinuxProcess* process, const char* dirname, const char* name) {
    char filename[MAX_NAME+1];
-   snprintf(filename, MAX_NAME, "%s/%s/statm", dirname, name);
+   xSnprintf(filename, MAX_NAME, "%s/%s/statm", dirname, name);
    int fd = open(filename, O_RDONLY);
    if (fd == -1)
       return false;
@@ -438,7 +447,7 @@ static void LinuxProcessList_readOpenVZData(LinuxProcess* process, const char* d
       return;
    }
    char filename[MAX_NAME+1];
-   snprintf(filename, MAX_NAME, "%s/%s/stat", dirname, name);
+   xSnprintf(filename, MAX_NAME, "%s/%s/stat", dirname, name);
    FILE* file = fopen(filename, "r");
    if (!file)
       return;
@@ -461,7 +470,7 @@ static void LinuxProcessList_readOpenVZData(LinuxProcess* process, const char* d
 
 static void LinuxProcessList_readCGroupFile(LinuxProcess* process, const char* dirname, const char* name) {
    char filename[MAX_NAME+1];
-   snprintf(filename, MAX_NAME, "%s/%s/cgroup", dirname, name);
+   xSnprintf(filename, MAX_NAME, "%s/%s/cgroup", dirname, name);
    FILE* file = fopen(filename, "r");
    if (!file) {
       process->cgroup = xStrdup("");
@@ -496,7 +505,7 @@ static void LinuxProcessList_readCGroupFile(LinuxProcess* process, const char* d
 
 static void LinuxProcessList_readVServerData(LinuxProcess* process, const char* dirname, const char* name) {
    char filename[MAX_NAME+1];
-   snprintf(filename, MAX_NAME, "%s/%s/status", dirname, name);
+   xSnprintf(filename, MAX_NAME, "%s/%s/status", dirname, name);
    FILE* file = fopen(filename, "r");
    if (!file)
       return;
@@ -527,10 +536,11 @@ static void LinuxProcessList_readVServerData(LinuxProcess* process, const char* 
 
 static void LinuxProcessList_readOomData(LinuxProcess* process, const char* dirname, const char* name) {
    char filename[MAX_NAME+1];
-   snprintf(filename, MAX_NAME, "%s/%s/oom_score", dirname, name);
+   xSnprintf(filename, MAX_NAME, "%s/%s/oom_score", dirname, name);
    FILE* file = fopen(filename, "r");
-   if (!file)
+   if (!file) {
       return;
+   }
    char buffer[PROC_LINE_LENGTH + 1];
    if (fgets(buffer, PROC_LINE_LENGTH, file)) {
       unsigned int oom;
@@ -557,7 +567,7 @@ static bool LinuxProcessList_readCmdlineFile(Process* process, const char* dirna
       return true;
 
    char filename[MAX_NAME+1];
-   snprintf(filename, MAX_NAME, "%s/%s/cmdline", dirname, name);
+   xSnprintf(filename, MAX_NAME, "%s/%s/cmdline", dirname, name);
    int fd = open(filename, O_RDONLY);
    if (fd == -1)
       return false;
@@ -678,7 +688,7 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
       LinuxProcess* lp = (LinuxProcess*) proc;
 
       char subdirname[MAX_NAME+1];
-      snprintf(subdirname, MAX_NAME, "%s/%s/task", dirname, name);
+      xSnprintf(subdirname, MAX_NAME, "%s/%s/task", dirname, name);
       LinuxProcessList_recurseProcTree(this, subdirname, proc, period, tv);
 
       #ifdef HAVE_TASKSTATS

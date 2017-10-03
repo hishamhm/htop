@@ -142,7 +142,7 @@ static void tagAllChildren(Panel* panel, Process* parent) {
    pid_t ppid = parent->pid;
    for (int i = 0; i < Panel_size(panel); i++) {
       Process* p = (Process*) Panel_get(panel, i);
-      if (!p->tag && p->ppid == ppid) {
+      if (!p->tag && Process_isChildOf(p, ppid)) {
          tagAllChildren(panel, p);
       }
    }
@@ -381,7 +381,7 @@ static Htop_Reaction actionRedraw() {
    return HTOP_REFRESH | HTOP_REDRAW_BAR;
 }
 
-static struct { const char* key; const char* info; } helpLeft[] = {
+static const struct { const char* key; const char* info; } helpLeft[] = {
    { .key = "   hjkl: ", .info = "scroll process list" },
    { .key = " Digits: ", .info = "incremental PID search" },
    { .key = "   F3 /: ", .info = "incremental name search" },
@@ -399,7 +399,7 @@ static struct { const char* key; const char* info; } helpLeft[] = {
    { .key = NULL, .info = NULL }
 };
 
-static struct { const char* key; const char* info; } helpRight[] = {
+static const struct { const char* key; const char* info; } helpRight[] = {
    { .key = "  Space: ", .info = "tag process" },
    { .key = "      c: ", .info = "tag process and its children" },
    { .key = "      U: ", .info = "untag all processes" },

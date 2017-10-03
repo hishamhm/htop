@@ -165,11 +165,10 @@ static void readFields(ProcessField* fields, int* flags, const char* line) {
 
 static bool Settings_read(Settings* this, const char* fileName) {
    FILE* fd;
-   uid_t euid = geteuid();
-
-   (void) seteuid(getuid());
+   
+   CRT_dropPrivileges();
    fd = fopen(fileName, "r");
-   (void) seteuid(euid);
+   CRT_restorePrivileges();
    if (!fd)
       return false;
    
@@ -255,34 +254,40 @@ static bool Settings_read(Settings* this, const char* fileName) {
 
 static void writeFields(FILE* fd, ProcessField* fields, const char* name) {
    fprintf(fd, "%s=", name);
+   const char* sep = "";
    for (int i = 0; fields[i]; i++) {
       // This "-1" is for compatibility with the older enum format.
-      fprintf(fd, "%d ", (int) fields[i]-1);
+      fprintf(fd, "%s%d", sep, (int) fields[i]-1);
+      sep = " ";
    }
    fprintf(fd, "\n");
 }
 
 static void writeMeters(Settings* this, FILE* fd, int column) {
+   const char* sep = "";
    for (int i = 0; i < this->columns[column].len; i++) {
-      fprintf(fd, "%s ", this->columns[column].names[i]);
+      fprintf(fd, "%s%s", sep, this->columns[column].names[i]);
+      sep = " ";
    }
    fprintf(fd, "\n");
 }
 
 static void writeMeterModes(Settings* this, FILE* fd, int column) {
+   const char* sep = "";
    for (int i = 0; i < this->columns[column].len; i++) {
-      fprintf(fd, "%d ", this->columns[column].modes[i]);
+      fprintf(fd, "%s%d", sep, this->columns[column].modes[i]);
+      sep = " ";
    }
    fprintf(fd, "\n");
 }
 
 bool Settings_write(Settings* this) {
    FILE* fd;
-   uid_t euid = geteuid();
 
-   (void) seteuid(getuid());
+   CRT_dropPrivileges();
    fd = fopen(this->filename, "w");
-   (void) seteuid(euid);
+   CRT_restorePrivileges();
+
    if (fd == NULL) {
       return false;
    }
@@ -368,8 +373,8 @@ Settings* Settings_new(int cpuCount) {
          htopDir = String_cat(home, "/.config/htop");
       }
       legacyDotfile = String_cat(home, "/.htoprc");
-      uid_t euid = geteuid();
-      (void) seteuid(getuid());
+      
+      CRT_dropPrivileges();
       (void) mkdir(configDir, 0700);
       (void) mkdir(htopDir, 0700);
       free(htopDir);
@@ -382,7 +387,7 @@ Settings* Settings_new(int cpuCount) {
          free(legacyDotfile);
          legacyDotfile = NULL;
       }
-      (void) seteuid(euid);
+      CRT_restorePrivileges();
    }
    this->colorScheme = 0;
    this->changed = false;

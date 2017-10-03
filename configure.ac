@@ -253,6 +253,12 @@ then
    AC_CHECK_HEADERS([hwloc.h],[:], [missing_headers="$missing_headers $ac_header"])
 fi
 
+AC_ARG_ENABLE(setuid, [AS_HELP_STRING([--enable-setuid], [enable setuid support for platforms that need it])],, enable_setuid="no")
+if test "x$enable_setuid" = xyes
+then
+   AC_DEFINE(HAVE_SETUID_ENABLED, 1, [Define if setuid support should be enabled.])
+fi
+
 # Bail out on errors.
 # ----------------------------------------------------------------------
 if test ! -z "$missing_libraries"; then
@@ -275,3 +281,17 @@ AM_CONDITIONAL([HTOP_UNSUPPORTED], [test "$my_htop_platform" = unsupported])
 AC_SUBST(my_htop_platform)
 AC_CONFIG_FILES([Makefile htop.1])
 AC_OUTPUT
+
+if test "$my_htop_platform" = "unsupported"
+then
+   echo ""
+   echo "****************************************************************"
+   echo "WARNING! This platform is not currently supported by htop."
+   echo ""
+   echo "The code will build, but it will produce a dummy version of htop"
+   echo "which shows no processes, using the files from the unsupported/"
+   echo "directory. This is meant to be a skeleton, to be used as a"
+   echo "starting point if you are porting htop to a new platform."
+   echo "****************************************************************"
+   echo ""
+fi
