@@ -73,6 +73,7 @@ typedef enum ProcessFields {
    TIME = 50,
    NLWP = 51,
    TGID = 52,
+   SORTKEY = 53,
 } ProcessField;
 
 typedef struct ProcessPidColumn_ {
@@ -125,6 +126,9 @@ typedef struct Process_ {
 
    unsigned long int minflt;
    unsigned long int majflt;
+
+   double my_sortkey;
+
    #ifdef DEBUG
    long int itrealvalue;
    unsigned long int vsize;
@@ -475,6 +479,7 @@ void Process_writeField(Process* this, RichString* str, ProcessField field) {
       }
       break;
    }
+   case SORTKEY: snprintf(buffer, n, "%4.1f ", this->my_sortkey); break;
    default:
       xSnprintf(buffer, n, "- ");
    }
@@ -596,6 +601,9 @@ long Process_compare(const void* v1, const void* v2) {
          return (p1->pid - p2->pid);
       else
          return (p1->starttime_ctime - p2->starttime_ctime);
+   }
+   case SORTKEY: {
+        return 10000*(p2->my_sortkey - p1->my_sortkey);
    }
    case STATE:
       return (p1->state - p2->state);

@@ -717,6 +717,20 @@ static bool LinuxProcessList_recurseProcTree(LinuxProcessList* this, const char*
       proc->percent_cpu = CLAMP(percent_cpu, 0.0, cpus * 100.0);
       if (isnan(proc->percent_cpu)) proc->percent_cpu = 0.0;
       proc->percent_mem = (proc->m_resident * PAGE_SIZE_KB) / (double)(pl->totalMem) * 100.0;
+      
+      {
+         double new_sortkey;
+         new_sortkey = proc->percent_mem / 3 + proc->percent_cpu;
+         if (proc->pid != proc->tgid) {
+            new_sortkey -= proc->percent_mem;
+         }
+         new_sortkey += 2*log(lp->io_rate_read_bps + lp->io_rate_write_bps + 1);
+         if (proc->state == 'S') new_sortkey-=1;
+         if (proc->state == 'D') new_sortkey+=10;
+         if (proc->state == 'T') new_sortkey-=100;
+         
+         proc->my_sortkey = proc->my_sortkey * 0.6 + new_sortkey * 0.4;
+      }
 
       if(!preExisting) {
 

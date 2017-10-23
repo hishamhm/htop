@@ -52,6 +52,7 @@ typedef enum ProcessFields {
    TIME = 50,
    NLWP = 51,
    TGID = 52,
+   SORTKEY = 53,
 } ProcessField;
 
 typedef struct ProcessPidColumn_ {
@@ -104,6 +105,9 @@ typedef struct Process_ {
 
    unsigned long int minflt;
    unsigned long int majflt;
+
+   double my_sortkey;
+
    #ifdef DEBUG
    long int itrealvalue;
    unsigned long int vsize;
