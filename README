@@ -49,7 +49,7 @@ h       l    one character
 In order to accomodate these keybindings, the following changes
 were made to the original keybindings:
 
-* Ctrl+F and Ctrt+B can now longer be used to navigate horizontally
+* Ctrl+F and Ctrt+B can no longer be used to navigate horizontally
 * 'h' can no longer be used to access the help, leaving Ctrl+F1 & '?'
 * 'k' can no longer be used to kill processes, being replaced with 'x'
 * 'l' can no longer be used to list open files, being replaced with 'L'
