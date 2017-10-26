@@ -382,7 +382,7 @@ static Htop_Reaction actionRedraw() {
 }
 
 static const struct { const char* key; const char* info; } helpLeft[] = {
-   { .key = " Arrows: ", .info = "scroll process list" },
+   { .key = "   hjkl: ", .info = "scroll process list" },
    { .key = " Digits: ", .info = "incremental PID search" },
    { .key = "   F3 /: ", .info = "incremental name search" },
    { .key = "   F4 \\: ",.info = "incremental name filtering" },
@@ -403,7 +403,7 @@ static const struct { const char* key; const char* info; } helpRight[] = {
    { .key = "  Space: ", .info = "tag process" },
    { .key = "      c: ", .info = "tag process and its children" },
    { .key = "      U: ", .info = "untag all processes" },
-   { .key = "   F9 k: ", .info = "kill process/tagged processes" },
+   { .key = "   F9 x: ", .info = "kill process/tagged processes" },
    { .key = "   F7 ]: ", .info = "higher priority (root only)" },
    { .key = "   F8 [: ", .info = "lower priority (+ nice)" },
 #if (HAVE_LIBHWLOC || HAVE_LINUX_AFFINITY)
@@ -411,7 +411,7 @@ static const struct { const char* key; const char* info; } helpRight[] = {
 #endif
    { .key = "      e: ", .info = "show process environment" },
    { .key = "      i: ", .info = "set IO priority" },
-   { .key = "      l: ", .info = "list open files with lsof" },
+   { .key = "      L: ", .info = "list open files with lsof" },
    { .key = "      s: ", .info = "trace syscalls with strace" },
    { .key = "         ", .info = "" },
    { .key = " F2 C S: ", .info = "setup" },
@@ -543,6 +543,7 @@ void Action_setBindings(Htop_Action* keys) {
    keys['I'] = actionInvertSortOrder;
    keys[KEY_F(6)] = actionExpandCollapseOrSortColumn;
    keys[KEY_F(18)] = actionExpandCollapseOrSortColumn;
+   keys['o'] = actionExpandCollapseOrSortColumn;
    keys['<'] = actionSetSortColumn;
    keys[','] = actionSetSortColumn;
    keys['>'] = actionSetSortColumn;
@@ -551,7 +552,7 @@ void Action_setBindings(Htop_Action* keys) {
    keys['q'] = actionQuit;
    keys['a'] = actionSetAffinity;
    keys[KEY_F(9)] = actionKill;
-   keys['k'] = actionKill;
+   keys['x'] = actionKill;
    keys[KEY_RECLICK] = actionExpandOrCollapse;
    keys['+'] = actionExpandOrCollapse;
    keys['='] = actionExpandOrCollapse;
@@ -561,12 +562,11 @@ void Action_setBindings(Htop_Action* keys) {
    keys['S'] = actionSetup;
    keys['C'] = actionSetup;
    keys[KEY_F(2)] = actionSetup;
-   keys['l'] = actionLsof;
+   keys['L'] = actionLsof;
    keys['s'] = actionStrace;
    keys[' '] = actionTag;
    keys['\014'] = actionRedraw; // Ctrl+L
    keys[KEY_F(1)] = actionHelp;
-   keys['h'] = actionHelp;
    keys['?'] = actionHelp;
    keys['U'] = actionUntagAll;
    keys['c'] = actionTagAllChildren;
