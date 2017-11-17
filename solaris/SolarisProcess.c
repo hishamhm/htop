@@ -6,24 +6,24 @@ in the source distribution for its full text.
 */
 
 #include "Process.h"
-#include "UnsupportedProcess.h"
+#include "SolarisProcess.h"
 #include <stdlib.h>
 
 /*{
 #include "Settings.h"
 
-#define Process_delete UnsupportedProcess_delete
+#define Process_delete SolarisProcess_delete
 
 }*/
 
-Process* UnsupportedProcess_new(Settings* settings) {
+Process* SolarisProcess_new(Settings* settings) {
    Process* this = xCalloc(1, sizeof(Process));
    Object_setClass(this, Class(Process));
    Process_init(this, settings);
    return this;
 }
 
-void UnsupportedProcess_delete(Object* cast) {
+void SolarisProcess_delete(Object* cast) {
    Process* this = (Process*) cast;
    Object_setClass(this, Class(Process));
    Process_done((Process*)cast);

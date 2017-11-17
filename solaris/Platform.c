@@ -24,6 +24,25 @@ in the source distribution for its full text.
 }*/
 
 #include <utmpx.h>
+#include <sys/loadavg.h>
+#include <string.h>
+
+double plat_loadavg[3] = {0};
+
+#define MINORBITS        20
+#define MINORMASK        ((1U << MINORBITS) - 1)
+
+unsigned int major(dev_t dev) {
+   return ((unsigned int) ((dev) >> MINORBITS ));
+}
+
+unsigned int minor(dev_t dev) {
+   return ((unsigned int) ((dev) & MINORMASK ));
+}
+
+unsigned int mkdev(unsigned int ma, unsigned int mi) {
+   return (((ma) << MINORBITS) | (mi));
+}
 
 const SignalItem Platform_signals[] = {
    { .name = " 0 Cancel",      .number =  0 },
@@ -153,9 +172,10 @@ int Platform_getUptime() {
 }
 
 void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
-   *one = 0;
-   *five = 0;
-   *fifteen = 0;
+   getloadavg( plat_loadavg, 3 );
+   *one = plat_loadavg[LOADAVG_1MIN];
+   *five = plat_loadavg[LOADAVG_5MIN];
+   *fifteen = plat_loadavg[LOADAVG_15MIN];
 }
 
 int Platform_getMaxPid() {

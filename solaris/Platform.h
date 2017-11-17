@@ -15,6 +15,17 @@ in the source distribution for its full text.
 #include "SignalsPanel.h"
 #include "SolarisProcess.h"
 
+extern double plat_loadavg[3];
+
+#define MINORBITS        20
+#define MINORMASK        ((1U << MINORBITS) - 1)
+
+unsigned int major(dev_t dev);
+
+unsigned int minor(dev_t dev);
+
+unsigned int mkdev(unsigned int ma, unsigned int mi);
+
 extern const SignalItem Platform_signals[];
 
 extern const unsigned int Platform_numberOfSignals;

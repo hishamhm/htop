@@ -6,7 +6,7 @@ in the source distribution for its full text.
 */
 
 #include "ProcessList.h"
-#include "UnsupportedProcess.h"
+#include "SolarisProcess.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -31,7 +31,7 @@ void ProcessList_goThroughEntries(ProcessList* super) {
 	bool preExisting = true;
     Process *proc;
 
-    proc = ProcessList_getProcess(super, 1, &preExisting, UnsupportedProcess_new);
+    proc = ProcessList_getProcess(super, 1, &preExisting, SolarisProcess_new);
 
     /* Empty values */
     proc->time = proc->time + 10;
@@ -69,7 +69,7 @@ void ProcessList_goThroughEntries(ProcessList* super) {
     proc->majflt = 20;
 }
 
-void UnsupportedProcessList_scan(ProcessList* this) {
+void SolarisProcessList_scan(ProcessList* this) {
    (void) this;
    // stub!
 }
