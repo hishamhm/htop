@@ -26,6 +26,7 @@ in the source distribution for its full text.
 #include <utmpx.h>
 #include <sys/loadavg.h>
 #include <string.h>
+#include <kstat.h>
 
 double plat_loadavg[3] = {0};
 
@@ -179,7 +180,26 @@ void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
 }
 
 int Platform_getMaxPid() {
-   return 1;
+   kstat_ctl_t    *kc;
+   kstat_t	  *ksp;
+   int            *kstat_pidmax_p;
+   int            kstat_pidmax;
+   char ks_module[] = "unix";
+   int  ks_instance = 0;
+   char ks_name[] ="var";
+   char ks_vname[] = "v_proc";
+
+   kc = kstat_open();
+   ksp = kstat_lookup(kc,ks_module,ks_instance,ks_name);
+// Apparently this is returning NULL for some reason...
+   kstat_pidmax_p = kstat_data_lookup(ksp,ks_vname);
+   if( kstat_pidmax_p != NULL ) {
+      kstat_pidmax = *kstat_pidmax_p;
+   } else {
+      kstat_pidmax = 32778;
+   } 
+   kstat_close(kc);
+   return kstat_pidmax;
 }
 
 double Platform_setCPUValues(Meter* this, int cpu) {
