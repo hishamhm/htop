@@ -74,25 +74,42 @@ static void setCommand(Process* process, const char* command, int len) {
    process->commLen = len;
 }
 
+static void setZoneName(kstat_ctl_t* kd, SolarisProcess* sproc) {
+  if ( sproc->zoneid == 0 ) {
+     strncpy( sproc->zname, "global    ", 11);
+  } else if ( kd == NULL ) {
+     strncpy( sproc->zname, "unknown   ", 11);
+  } else {
+     kstat_t* ks = kstat_lookup( kd, "zones", sproc->zoneid, NULL );
+     strncpy( sproc->zname, ks->ks_name, strlen(ks->ks_name) );
+  }
+} 
+
+
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId) {
    SolarisProcessList* spl = xCalloc(1, sizeof(SolarisProcessList));
    ProcessList* pl = (ProcessList*) spl;
    ProcessList_init(pl, Class(SolarisProcess), usersTable, pidWhiteList, userId);
-//   spl->kd = kstat_open();
-//   kstat_t *ncpu_handle = kstat_lookup(spl->kd,"unix",0,"system_misc");
-//   kstat_named_t *ks_ncpus = kstat_data_lookup(ncpu_handle,"ncpus");
-//   if ( ks_ncpus->value.i32 > 0 ) {
-//	   pl->cpuCount = ks_ncpus->value.i32;
-//   } else {
+   int kchain = 0;
+   kstat_t *ncpu_handle;
+   kstat_named_t *ks_ncpus;
+
+   spl->kd = kstat_open();
+   if (spl->kd     != NULL) { ncpu_handle = kstat_lookup(spl->kd,"unix",0,"system_misc"); }
+   if (ncpu_handle != NULL) { kchain = kstat_read(spl->kd,ncpu_handle,NULL); }
+   if (kchain      != -1  ) { ks_ncpus = kstat_data_lookup(ncpu_handle,"ncpus"); }
+   if (ks_ncpus    != NULL) {
+//`	   pl->cpuCount = (uint32_t)ks_ncpus->value.ui32;
+   } else {
 //	   pl->cpuCount = 1;
-//   }
+   }
 
    return pl;
 }
 
 void ProcessList_delete(ProcessList* this) {
    const SolarisProcessList* spl = (SolarisProcessList*) this;
-//   if (spl->kd) kstat_close(spl->kd);
+   if (spl->kd) kstat_close(spl->kd);
    ProcessList_done(this);
    free(this);
 }
@@ -161,10 +178,9 @@ void ProcessList_goThroughEntries(ProcessList* this) {
              proc->starttime_ctime = _psinfo.pr_start.tv_sec;
 	     proc->session         = _pstatus.pr_sid;
              setCommand(proc,_psinfo.pr_fname,PRFNSZ);
+	     setZoneName(spl->kd,sproc);
 	     proc->majflt          = _prusage.pr_majf;
 	     proc->minflt          = _prusage.pr_minf; 
-             ProcessList_add(this, proc);
-	    sproc->zname           = "unknown";
 	     proc->m_resident      = (_psinfo.pr_rssize)/8;
 	     proc->m_size          = (_psinfo.pr_size)/8;
              proc->priority        = _psinfo.pr_lwp.pr_pri;
@@ -172,16 +188,18 @@ void ProcessList_goThroughEntries(ProcessList* this) {
              proc->processor       = _psinfo.pr_lwp.pr_onpro;
              proc->state           = _psinfo.pr_lwp.pr_sname;
 	     proc->time            = _psinfo.pr_time.tv_sec;
-        } else {
+             ProcessList_add(this, proc);
+	} else {
 	     proc->ppid            = _psinfo.pr_ppid;
 	    sproc->zoneid          = _psinfo.pr_zoneid;
 	     proc->percent_cpu     = (_psinfo.pr_pctcpu)/100;
 	     proc->percent_mem     = (_psinfo.pr_pctmem)/100;
 	     proc->st_uid          = _psinfo.pr_euid;
+	     proc->pgrp            = _psinfo.pr_pgid;
 	     proc->nlwp            = _psinfo.pr_nlwp;
 	     proc->user            = UsersTable_getRef(this->usersTable, proc->st_uid);
              setCommand(proc,_psinfo.pr_fname,PRFNSZ);
-	    sproc->zname           = "unknown";
+	     setZoneName(spl->kd,sproc);
              proc->majflt          = _prusage.pr_majf;
              proc->minflt          = _prusage.pr_minf;
              proc->m_resident      = (_psinfo.pr_rssize)/8;

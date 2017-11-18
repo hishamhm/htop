@@ -29,6 +29,7 @@ in the source distribution for its full text.
 #include <kstat.h>
 #include <time.h>
 #include <math.h>
+#include <sys/var.h>
 
 /*{
 #include "Action.h"
@@ -38,6 +39,8 @@ in the source distribution for its full text.
 extern ProcessFieldData Process_fields[];
 
 }*/
+
+typedef struct var kvar_t;
 
 double plat_loadavg[3] = {0};
 
@@ -159,24 +162,18 @@ void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
 
 int Platform_getMaxPid() {
    kstat_ctl_t    *kc;
-   kstat_t	  *ksp;
-   kstat_named_t  *ks_maxproc;
-   int            kstat_pidmax;
-   char ks_module[] = "unix";
-   int  ks_instance = 0;
-   char ks_name[] ="var";
-   char ks_vname[] = "v_proc";
-
-//   kc = kstat_open();
-//   ksp = kstat_lookup(kc,ks_module,ks_instance,ks_name);
-//   ks_maxproc = kstat_data_lookup(ksp,ks_vname);
-//   if( ks_maxproc->value.i32 > 1024 ) {
-//      kstat_pidmax = ks_maxproc->value.i32;
-//   } else {
-      kstat_pidmax = 32778;
-//   } 
-//   kstat_close(kc);
-   return kstat_pidmax;
+   kstat_t        *kshandle;
+   kvar_t         *ksvar;
+   int            vproc = 32778; // Reasonable Solaris default
+   kc = kstat_open();
+   if (kc       != NULL) { kshandle = kstat_lookup(kc,"unix",0,"var"); }
+   if (kshandle != NULL) { kstat_read(kc,kshandle,NULL); }
+   ksvar = kshandle->ks_data;
+   if (ksvar->v_proc > 0 ) {
+      vproc = ksvar->v_proc;
+   }
+   if (kc       != NULL) { kstat_close(kc); }
+   return vproc; 
 }
 
 double Platform_setCPUValues(Meter* this, int cpu) {

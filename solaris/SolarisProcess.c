@@ -19,6 +19,7 @@ in the source distribution for its full text.
 
 /*{
 #include "Settings.h"
+#include <zone.h>
 
 typedef enum SolarisProcessFields {
    // Add platform-specific fields here, with ids >= 100
@@ -32,7 +33,7 @@ typedef struct SolarisProcess_ {
    Process super;
    int   kernel;
    int   zoneid;
-   char* zname;
+   char  zname[ZONENAME_MAX];
 } SolarisProcess;
 
 
@@ -82,7 +83,7 @@ ProcessFieldData Process_fields[] = {
    [NLWP] = { .name = "NLWP", .title = "NLWP ", .description = "Number of threads in the process", .flags = 0, },
    [TGID] = { .name = "TGID", .title = "   TGID ", .description = "Thread group ID (i.e. process ID)", .flags = 0, },
    [ZONEID] = { .name = "ZONEID", .title = " ZONEID ", .description = "Zone ID", .flags = 0, },
-   [ZONE] = { .name = "ZONE", .title = "ZONE       ", .description = "Zone name", .flags = 0, },
+   [ZONE] = { .name = "ZONE", .title = "ZONE        ", .description = "Zone name", .flags = 0, },
    [LAST_PROCESSFIELD] = { .name = "*** report bug! ***", .title = NULL, .description = NULL, .flags = 0, },
 };
 

@@ -11,6 +11,7 @@ in the source distribution for its full text.
 */
 
 #include "Settings.h"
+#include <zone.h>
 
 typedef enum SolarisProcessFields {
    // Add platform-specific fields here, with ids >= 100
@@ -24,7 +25,7 @@ typedef struct SolarisProcess_ {
    Process super;
    int   kernel;
    int   zoneid;
-   char* zname;
+   char  zname[ZONENAME_MAX];
 } SolarisProcess;
 
 
