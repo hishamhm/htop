@@ -25,7 +25,7 @@ typedef struct SolarisProcess_ {
    Process super;
    int   kernel;
    int   zoneid;
-   char  zname[ZONENAME_MAX];
+   char  zname[ZONENAME_MAX+1];
 } SolarisProcess;
 
 

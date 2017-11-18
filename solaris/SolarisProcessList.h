@@ -34,17 +34,7 @@ typedef struct CPUData_ {
 typedef struct SolarisProcessList_ {
    ProcessList super;
    kstat_ctl_t* kd;
-   int zfsArcEnabled;
-   unsigned long long int memWire;
-   unsigned long long int memActive;
-   unsigned long long int memInactive;
-   unsigned long long int memFree;
-   unsigned long long int memZfsArc;
    CPUData* cpus;
-   unsigned long   *cp_time_o;
-   unsigned long   *cp_time_n;
-   unsigned long  *cp_times_o;
-   unsigned long  *cp_times_n;
 } SolarisProcessList;
 
 

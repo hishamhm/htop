@@ -49,17 +49,7 @@ typedef struct CPUData_ {
 typedef struct SolarisProcessList_ {
    ProcessList super;
    kstat_ctl_t* kd;
-   int zfsArcEnabled;
-   unsigned long long int memWire;
-   unsigned long long int memActive;
-   unsigned long long int memInactive;
-   unsigned long long int memFree;
-   unsigned long long int memZfsArc;
    CPUData* cpus;
-   unsigned long   *cp_time_o;
-   unsigned long   *cp_time_n;
-   unsigned long  *cp_times_o;
-   unsigned long  *cp_times_n;
 } SolarisProcessList;
 
 }*/
@@ -99,9 +89,15 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    if (ncpu_handle != NULL) { kchain = kstat_read(spl->kd,ncpu_handle,NULL); }
    if (kchain      != -1  ) { ks_ncpus = kstat_data_lookup(ncpu_handle,"ncpus"); }
    if (ks_ncpus    != NULL) {
-//`	   pl->cpuCount = (uint32_t)ks_ncpus->value.ui32;
+      pl->cpuCount = (uint32_t)ks_ncpus->value.ui32;
    } else {
-//	   pl->cpuCount = 1;
+      pl->cpuCount = 1;
+   }
+
+   if (pl->cpuCount == 1 ) {
+      spl->cpus = xRealloc(spl->cpus, sizeof(CPUData));
+   } else {
+      spl->cpus = xRealloc(spl->cpus, (pl->cpuCount + 1) * sizeof(CPUData));
    }
 
    return pl;
@@ -110,6 +106,7 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
 void ProcessList_delete(ProcessList* this) {
    const SolarisProcessList* spl = (SolarisProcessList*) this;
    if (spl->kd) kstat_close(spl->kd);
+   free(spl->cpus);
    ProcessList_done(this);
    free(this);
 }

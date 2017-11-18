@@ -33,7 +33,7 @@ typedef struct SolarisProcess_ {
    Process super;
    int   kernel;
    int   zoneid;
-   char  zname[ZONENAME_MAX];
+   char  zname[ZONENAME_MAX+1];
 } SolarisProcess;
 
 
@@ -83,7 +83,7 @@ ProcessFieldData Process_fields[] = {
    [NLWP] = { .name = "NLWP", .title = "NLWP ", .description = "Number of threads in the process", .flags = 0, },
    [TGID] = { .name = "TGID", .title = "   TGID ", .description = "Thread group ID (i.e. process ID)", .flags = 0, },
    [ZONEID] = { .name = "ZONEID", .title = " ZONEID ", .description = "Zone ID", .flags = 0, },
-   [ZONE] = { .name = "ZONE", .title = "ZONE        ", .description = "Zone name", .flags = 0, },
+   [ZONE] = { .name = "ZONE", .title = "ZONE             ", .description = "Zone name", .flags = 0, },
    [LAST_PROCESSFIELD] = { .name = "*** report bug! ***", .title = NULL, .description = NULL, .flags = 0, },
 };
 
@@ -121,10 +121,10 @@ void SolarisProcess_writeField(Process* this, RichString* str, ProcessField fiel
    // add Solaris-specific fields here
    case ZONEID: xSnprintf(buffer, n, Process_pidFormat, sp->zoneid); break;
    case ZONE:{
-      xSnprintf(buffer, n, "%-11s ", sp->zname); break;
-      if (buffer[11] != '\0') {
-         buffer[11] = ' ';
-         buffer[12] = '\0';
+      xSnprintf(buffer, n, "%-*s ", ZONENAME_MAX/4, sp->zname); break;
+      if (buffer[ZONENAME_MAX/4] != '\0') {
+         buffer[ZONENAME_MAX/4] = ' ';
+         buffer[(ZONENAME_MAX/4)+1] = '\0';
       }
       break;
    }
