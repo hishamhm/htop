@@ -3,9 +3,10 @@
 #ifndef HEADER_Platform
 #define HEADER_Platform
 /*
-htop - unsupported/Platform.h
+htop - solaris/Platform.h
 (C) 2014 Hisham H. Muhammad
 (C) 2015 David C. Hunt
+(C) 2017 Guy M. Broome
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
@@ -13,7 +14,9 @@ in the source distribution for its full text.
 #include "Action.h"
 #include "BatteryMeter.h"
 #include "SignalsPanel.h"
-#include "SolarisProcess.h"
+
+extern ProcessFieldData Process_fields[];
+
 
 extern double plat_loadavg[3];
 
@@ -32,8 +35,6 @@ extern const unsigned int Platform_numberOfSignals;
 
 extern ProcessField Platform_defaultFields[];
 
-extern ProcessFieldData Process_fields[];
-
 extern MeterClass* Platform_meterTypes[];
 
 void Platform_setBindings(Htop_Action* keys);
@@ -41,8 +42,6 @@ void Platform_setBindings(Htop_Action* keys);
 extern int Platform_numberOfFields;
 
 extern char Process_pidFormat[20];
-
-extern ProcessPidColumn Process_pidColumns[];
 
 int Platform_getUptime();
 
@@ -55,8 +54,6 @@ double Platform_setCPUValues(Meter* this, int cpu);
 void Platform_setMemoryValues(Meter* this);
 
 void Platform_setSwapValues(Meter* this);
-
-bool Process_isThread(Process* this);
 
 char* Platform_getProcessEnv(pid_t pid);
 

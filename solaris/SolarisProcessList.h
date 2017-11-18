@@ -3,20 +3,58 @@
 #ifndef HEADER_SolarisProcessList
 #define HEADER_SolarisProcessList
 /*
-htop - UnsupportedProcessList.h
+htop - SolarisProcessList.h
 (C) 2014 Hisham H. Muhammad
+(C) 2017 Guy M. Broome
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
+#define MAXCMDLINE 255
+
+
+#include <kstat.h>
+#include <sys/param.h>
+#include <sys/zone.h>
+#include <sys/uio.h>
+#include <sys/resource.h>
+
+#define ZONE_ERRMSGLEN 1024
+char zone_errmsg[ZONE_ERRMSGLEN];
+
+typedef struct CPUData_ {
+   double userPercent;
+   double nicePercent;
+   double systemPercent;
+   double irqPercent;
+   double idlePercent;
+   double systemAllPercent;
+} CPUData;
+
+typedef struct SolarisProcessList_ {
+   ProcessList super;
+   kstat_ctl_t* kd;
+   int zfsArcEnabled;
+   unsigned long long int memWire;
+   unsigned long long int memActive;
+   unsigned long long int memInactive;
+   unsigned long long int memFree;
+   unsigned long long int memZfsArc;
+   CPUData* cpus;
+   unsigned long   *cp_time_o;
+   unsigned long   *cp_time_n;
+   unsigned long  *cp_times_o;
+   unsigned long  *cp_times_n;
+} SolarisProcessList;
 
 
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId);
 
 void ProcessList_delete(ProcessList* this);
 
-void ProcessList_goThroughEntries(ProcessList* super);
+void ProcessList_goThroughEntries(ProcessList* this);
 
 void SolarisProcessList_scan(ProcessList* this);
+
 
 #endif
