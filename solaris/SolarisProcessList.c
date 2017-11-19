@@ -35,6 +35,8 @@ in the source distribution for its full text.
 #include <sys/uio.h>
 #include <sys/resource.h>
 #include <sys/sysconf.h>
+#include <sys/sysinfo.h>
+#include <sys/swap.h>
 
 #define ZONE_ERRMSGLEN 1024
 char zone_errmsg[ZONE_ERRMSGLEN];
@@ -174,14 +176,51 @@ static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
 
 static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    SolarisProcessList* spl = (SolarisProcessList*) pl;
-   // Divide these quantities separately to reduce the risk of overflow
-   pl->totalMem = (sysconf(_SC_PHYS_PAGES)/1024) * PAGE_SIZE;
-   pl->buffersMem = 0;
-   pl->cachedMem = 0;
-   pl->usedMem = pl->totalMem - ((sysconf(_SC_AVPHYS_PAGES)/1024) * PAGE_SIZE);
-   pl->totalSwap = 0;
-   pl->usedSwap = 0;
-   pl->sharedMem = 0;  // currently unused
+   kstat_t *meminfo;
+   int     ksrphyserr;
+   kstat_named_t *totalmem_pgs, *lockedmem_pgs, *pages;
+   struct swaptable 	*sl;
+   struct swapent	*swapdev;
+   uint64_t         totalswap = 0;
+   uint64_t         totalfree = 0;
+   int              nswap = swapctl(SC_GETNSWP, NULL);
+
+   // Part 1 - physical memory
+   if (spl->kd != NULL) { meminfo    = kstat_lookup(spl->kd,"unix",0,"system_pages"); }
+   if (meminfo != NULL) { ksrphyserr = kstat_read(spl->kd,meminfo,NULL); }
+   if (ksrphyserr != -1) {
+      totalmem_pgs   = kstat_data_lookup( meminfo, "physmem" );
+      lockedmem_pgs  = kstat_data_lookup( meminfo, "pageslocked" );
+      pages          = kstat_data_lookup( meminfo, "pagestotal" );
+
+      pl->totalMem   = ((totalmem_pgs->value.ui64)/1024)  * PAGE_SIZE;
+      pl->usedMem    = ((lockedmem_pgs->value.ui64)/1024) * PAGE_SIZE;
+      // Not sure how to implement this on Solaris - suggestions welcome!
+      pl->cachedMem  = 0;     
+      // Not really "buffers" but the best Solaris analogue that I can find to
+      // "memory in use but not by programs or the kernel itself"
+      pl->buffersMem = (((totalmem_pgs->value.ui64)/1024) - (pages->value.ui64)/1024) * PAGE_SIZE;
+   } else {
+      // Fall back to basic sysconf if kstat isn't working
+      pl->totalMem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
+      pl->buffersMem = 0;
+      pl->cachedMem  = 0;
+      pl->usedMem    = pl->totalMem - (sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE));
+   }
+   
+   // Part 2 - swap
+   if (nswap !=    0) { sl  = malloc(nswap * sizeof(swapent_t) + sizeof(int)); nswap = -1; }
+   if (sl    != NULL) { nswap = swapctl(SC_LIST, sl); }
+   if (nswap !=   -1) {
+      swapdev = sl->swt_ent;
+      for (int i = 0; i < nswap; i++, swapdev++) {
+			totalswap += swapdev->ste_pages,
+			totalfree += swapdev->ste_free;
+      }
+      free(sl);
+   }
+   pl->totalSwap = (totalswap * PAGE_SIZE)/1024;
+   pl->usedSwap  = pl->totalSwap - ((totalfree * PAGE_SIZE)/1024); 
 }
 
 void ProcessList_delete(ProcessList* this) {
