@@ -18,6 +18,7 @@ in the source distribution for its full text.
 #include <sys/zone.h>
 #include <sys/uio.h>
 #include <sys/resource.h>
+#include <sys/sysconf.h>
 
 #define ZONE_ERRMSGLEN 1024
 char zone_errmsg[ZONE_ERRMSGLEN];

@@ -23,6 +23,7 @@ in the source distribution for its full text.
 #include <pwd.h>
 #include <dirent.h>
 #include <math.h>
+#include <time.h>
 
 #define MAXCMDLINE 255
 
@@ -33,6 +34,7 @@ in the source distribution for its full text.
 #include <sys/zone.h>
 #include <sys/uio.h>
 #include <sys/resource.h>
+#include <sys/sysconf.h>
 
 #define ZONE_ERRMSGLEN 1024
 char zone_errmsg[ZONE_ERRMSGLEN];
@@ -208,6 +210,7 @@ void ProcessList_goThroughEntries(ProcessList* this) {
     prusage_t _prusage;
     char filename[MAX_NAME+1];
     FILE *fp;
+    char *starttime;
 
     SolarisProcessList_scanCPUTime(this);
 
@@ -253,7 +256,6 @@ void ProcessList_goThroughEntries(ProcessList* this) {
              proc->st_uid          = _psinfo.pr_euid;
              proc->user            = UsersTable_getRef(this->usersTable, proc->st_uid);
              proc->nlwp            = _psinfo.pr_nlwp;
-             proc->starttime_ctime = _psinfo.pr_start.tv_sec;
 	     proc->session         = _pstatus.pr_sid;
              setCommand(proc,_psinfo.pr_fname,PRFNSZ);
 	     setZoneName(spl->kd,sproc);
@@ -266,7 +268,9 @@ void ProcessList_goThroughEntries(ProcessList* this) {
              proc->processor       = _psinfo.pr_lwp.pr_onpro;
              proc->state           = _psinfo.pr_lwp.pr_sname;
 	     proc->time            = _psinfo.pr_time.tv_sec;
-             ProcessList_add(this, proc);
+             starttime = ctime(&_psinfo.pr_start.tv_sec);
+	     proc->starttime_ctime = *starttime;
+	     ProcessList_add(this, proc);
 	} else {
 	     proc->ppid            = _psinfo.pr_ppid;
 	    sproc->zoneid          = _psinfo.pr_zoneid;
@@ -291,6 +295,7 @@ void ProcessList_goThroughEntries(ProcessList* this) {
              proc->state           = _psinfo.pr_lwp.pr_sname;
              proc->time            = _psinfo.pr_time.tv_sec;
 	}
+
         if (proc->percent_cpu > 0.1) {
             if ( strcmp("sleep", proc->comm) == 0 ) {
                 isIdleProcess = true;
