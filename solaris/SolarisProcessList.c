@@ -86,19 +86,10 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    SolarisProcessList* spl = xCalloc(1, sizeof(SolarisProcessList));
    ProcessList* pl = (ProcessList*) spl;
    ProcessList_init(pl, Class(SolarisProcess), usersTable, pidWhiteList, userId);
-   int kchain = 0;
-   kstat_t *ncpu_handle;
-   kstat_named_t *ks_ncpus;
 
    spl->kd = kstat_open();
-   if (spl->kd     != NULL) { ncpu_handle = kstat_lookup(spl->kd,"unix",0,"system_misc"); }
-   if (ncpu_handle != NULL) { kchain = kstat_read(spl->kd,ncpu_handle,NULL); }
-   if (kchain      != -1  ) { ks_ncpus = kstat_data_lookup(ncpu_handle,"ncpus"); }
-   if (ks_ncpus    != NULL) {
-      pl->cpuCount = (uint32_t)ks_ncpus->value.ui32;
-   } else {
-      pl->cpuCount = 1;
-   }
+
+   pl->cpuCount = sysconf(_SC_NPROCESSORS_ONLN);
 
    if (pl->cpuCount == 1 ) {
       spl->cpus = xRealloc(spl->cpus, sizeof(CPUData));
@@ -215,7 +206,7 @@ void ProcessList_goThroughEntries(ProcessList* this) {
     SolarisProcessList_scanCPUTime(this);
 
     dir = opendir(PROCDIR); 
-    if (!dir) return false;
+    if (!dir) return;
     while ((entry = readdir(dir)) != NULL) {
         name = entry->d_name;
         pid  = atoi(name);
