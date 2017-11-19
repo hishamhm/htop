@@ -252,11 +252,11 @@ void ProcessList_goThroughEntries(ProcessList* this) {
             sproc->zoneid          = _psinfo.pr_zoneid;
              proc->tty_nr          = _psinfo.pr_ttydev;
              proc->pgrp            = _psinfo.pr_pgid;
-	     // WARNING: These Solaris 'percentages' are actually 16-bit BINARY FRACTIONS
-	     // where 1.0 = 0x8000.
+	     // NOTE: These 'percentages' are 16-bit BINARY FRACTIONS where 1.0 = 0x8000
+	     // Source: https://docs.oracle.com/cd/E19253-01/816-5174/proc-4/index.html
+	     // (accessed on 18 November 2017)
              proc->percent_cpu     = ((uint16_t)_psinfo.pr_pctcpu/(double)65535)*(double)100.0;
              proc->percent_mem     = ((uint16_t)_psinfo.pr_pctmem/(double)65535)*(double)100.0;
-	     // End warning
              proc->st_uid          = _psinfo.pr_euid;
              proc->user            = UsersTable_getRef(this->usersTable, proc->st_uid);
              proc->nlwp            = _psinfo.pr_nlwp;
@@ -278,11 +278,9 @@ void ProcessList_goThroughEntries(ProcessList* this) {
 	} else {
 	     proc->ppid            = _psinfo.pr_ppid;
 	    sproc->zoneid          = _psinfo.pr_zoneid;
-	     // WARNING: These Solaris 'percentages' are actually 16-bit BINARY FRACTIONS
-	     // where 1.0 = 0x8000.
+	     // See note above about these percentages
 	     proc->percent_cpu     = ((uint16_t)_psinfo.pr_pctcpu/(double)65535)*(double)100.0;
 	     proc->percent_mem     = ((uint16_t)_psinfo.pr_pctmem/(double)65535)*(double)100.0;
-             // End warning
 	     proc->st_uid          = _psinfo.pr_euid;
 	     proc->pgrp            = _psinfo.pr_pgid;
 	     proc->nlwp            = _psinfo.pr_nlwp;
