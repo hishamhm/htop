@@ -25,15 +25,23 @@ typedef enum SolarisProcessFields {
    // Add platform-specific fields here, with ids >= 100
    ZONEID   = 100,
    ZONE  = 101,
-   LAST_PROCESSFIELD = 102,
+   PROJID = 102,
+   TASKID = 103,
+   POOLID = 104,
+   CONTID = 105,
+   LAST_PROCESSFIELD = 106,
 } SolarisProcessField;
 
 
 typedef struct SolarisProcess_ {
    Process super;
    int   kernel;
-   int   zoneid;
+   zoneid_t   zoneid;
    char  zname[ZONENAME_MAX+1];
+   taskid_t   taskid;
+   projid_t   projid;
+   poolid_t   poolid;
+   ctid_t     contid;
 } SolarisProcess;
 
 
@@ -84,11 +92,19 @@ ProcessFieldData Process_fields[] = {
    [TGID] = { .name = "TGID", .title = "   TGID ", .description = "Thread group ID (i.e. process ID)", .flags = 0, },
    [ZONEID] = { .name = "ZONEID", .title = " ZONEID ", .description = "Zone ID", .flags = 0, },
    [ZONE] = { .name = "ZONE", .title = "ZONE             ", .description = "Zone name", .flags = 0, },
+   [PROJID] = { .name = "PROJID", .title = " PRJID ", .description = "Project ID", .flags = 0, },
+   [TASKID] = { .name = "TASKID", .title = " TSKID ", .description = "Task ID", .flags = 0, },
+   [POOLID] = { .name = "POOLID", .title = " POLID ", .description = "Pool ID", .flags = 0, },
+   [CONTID] = { .name = "CONTID", .title = " CNTID ", .description = "Contract ID", .flags = 0, },
    [LAST_PROCESSFIELD] = { .name = "*** report bug! ***", .title = NULL, .description = NULL, .flags = 0, },
 };
 
 ProcessPidColumn Process_pidColumns[] = {
    { .id = ZONEID, .label = "ZONEID" },
+   { .id = TASKID, .label = "TSKID" },
+   { .id = PROJID, .label = "PRJID" },
+   { .id = POOLID, .label = "POLID" },
+   { .id = CONTID, .label = "CNTID" },
    { .id = PID, .label = "PID" },
    { .id = PPID, .label = "PPID" },
    { .id = TPGID, .label = "TPGID" },
@@ -120,6 +136,10 @@ void SolarisProcess_writeField(Process* this, RichString* str, ProcessField fiel
    switch ((int) field) {
    // add Solaris-specific fields here
    case ZONEID: xSnprintf(buffer, n, Process_pidFormat, sp->zoneid); break;
+   case PROJID: xSnprintf(buffer, n, Process_pidFormat, sp->projid); break;
+   case TASKID: xSnprintf(buffer, n, Process_pidFormat, sp->taskid); break;
+   case POOLID: xSnprintf(buffer, n, Process_pidFormat, sp->poolid); break;
+   case CONTID: xSnprintf(buffer, n, Process_pidFormat, sp->contid); break;
    case ZONE:{
       xSnprintf(buffer, n, "%-*s ", ZONENAME_MAX/4, sp->zname); break;
       if (buffer[ZONENAME_MAX/4] != '\0') {
@@ -148,6 +168,14 @@ long SolarisProcess_compare(const void* v1, const void* v2) {
    switch ((int) settings->sortKey) {
    case ZONEID:
       return (p1->zoneid - p2->zoneid);
+   case PROJID:
+      return (p1->projid - p2->projid);
+   case TASKID:
+      return (p1->taskid - p2->taskid);
+   case POOLID:
+      return (p1->poolid - p2->poolid);
+   case CONTID:
+      return (p1->contid - p2->contid);
    case ZONE:
       return strcmp(p1->zname ? p1->zname : "global", p2->zname ? p2->zname : "global");
    default:

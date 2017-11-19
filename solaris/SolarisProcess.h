@@ -17,15 +17,23 @@ typedef enum SolarisProcessFields {
    // Add platform-specific fields here, with ids >= 100
    ZONEID   = 100,
    ZONE  = 101,
-   LAST_PROCESSFIELD = 102,
+   PROJID = 102,
+   TASKID = 103,
+   POOLID = 104,
+   CONTID = 105,
+   LAST_PROCESSFIELD = 106,
 } SolarisProcessField;
 
 
 typedef struct SolarisProcess_ {
    Process super;
    int   kernel;
-   int   zoneid;
+   zoneid_t   zoneid;
    char  zname[ZONENAME_MAX+1];
+   taskid_t   taskid;
+   projid_t   projid;
+   poolid_t   poolid;
+   ctid_t     contid;
 } SolarisProcess;
 
 

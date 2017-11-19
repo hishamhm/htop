@@ -242,12 +242,9 @@ void ProcessList_goThroughEntries(ProcessList* this) {
     bool hideUserlandThreads = settings->hideUserlandThreads;
     DIR* dir;
     struct dirent* entry;
-    struct timeval tv;
-    time_t curTime;
     char*  name;
     int    pid;
     bool   preExisting = false;
-    bool isIdleProcess = false;
     Process* proc;
     Process* parent = NULL;
     SolarisProcess* sproc;
@@ -257,6 +254,8 @@ void ProcessList_goThroughEntries(ProcessList* this) {
     char filename[MAX_NAME+1];
     FILE *fp;
     char *starttime;
+    uint64_t addRunning = 0;
+    uint64_t addTotal = 0;
 
     SolarisProcessList_scanCPUTime(this);
     SolarisProcessList_scanMemoryInfo(this);
@@ -264,11 +263,12 @@ void ProcessList_goThroughEntries(ProcessList* this) {
     dir = opendir(PROCDIR); 
     if (!dir) return;
     while ((entry = readdir(dir)) != NULL) {
+	addRunning = 0;
+	addTotal = 0;
         name = entry->d_name;
         pid  = atoi(name);
         proc = ProcessList_getProcess(this, pid, &preExisting, (Process_New) SolarisProcess_new);
         proc->tgid = parent ? parent->pid : pid;
-        proc->show = true; 	
         sproc = (SolarisProcess *) proc;
         xSnprintf(filename, MAX_NAME, "%s/%s/psinfo", PROCDIR, name);
 	fp   = fopen(filename, "r");
@@ -315,7 +315,11 @@ void ProcessList_goThroughEntries(ProcessList* this) {
              proc->processor       = _psinfo.pr_lwp.pr_onpro;
              proc->state           = _psinfo.pr_lwp.pr_sname;
 	     proc->time            = _psinfo.pr_time.tv_sec;
-             starttime = ctime(&_psinfo.pr_start.tv_sec);
+            sproc->taskid          = _psinfo.pr_taskid;
+            sproc->projid          = _psinfo.pr_projid;
+	    sproc->poolid          = _psinfo.pr_poolid;
+	    sproc->contid          = _psinfo.pr_contract;
+	     starttime = ctime(&_psinfo.pr_start.tv_sec);
 	     proc->starttime_ctime = *starttime;
 	     ProcessList_add(this, proc);
 	} else {
@@ -339,17 +343,45 @@ void ProcessList_goThroughEntries(ProcessList* this) {
              proc->processor       = _psinfo.pr_lwp.pr_onpro;
              proc->state           = _psinfo.pr_lwp.pr_sname;
              proc->time            = _psinfo.pr_time.tv_sec;
+	    sproc->taskid          = _psinfo.pr_taskid;
+	    sproc->projid          = _psinfo.pr_projid;
+            sproc->poolid          = _psinfo.pr_poolid;
+            sproc->contid          = _psinfo.pr_contract;
 	}
-
-        if (proc->percent_cpu > 0.1) {
-            if ( strcmp("sleep", proc->comm) == 0 ) {
-                isIdleProcess = true;
-            }
-        }
-        if (isnan(proc->percent_cpu)) proc->percent_cpu = 0.0;
-	if (proc->state == 'O')
-		this->runningTasks++;
-        this->totalTasks++;
+	proc->show = !(hideKernelThreads && (_pstatus.pr_flags & PR_ISSYS));
+	if (_pstatus.pr_flags & PR_ISSYS) {
+		if (hideKernelThreads) {
+                   addRunning = 0;
+	           addTotal   = 0;
+		} else {
+		   this->kernelThreads += proc->nlwp;
+		   if (proc->state == 'O') {
+			   addRunning++;
+		           addTotal = proc->nlwp+1;
+		   } else {
+			   addTotal = proc->nlwp+1;
+		   }
+	        }
+	} else {
+		if (hideUserlandThreads) {
+			if(proc->state == 'O') {
+				addRunning++;
+				addTotal++;
+			} else {
+				addTotal++;
+			}
+		} else {
+			this->userlandThreads += proc->nlwp;
+			if(proc->state == 'O') {
+				addRunning++;
+				addTotal = proc->nlwp+1;
+			} else {
+				addTotal = proc->nlwp+1;
+			}
+		}
+	}
+	this->runningTasks+=addRunning;
+        this->totalTasks+=addTotal;
 	proc->updated = true;
     }    
     closedir(dir);
