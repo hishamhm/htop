@@ -44,6 +44,10 @@ typedef struct CPUData_ {
    double irqPercent;
    double idlePercent;
    double systemAllPercent;
+   uint64_t luser;
+   uint64_t lkrnl;
+   uint64_t lintr;
+   uint64_t lidle;
 } CPUData;
 
 typedef struct SolarisProcessList_ {
@@ -103,6 +107,78 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    return pl;
 }
 
+static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
+   const SolarisProcessList* spl = (SolarisProcessList*) pl;
+   int cpus   = pl->cpuCount;
+   kstat_t *cpuinfo;
+   int kchain = 0;
+   kstat_named_t *idletime, *intrtime, *krnltime, *usertime;
+   double idlebuf = 0;
+   double intrbuf = 0;
+   double krnlbuf = 0;
+   double userbuf = 0;
+   uint64_t totaltime = 0;
+   int arrskip = 0;
+
+   assert(cpus > 0);
+
+   if (cpus > 1) {
+       // Store values for the stats loop one extra element up in the array
+       // to leave room for the average to be calculated afterwards
+       arrskip++;
+   }
+#define DEBUGCPU 17
+   // Calculate per-CPU statistics first
+   for (int i = 0; i < cpus; i++) {
+      if (spl->kd != NULL) { cpuinfo = kstat_lookup(spl->kd,"cpu",i,"sys"); }
+      if (cpuinfo != NULL) { kchain = kstat_read(spl->kd,cpuinfo,NULL); }
+      if (kchain  != -1  ) {
+         idletime = kstat_data_lookup(cpuinfo,"cpu_nsec_idle");
+         intrtime = kstat_data_lookup(cpuinfo,"cpu_nsec_intr");
+         krnltime = kstat_data_lookup(cpuinfo,"cpu_nsec_kernel");
+         usertime = kstat_data_lookup(cpuinfo,"cpu_nsec_user");
+      }
+
+      assert( (idletime != NULL) && (intrtime != NULL)
+           && (krnltime != NULL) && (usertime != NULL) );
+
+      CPUData* cpuData          = &(spl->cpus[i+arrskip]);
+      totaltime = (idletime->value.ui64 - cpuData->lidle)
+                + (intrtime->value.ui64 - cpuData->lintr)
+                + (krnltime->value.ui64 - cpuData->lkrnl)
+                + (usertime->value.ui64 - cpuData->luser);
+      // Calculate percentages of deltas since last reading
+      cpuData->userPercent      = ((usertime->value.ui64 - cpuData->luser) / (double)totaltime) * 100.0;
+      cpuData->nicePercent      = (double)0.0; // Not implemented on Solaris
+      cpuData->systemPercent    = ((krnltime->value.ui64 - cpuData->lkrnl) / (double)totaltime) * 100.0;
+      cpuData->irqPercent       = ((intrtime->value.ui64 - cpuData->lintr) / (double)totaltime) * 100.0;
+      cpuData->systemAllPercent = cpuData->systemPercent + cpuData->irqPercent;
+      cpuData->idlePercent      = ((idletime->value.ui64 - cpuData->lidle) / (double)totaltime) * 100.0;
+      // Store current values to use for the next round of deltas
+      cpuData->luser            = usertime->value.ui64;
+      cpuData->lkrnl            = krnltime->value.ui64;
+      cpuData->lintr            = intrtime->value.ui64;
+      cpuData->lidle            = idletime->value.ui64;
+      // Accumulate the current percentages into buffers for later average calculation
+      if (cpus > 1) {
+         userbuf               += cpuData->userPercent;
+         krnlbuf               += cpuData->systemPercent;
+         intrbuf               += cpuData->irqPercent;
+         idlebuf               += cpuData->idlePercent;
+      }
+   }
+   
+   if (cpus > 1) {
+      CPUData* cpuData          = &(spl->cpus[0]);
+      cpuData->userPercent      = userbuf / cpus;
+      cpuData->nicePercent      = (double)0.0; // Not implemented on Solaris
+      cpuData->systemPercent    = krnlbuf / cpus;
+      cpuData->irqPercent       = intrbuf / cpus;
+      cpuData->systemAllPercent = cpuData->systemPercent + cpuData->irqPercent;
+      cpuData->idlePercent      = idlebuf / cpus;
+   }
+}
+
 void ProcessList_delete(ProcessList* this) {
    const SolarisProcessList* spl = (SolarisProcessList*) this;
    if (spl->kd) kstat_close(spl->kd);
@@ -132,6 +208,8 @@ void ProcessList_goThroughEntries(ProcessList* this) {
     prusage_t _prusage;
     char filename[MAX_NAME+1];
     FILE *fp;
+
+    SolarisProcessList_scanCPUTime(this);
 
     dir = opendir(PROCDIR); 
     if (!dir) return false;
@@ -167,8 +245,11 @@ void ProcessList_goThroughEntries(ProcessList* this) {
             sproc->zoneid          = _psinfo.pr_zoneid;
              proc->tty_nr          = _psinfo.pr_ttydev;
              proc->pgrp            = _psinfo.pr_pgid;
-             proc->percent_cpu     = (_psinfo.pr_pctcpu)/100;
-             proc->percent_mem     = (_psinfo.pr_pctmem)/100;
+	     // WARNING: These Solaris 'percentages' are actually 16-bit BINARY FRACTIONS
+	     // where 1.0 = 0x8000.
+             proc->percent_cpu     = ((uint16_t)_psinfo.pr_pctcpu/(double)65535)*(double)100.0;
+             proc->percent_mem     = ((uint16_t)_psinfo.pr_pctmem/(double)65535)*(double)100.0;
+	     // End warning
              proc->st_uid          = _psinfo.pr_euid;
              proc->user            = UsersTable_getRef(this->usersTable, proc->st_uid);
              proc->nlwp            = _psinfo.pr_nlwp;
@@ -189,8 +270,11 @@ void ProcessList_goThroughEntries(ProcessList* this) {
 	} else {
 	     proc->ppid            = _psinfo.pr_ppid;
 	    sproc->zoneid          = _psinfo.pr_zoneid;
-	     proc->percent_cpu     = (_psinfo.pr_pctcpu)/100;
-	     proc->percent_mem     = (_psinfo.pr_pctmem)/100;
+	     // WARNING: These Solaris 'percentages' are actually 16-bit BINARY FRACTIONS
+	     // where 1.0 = 0x8000.
+	     proc->percent_cpu     = ((uint16_t)_psinfo.pr_pctcpu/(double)65535)*(double)100.0;
+	     proc->percent_mem     = ((uint16_t)_psinfo.pr_pctmem/(double)65535)*(double)100.0;
+             // End warning
 	     proc->st_uid          = _psinfo.pr_euid;
 	     proc->pgrp            = _psinfo.pr_pgid;
 	     proc->nlwp            = _psinfo.pr_nlwp;

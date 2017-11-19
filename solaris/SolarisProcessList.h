@@ -29,6 +29,10 @@ typedef struct CPUData_ {
    double irqPercent;
    double idlePercent;
    double systemAllPercent;
+   uint64_t luser;
+   uint64_t lkrnl;
+   uint64_t lintr;
+   uint64_t lidle;
 } CPUData;
 
 typedef struct SolarisProcessList_ {
