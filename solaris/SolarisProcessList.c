@@ -120,7 +120,7 @@ static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
        // to leave room for the average to be calculated afterwards
        arrskip++;
    }
-#define DEBUGCPU 17
+
    // Calculate per-CPU statistics first
    for (int i = 0; i < cpus; i++) {
       if (spl->kd != NULL) { cpuinfo = kstat_lookup(spl->kd,"cpu",i,"sys"); }
@@ -172,6 +172,18 @@ static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
    }
 }
 
+static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
+   SolarisProcessList* spl = (SolarisProcessList*) pl;
+   // Divide these quantities separately to reduce the risk of overflow
+   pl->totalMem = (sysconf(_SC_PHYS_PAGES)/1024) * PAGE_SIZE;
+   pl->buffersMem = 0;
+   pl->cachedMem = 0;
+   pl->usedMem = pl->totalMem - ((sysconf(_SC_AVPHYS_PAGES)/1024) * PAGE_SIZE);
+   pl->totalSwap = 0;
+   pl->usedSwap = 0;
+   pl->sharedMem = 0;  // currently unused
+}
+
 void ProcessList_delete(ProcessList* this) {
    const SolarisProcessList* spl = (SolarisProcessList*) this;
    if (spl->kd) kstat_close(spl->kd);
@@ -204,6 +216,7 @@ void ProcessList_goThroughEntries(ProcessList* this) {
     char *starttime;
 
     SolarisProcessList_scanCPUTime(this);
+    SolarisProcessList_scanMemoryInfo(this);
 
     dir = opendir(PROCDIR); 
     if (!dir) return;
