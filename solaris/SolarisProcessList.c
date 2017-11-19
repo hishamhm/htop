@@ -184,6 +184,10 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    uint64_t         totalswap = 0;
    uint64_t         totalfree = 0;
    int              nswap = swapctl(SC_GETNSWP, NULL);
+   // PAGE_SIZE is a macro to a function call.
+   // Since we use it so much in here, go ahead copy
+   // the value locally.
+   int              pgsiz = PAGE_SIZE;
 
    // Part 1 - physical memory
    if (spl->kd != NULL) { meminfo    = kstat_lookup(spl->kd,"unix",0,"system_pages"); }
@@ -193,19 +197,19 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
       lockedmem_pgs  = kstat_data_lookup( meminfo, "pageslocked" );
       pages          = kstat_data_lookup( meminfo, "pagestotal" );
 
-      pl->totalMem   = ((totalmem_pgs->value.ui64)/1024)  * PAGE_SIZE;
-      pl->usedMem    = ((lockedmem_pgs->value.ui64)/1024) * PAGE_SIZE;
+      pl->totalMem   = ((totalmem_pgs->value.ui64)/1024)  * pgsiz;
+      pl->usedMem    = ((lockedmem_pgs->value.ui64)/1024) * pgsiz;
       // Not sure how to implement this on Solaris - suggestions welcome!
       pl->cachedMem  = 0;     
       // Not really "buffers" but the best Solaris analogue that I can find to
       // "memory in use but not by programs or the kernel itself"
-      pl->buffersMem = (((totalmem_pgs->value.ui64)/1024) - (pages->value.ui64)/1024) * PAGE_SIZE;
+      pl->buffersMem = (((totalmem_pgs->value.ui64)/1024) - (pages->value.ui64)/1024) * pgsiz;
    } else {
       // Fall back to basic sysconf if kstat isn't working
-      pl->totalMem = sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
+      pl->totalMem = sysconf(_SC_PHYS_PAGES) * pgsiz;
       pl->buffersMem = 0;
       pl->cachedMem  = 0;
-      pl->usedMem    = pl->totalMem - (sysconf(_SC_AVPHYS_PAGES) * sysconf(_SC_PAGESIZE));
+      pl->usedMem    = pl->totalMem - (sysconf(_SC_AVPHYS_PAGES) * pgsiz);
    }
    
    // Part 2 - swap
@@ -219,8 +223,8 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
       }
       free(sl);
    }
-   pl->totalSwap = (totalswap * PAGE_SIZE)/1024;
-   pl->usedSwap  = pl->totalSwap - ((totalfree * PAGE_SIZE)/1024); 
+   pl->totalSwap = (totalswap * pgsiz)/1024;
+   pl->usedSwap  = pl->totalSwap - ((totalfree * pgsiz)/1024); 
 }
 
 void ProcessList_delete(ProcessList* this) {
