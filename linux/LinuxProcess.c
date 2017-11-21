@@ -456,11 +456,11 @@ long LinuxProcess_compare(const void* v1, const void* v2) {
       return (p2->oom - p1->oom);
    #ifdef HAVE_DELAYACCT
    case PERCENT_CPU_DELAY:
-      return (p2->cpu_delay_percent - p1->cpu_delay_percent);
+      return (p2->cpu_delay_percent > p1->cpu_delay_percent ? 1 : -1);
    case PERCENT_IO_DELAY:
-      return (p2->blkio_delay_percent - p1->blkio_delay_percent);
+      return (p2->blkio_delay_percent > p1->blkio_delay_percent ? 1 : -1);
    case PERCENT_SWAP_DELAY:
-      return (p2->swapin_delay_percent - p1->swapin_delay_percent);
+      return (p2->swapin_delay_percent > p1->swapin_delay_percent ? 1 : -1);
    #endif
    case IO_PRIORITY:
       return LinuxProcess_effectiveIOPriority(p1) - LinuxProcess_effectiveIOPriority(p2);
