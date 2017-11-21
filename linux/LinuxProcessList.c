@@ -209,12 +209,14 @@ static void LinuxProcessList_initTtyDrivers(LinuxProcessList* this) {
 #ifdef HAVE_DELAYACCT
 
 static void LinuxProcessList_initNetlinkSocket(LinuxProcessList* this) {
-  this->netlink_socket = nl_socket_alloc();
-  if (this->netlink_socket == NULL)
-    return;
-  if (nl_connect(this->netlink_socket, NETLINK_GENERIC) < 0)
-    return;
-  this->netlink_family = genl_ctrl_resolve(this->netlink_socket, TASKSTATS_GENL_NAME);
+   this->netlink_socket = nl_socket_alloc();
+   if (this->netlink_socket == NULL) {
+      return;
+   }
+   if (nl_connect(this->netlink_socket, NETLINK_GENERIC) < 0) {
+      return;
+   }
+   this->netlink_family = genl_ctrl_resolve(this->netlink_socket, TASKSTATS_GENL_NAME);
 }
 
 #endif
@@ -592,62 +594,68 @@ static void LinuxProcessList_readOomData(LinuxProcess* process, const char* dirn
 #ifdef HAVE_DELAYACCT
 
 static int handleNetlinkMsg(struct nl_msg *nlmsg, void *linuxProcess) {
-  struct nlmsghdr *nlhdr;
-  struct nlattr *nlattrs[TASKSTATS_TYPE_MAX + 1];
-  struct nlattr *nlattr;
-  struct taskstats *stats;
-  int rem;
-  unsigned long long int timeDelta;
-  LinuxProcess* lp = (LinuxProcess*) linuxProcess;
+   struct nlmsghdr *nlhdr;
+  	struct nlattr *nlattrs[TASKSTATS_TYPE_MAX + 1];
+  	struct nlattr *nlattr;
+	struct taskstats *stats;
+	int rem;
+	unsigned long long int timeDelta;
+	LinuxProcess* lp = (LinuxProcess*) linuxProcess;
 
-  nlhdr = nlmsg_hdr(nlmsg);
+	nlhdr = nlmsg_hdr(nlmsg);
 
-  if (genlmsg_parse(nlhdr, 0, nlattrs, TASKSTATS_TYPE_MAX, NULL) < 0)
-    return NL_SKIP;
+   if (genlmsg_parse(nlhdr, 0, nlattrs, TASKSTATS_TYPE_MAX, NULL) < 0) {
+      return NL_SKIP;
+	}
 
-  if ((nlattr = nlattrs[TASKSTATS_TYPE_AGGR_PID]) || (nlattr = nlattrs[TASKSTATS_TYPE_NULL])) {
-    stats = nla_data(nla_next(nla_data(nlattr), &rem));
-    assert(lp->super.pid == stats->ac_pid);
-    timeDelta = (stats->ac_etime*1000 - lp->delay_read_time);
-    #define BOUNDS(x) isnan(x) ? 0.0 : (x > 100) ? 100.0 : x;
-    #define DELTAPERC(x,y) BOUNDS((float) (x - y) / timeDelta * 100);
-    lp->cpu_delay_percent = DELTAPERC(stats->cpu_delay_total, lp->cpu_delay_total);
-    lp->blkio_delay_percent = DELTAPERC(stats->blkio_delay_total, lp->blkio_delay_total);
-    lp->swapin_delay_percent = DELTAPERC(stats->swapin_delay_total, lp->swapin_delay_total);
-    #undef DELTAPERC
-    #undef BOUNDS
-    lp->swapin_delay_total = stats->swapin_delay_total;
-    lp->blkio_delay_total = stats->blkio_delay_total;
-    lp->cpu_delay_total = stats->cpu_delay_total;
-    lp->delay_read_time = stats->ac_etime*1000;
-  }
-  return NL_OK;
+	if ((nlattr = nlattrs[TASKSTATS_TYPE_AGGR_PID]) || (nlattr = nlattrs[TASKSTATS_TYPE_NULL])) {
+		stats = nla_data(nla_next(nla_data(nlattr), &rem));
+		assert(lp->super.pid == stats->ac_pid);
+		timeDelta = (stats->ac_etime*1000 - lp->delay_read_time);
+		#define BOUNDS(x) isnan(x) ? 0.0 : (x > 100) ? 100.0 : x;
+		#define DELTAPERC(x,y) BOUNDS((float) (x - y) / timeDelta * 100);
+		lp->cpu_delay_percent = DELTAPERC(stats->cpu_delay_total, lp->cpu_delay_total);
+		lp->blkio_delay_percent = DELTAPERC(stats->blkio_delay_total, lp->blkio_delay_total);
+		lp->swapin_delay_percent = DELTAPERC(stats->swapin_delay_total, lp->swapin_delay_total);
+		#undef DELTAPERC
+		#undef BOUNDS
+		lp->swapin_delay_total = stats->swapin_delay_total;
+		lp->blkio_delay_total = stats->blkio_delay_total;
+		lp->cpu_delay_total = stats->cpu_delay_total;
+		lp->delay_read_time = stats->ac_etime*1000;
+	}
+  	return NL_OK;
 }
 
 static void LinuxProcessList_readDelayAcctData(LinuxProcessList* this, LinuxProcess* process) {
-  struct nl_msg *msg;
+   struct nl_msg *msg;
 
-  if (nl_socket_modify_cb(this->netlink_socket, NL_CB_VALID, NL_CB_CUSTOM, handleNetlinkMsg, process) < 0)
-    return;
+   if (nl_socket_modify_cb(this->netlink_socket, NL_CB_VALID, NL_CB_CUSTOM, handleNetlinkMsg, process) < 0) {
+      return;
+   }
 
-  if (! (msg = nlmsg_alloc()))
-    return;
+   if (! (msg = nlmsg_alloc())) {
+      return;
+   }
 
-  if (! genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, this->netlink_family, 0, NLM_F_REQUEST, TASKSTATS_CMD_GET, TASKSTATS_VERSION))
-    nlmsg_free(msg);
+   if (! genlmsg_put(msg, NL_AUTO_PID, NL_AUTO_SEQ, this->netlink_family, 0, NLM_F_REQUEST, TASKSTATS_CMD_GET, TASKSTATS_VERSION)) {
+      nlmsg_free(msg);
+   }
 
-  if (nla_put_u32(msg, TASKSTATS_CMD_ATTR_PID, process->super.pid) < 0)
-    nlmsg_free(msg);
+   if (nla_put_u32(msg, TASKSTATS_CMD_ATTR_PID, process->super.pid) < 0) {
+      nlmsg_free(msg);
+   }
 
-  if (nl_send_sync(this->netlink_socket, msg) < 0) {
-    process->swapin_delay_percent = -1LL;
-    process->blkio_delay_percent = -1LL;
-    process->cpu_delay_percent = -1LL;
-    return;
-  }
- 
-  if (nl_recvmsgs_default(this->netlink_socket) < 0)
-    return;
+   if (nl_send_sync(this->netlink_socket, msg) < 0) {
+      process->swapin_delay_percent = -1LL;
+      process->blkio_delay_percent = -1LL;
+      process->cpu_delay_percent = -1LL;
+      return;
+   }
+   
+   if (nl_recvmsgs_default(this->netlink_socket) < 0) {
+      return;
+   }
 }
 
 #endif
