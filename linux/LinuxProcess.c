@@ -308,10 +308,11 @@ bool LinuxProcess_setIOPriority(LinuxProcess* this, IOPriority ioprio) {
 
 #ifdef HAVE_DELAYACCT
 void LinuxProcess_printDelay(float delay_percent, char* buffer, int n) {
-  if (delay_percent == -1LL)
+  if (delay_percent == -1LL) {
     xSnprintf(buffer, n, " N/A  ");
-  else
-    xSnprintf(buffer, n, "%4.1f ", delay_percent);
+  } else {
+    xSnprintf(buffer, n, "%4.1f  ", delay_percent);
+  }
 }
 #endif
 
