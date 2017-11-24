@@ -35,29 +35,14 @@ in the source distribution for its full text.
 #include "Action.h"
 #include "BatteryMeter.h"
 #include "SignalsPanel.h"
+#include <sys/mkdev.h>
 
 extern ProcessFieldData Process_fields[];
+typedef struct var kvar_t;
 
 }*/
 
-typedef struct var kvar_t;
-
 double plat_loadavg[3] = {0};
-
-#define MINORBITS        20
-#define MINORMASK        ((1U << MINORBITS) - 1)
-
-unsigned int major(dev_t dev) {
-   return ((unsigned int) ((dev) >> MINORBITS ));
-}
-
-unsigned int minor(dev_t dev) {
-   return ((unsigned int) ((dev) & MINORMASK ));
-}
-
-unsigned int mkdev(unsigned int ma, unsigned int mi) {
-   return (((ma) << MINORBITS) | (mi));
-}
 
 const SignalItem Platform_signals[] = {
    { .name = " 0 Cancel",      .number =  0 },

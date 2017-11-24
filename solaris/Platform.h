@@ -14,14 +14,13 @@ in the source distribution for its full text.
 #include "Action.h"
 #include "BatteryMeter.h"
 #include "SignalsPanel.h"
+#include <sys/mkdev.h>
 
 extern ProcessFieldData Process_fields[];
+typedef struct var kvar_t;
 
 
-
-unsigned int minor(dev_t dev);
-
-unsigned int mkdev(unsigned int ma, unsigned int mi);
+extern double plat_loadavg[3];
 
 extern const SignalItem Platform_signals[];
 
