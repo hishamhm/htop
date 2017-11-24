@@ -231,6 +231,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
       for (int i = 0; i < nswap; i++, swapdev++) {
 			totalswap += swapdev->ste_pages;
 			totalfree += swapdev->ste_free;
+			free(swapdev->ste_path);
       }
       free(sl);
    }
