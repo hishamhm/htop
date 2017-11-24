@@ -65,7 +65,7 @@ const SignalItem Platform_signals[] = {
    { .name = "17 SIGUSR2",     .number = 17 },
    { .name = "18 SIGCHLD/CLD", .number = 18 },
    { .name = "19 SIGPWR",      .number = 19 },
-   { .name = "20 WIGWINCH",    .number = 20 },
+   { .name = "20 SIGWINCH",    .number = 20 },
    { .name = "21 SIGURG",      .number = 21 },
    { .name = "22 SIGPOLL/IO",  .number = 22 },
    { .name = "23 SIGSTOP",     .number = 23 },
