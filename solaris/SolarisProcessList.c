@@ -81,8 +81,7 @@ static void setZoneName(kstat_ctl_t* kd, SolarisProcess* sproc) {
      kstat_t* ks = kstat_lookup( kd, "zones", sproc->zoneid, NULL );
      strncpy( sproc->zname, ks->ks_name, strlen(ks->ks_name) );
   }
-} 
-
+}
 
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId) {
    SolarisProcessList* spl = xCalloc(1, sizeof(SolarisProcessList));
@@ -265,9 +264,12 @@ void ProcessList_goThroughEntries(ProcessList* this) {
     prusage_t _prusage;
     char filename[MAX_NAME+1];
     FILE *fp;
-    char *starttime;
     uint64_t addRunning = 0;
     uint64_t addTotal = 0;
+    struct timeval tv;
+    struct tm date;
+
+    gettimeofday(&tv, NULL);
 
     SolarisProcessList_scanCPUTime(this);
     SolarisProcessList_scanMemoryInfo(this);
@@ -331,8 +333,9 @@ void ProcessList_goThroughEntries(ProcessList* this) {
             sproc->projid          = _psinfo.pr_projid;
 	    sproc->poolid          = _psinfo.pr_poolid;
 	    sproc->contid          = _psinfo.pr_contract;
-	     starttime = ctime(&_psinfo.pr_start.tv_sec);
-	     proc->starttime_ctime = *starttime;
+	     proc->starttime_ctime = _psinfo.pr_start.tv_sec;
+             (void) localtime_r((time_t*) &proc->starttime_ctime, &date);
+	     strftime(proc->starttime_show, 7, ((proc->starttime_ctime > tv.tv_sec - 86400) ? "%R " : "%b%d "), &date); 
 	     ProcessList_add(this, proc);
 	} else {
 	     proc->ppid            = _psinfo.pr_ppid;
