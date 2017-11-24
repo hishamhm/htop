@@ -176,14 +176,15 @@ static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
 
 static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    SolarisProcessList* spl = (SolarisProcessList*) pl;
-   kstat_t *meminfo;
-   int     ksrphyserr;
-   kstat_named_t *totalmem_pgs, *lockedmem_pgs, *pages;
-   struct swaptable 	*sl;
-   struct swapent	*swapdev;
-   uint64_t         totalswap = 0;
-   uint64_t         totalfree = 0;
-   int              nswap = swapctl(SC_GETNSWP, NULL);
+   kstat_t             *meminfo;
+   int                 ksrphyserr;
+   kstat_named_t       *totalmem_pgs, *lockedmem_pgs, *pages;
+   struct swaptable    *sl;
+   struct swapent      *swapdev;
+   uint64_t            totalswap = 0;
+   uint64_t            totalfree = 0;
+   int                 nswap = 0;
+   char                *spath = NULL; 
    // PAGE_SIZE is a macro to a function call.
    // Since we use it so much in here, go ahead copy
    // the value locally.
@@ -213,12 +214,22 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    }
    
    // Part 2 - swap
-   if (nswap !=    0) { sl  = malloc(nswap * sizeof(swapent_t) + sizeof(int)); nswap = -1; }
-   if (sl    != NULL) { nswap = swapctl(SC_LIST, sl); }
-   if (nswap !=   -1) {
+   nswap = swapctl(SC_GETNSWP, NULL);
+   if (nswap >     0) { sl  = malloc(nswap * sizeof(swapent_t) + sizeof(int)); }
+   if (sl    != NULL) { spath = malloc( nswap * MAXPATHLEN ); }
+   if (spath != NULL) { 
       swapdev = sl->swt_ent;
       for (int i = 0; i < nswap; i++, swapdev++) {
-			totalswap += swapdev->ste_pages,
+         swapdev->ste_path = spath;
+	 spath += MAXPATHLEN;
+      }
+      sl->swt_n = nswap;
+   }
+   nswap = swapctl(SC_LIST, sl);
+   if (nswap > 0) { 
+      swapdev = sl->swt_ent;
+      for (int i = 0; i < nswap; i++, swapdev++) {
+			totalswap += swapdev->ste_pages;
 			totalfree += swapdev->ste_free;
       }
       free(sl);
