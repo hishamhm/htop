@@ -36,6 +36,7 @@ typedef enum SolarisProcessFields {
 typedef struct SolarisProcess_ {
    Process super;
    int   kernel;
+   bool  lwp;
    zoneid_t   zoneid;
    char  zname[ZONENAME_MAX+1];
    taskid_t   taskid;
@@ -184,10 +185,7 @@ long SolarisProcess_compare(const void* v1, const void* v2) {
 }
 
 bool Process_isThread(Process* this) {
-   SolarisProcess* fp = (SolarisProcess*) this;
+   SolarisProcess* sp = (SolarisProcess*) this;
 
-   if (fp->kernel == 1 )
-      return 1;
-   else
-      return 0;
+   return sp->lwp;
 }
