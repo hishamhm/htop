@@ -125,8 +125,8 @@ SolarisProcess* SolarisProcess_new(Settings* settings) {
 void Process_delete(Object* cast) {
    SolarisProcess* this = (SolarisProcess*) cast;
    Process_done((Process*)cast);
-   free(this->zname);
-   free(this);
+   if(this->zname != NULL) free(this->zname);
+   if(this != NULL) free(this);
 }
 
 void SolarisProcess_writeField(Process* this, RichString* str, ProcessField field) {

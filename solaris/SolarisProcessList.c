@@ -79,7 +79,7 @@ static void setZoneName(kstat_ctl_t* kd, SolarisProcess* sproc) {
      strncpy( sproc->zname, "unknown   ", 11);
   } else {
      kstat_t* ks = kstat_lookup( kd, "zones", sproc->zoneid, NULL );
-     strncpy( sproc->zname, ks->ks_name, strlen(ks->ks_name) );
+     strncpy( sproc->zname, ks->ks_name, ZONENAME_MAX+1 );
   }
 }
 
@@ -268,12 +268,13 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
     struct dirent* entry;
     char* lwpname;
     bool haveStatus = false;
+    bool haveUsage = false;
 
     dir = opendir(lwpdir);
     if (!dir) return;
     while ((entry = readdir(dir)) != NULL) {
         lwpname = entry->d_name;
-	lwpid   = (proc->pid << 8) + atoi(lwpname);
+	lwpid   = (proc->pid << 10) + atoi(lwpname);
         lwp     = ProcessList_getProcess(pl, lwpid, &preExisting, (Process_New) SolarisProcess_new);
         slwp    = (SolarisProcess*) lwp;
 	xSnprintf(filename, MAX_NAME, "%s/%s/lwp/%s/lwpsinfo", PROCDIR, name, lwpname);
@@ -290,9 +291,11 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
 	}
 	xSnprintf(filename, MAX_NAME, "%s/%s/lwp/%s/lwpusage", PROCDIR, name, lwpname);
         fp   = fopen(filename, "r");
-	fread(&_lwprusage,sizeof(prusage_t),1,fp);
-	fclose(fp);
-        if ( fp == NULL ) continue;
+	if ( fp != NULL ) {
+	    haveUsage = true;
+	    fread(&_lwprusage,sizeof(prusage_t),1,fp);
+	    fclose(fp);
+	}
 
 	if (!preExisting) {
 	     lwp->basenameOffset  = -1;
@@ -308,9 +311,8 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
             slwp->zoneid          = sproc->zoneid;
              lwp->tty_nr          = proc->tty_nr;
              lwp->pgrp            = proc->pgrp;
+             lwp->percent_cpu     = ((uint16_t)_lwpsinfo.pr_pctcpu/(double)32768)*(double)100.0;
              // Not tracked per thread
-//             lwp->percent_cpu     = ((uint16_t)_lwpsinfo.pr_pctcpu/(double)32768)*(double)100.0;
-             lwp->percent_cpu     = (double)0.0;
 	     lwp->percent_mem     = (double)0.0;
              lwp->st_uid          = proc->st_uid;
              lwp->user            = UsersTable_getRef(pl->usersTable, lwp->st_uid);
@@ -318,8 +320,13 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
              lwp->session         = proc->session;
              setCommand(lwp,proc->comm,PRFNSZ);
              setZoneName(spl->kd,slwp);
-             lwp->majflt          = _lwprusage.pr_majf;
-             lwp->minflt          = _lwprusage.pr_minf;
+	     if (haveUsage) {
+                 lwp->majflt      = _lwprusage.pr_majf;
+                 lwp->minflt      = _lwprusage.pr_minf;
+	     } else {
+	         lwp->majflt      = 0;
+		 lwp->minflt      = 0;
+	     }
              lwp->m_resident      = 0;
              lwp->m_size          = 0;
              lwp->priority        = _lwpsinfo.pr_pri;
@@ -338,9 +345,8 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
 	} else {
             slwp->zoneid          = sproc->zoneid;
              lwp->pgrp            = proc->pgrp;
+             lwp->percent_cpu     = ((uint16_t)_lwpsinfo.pr_pctcpu/(double)32768)*(double)100.0;
              // Not tracked per thread
-//             lwp->percent_cpu     = ((uint16_t)_lwpsinfo.pr_pctcpu/(double)32768)*(double)100.0;
-             lwp->percent_cpu     = (double)0.0;
 	     lwp->percent_mem     = (double)0.0;
              lwp->st_uid          = proc->st_uid;
              lwp->user            = UsersTable_getRef(pl->usersTable, lwp->st_uid);
@@ -348,8 +354,10 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
              lwp->session         = proc->session;
              setCommand(lwp,proc->comm,PRFNSZ);
              setZoneName(spl->kd,slwp);
-             lwp->majflt          = _lwprusage.pr_majf;
-             lwp->minflt          = _lwprusage.pr_minf;
+	     if (haveUsage) {
+                 lwp->majflt      = _lwprusage.pr_majf;
+                 lwp->minflt      = _lwprusage.pr_minf;
+	     }
              lwp->m_resident      = 0;
              lwp->m_size          = 0;
              lwp->priority        = _lwpsinfo.pr_pri;
@@ -363,17 +371,23 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
             slwp->contid          = sproc->contid;
 	}
 	if (slwp->kernel) {
-            pl->kernelThreads++;
-            lwp->show = !(hideKernelThreads);
+	    if(!(hideKernelThreads)) {
+	        lwp->show = true;
+		pl->totalTasks++;
+		pl->kernelThreads++;
+		if(lwp->state == 'O') pl->runningTasks++;
+	    } else {
+		lwp->show = false;
+	    }
         } else {
-            pl->userlandThreads++;
-            lwp->show = !(hideUserlandThreads);
-        }
-        if (lwp->state == 'O') {
-           pl->runningTasks++;
-           pl->totalTasks++;
-        } else {
-           pl->totalTasks++;
+	    if(!(hideUserlandThreads)) {
+                pl->userlandThreads++;
+                lwp->show = true;
+		pl->totalTasks++;
+		if(lwp->state == 'O') pl->runningTasks++;
+	    } else {
+		lwp->show = false;
+	    }
         }
         lwp->updated = true; 
     }
@@ -398,6 +412,7 @@ void ProcessList_goThroughEntries(ProcessList* this) {
     struct timeval tv;
     struct tm date;
     bool haveStatus = false;
+    bool haveUsage = false;
 
     gettimeofday(&tv, NULL);
 
@@ -425,9 +440,11 @@ void ProcessList_goThroughEntries(ProcessList* this) {
 	}
 	xSnprintf(filename, MAX_NAME, "%s/%s/usage", PROCDIR, name);
 	fp   = fopen(filename,"r");
-	if ( fp == NULL ) continue;
-	fread(&_prusage,sizeof(prusage_t),1,fp);
-	fclose(fp);
+	if ( fp != NULL ) {
+            haveUsage = true;
+	    fread(&_prusage,sizeof(prusage_t),1,fp);
+	    fclose(fp);
+	}
 
         if(!preExisting) {
 	    sproc->lwp             = false;
@@ -454,8 +471,13 @@ void ProcessList_goThroughEntries(ProcessList* this) {
              proc->nlwp            = _psinfo.pr_nlwp;
              setCommand(proc,_psinfo.pr_fname,PRFNSZ);
 	     setZoneName(spl->kd,sproc);
-	     proc->majflt          = _prusage.pr_majf;
-	     proc->minflt          = _prusage.pr_minf; 
+	     if (haveUsage) {
+	         proc->majflt      = _prusage.pr_majf;
+	         proc->minflt      = _prusage.pr_minf; 
+	     } else {
+	         proc->majflt      = 0;
+		 proc->minflt      = 0;
+	     }
 	     proc->m_resident      = (_psinfo.pr_rssize)/8;
 	     proc->m_size          = (_psinfo.pr_size)/8;
              proc->priority        = _psinfo.pr_lwp.pr_pri;
@@ -483,8 +505,10 @@ void ProcessList_goThroughEntries(ProcessList* this) {
 	     proc->user            = UsersTable_getRef(this->usersTable, proc->st_uid);
              setCommand(proc,_psinfo.pr_fname,PRFNSZ);
 	     setZoneName(spl->kd,sproc);
-             proc->majflt          = _prusage.pr_majf;
-             proc->minflt          = _prusage.pr_minf;
+	     if (haveUsage) {
+                 proc->majflt      = _prusage.pr_majf;
+                 proc->minflt      = _prusage.pr_minf;
+	     }
              proc->m_resident      = (_psinfo.pr_rssize)/8;
              proc->m_size          = (_psinfo.pr_size)/8;
              proc->priority        = _psinfo.pr_lwp.pr_pri;
@@ -505,7 +529,7 @@ void ProcessList_goThroughEntries(ProcessList* this) {
         }
 	proc->show = true;
 	proc->updated = true;
-        ProcessList_enumerateLWPs(proc, name, this, tv); 
+        ProcessList_enumerateLWPs(proc, name, this, tv);
     }    
     closedir(dir);
 }
