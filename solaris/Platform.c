@@ -158,7 +158,7 @@ int Platform_getMaxPid() {
       vproc = ksvar->v_proc;
    }
    if (kc       != NULL) { kstat_close(kc); }
-   return (vproc << 10) + 1023;
+   return (vproc << 8) + 255;
 //   return vproc; 
 }
 
