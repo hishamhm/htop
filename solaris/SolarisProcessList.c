@@ -397,7 +397,6 @@ void ProcessList_goThroughEntries(ProcessList* this) {
     FILE *fp;
     struct timeval tv;
     struct tm date;
-    bool haveStatus = false;
 
     gettimeofday(&tv, NULL);
 
@@ -419,7 +418,6 @@ void ProcessList_goThroughEntries(ProcessList* this) {
 	xSnprintf(filename, MAX_NAME, "%s/%s/status", PROCDIR, name);
 	fp   = fopen(filename, "r");
 	if ( fp != NULL ) {
-	    haveStatus = true;
 	    fread(&_pstatus,sizeof(pstatus_t),1,fp);
 	    fclose(fp);
 	}
@@ -431,14 +429,8 @@ void ProcessList_goThroughEntries(ProcessList* this) {
 
         if(!preExisting) {
 	    sproc->lwp             = false;
-	    if (haveStatus) {
-	        sproc->kernel      = _pstatus.pr_flags & PR_ISSYS;
-                 proc->session     = _pstatus.pr_sid;
-	    } else {
-		sproc->kernel      = false;
-		 proc->session     = 0;
-	    }
-	     proc->pid             = _psinfo.pr_pid;
+	    sproc->kernel          = _pstatus.pr_flags & PR_ISSYS;
+             proc->pid             = _psinfo.pr_pid;
              proc->ppid            = _psinfo.pr_ppid;
              proc->tgid            = _psinfo.pr_pid;
             sproc->zoneid          = _psinfo.pr_zoneid;
@@ -452,6 +444,7 @@ void ProcessList_goThroughEntries(ProcessList* this) {
              proc->st_uid          = _psinfo.pr_euid;
              proc->user            = UsersTable_getRef(this->usersTable, proc->st_uid);
              proc->nlwp            = _psinfo.pr_nlwp;
+	     proc->session         = _pstatus.pr_sid;
              setCommand(proc,_psinfo.pr_fname,PRFNSZ);
 	     setZoneName(spl->kd,sproc);
 	     proc->majflt          = _prusage.pr_majf;
