@@ -158,8 +158,7 @@ int Platform_getMaxPid() {
       vproc = ksvar->v_proc;
    }
    if (kc       != NULL) { kstat_close(kc); }
-   return (vproc << 8) + 255;
-//   return vproc; 
+   return vproc; 
 }
 
 double Platform_setCPUValues(Meter* this, int cpu) {

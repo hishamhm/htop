@@ -28,7 +28,6 @@ typedef enum SolarisProcessFields {
 typedef struct SolarisProcess_ {
    Process super;
    int   kernel;
-   bool  lwp;
    zoneid_t   zoneid;
    char  zname[ZONENAME_MAX+1];
    taskid_t   taskid;
