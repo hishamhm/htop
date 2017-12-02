@@ -10,7 +10,8 @@ os:
 
 matrix:
   include:
-    - os: linux
+    - compiler: gcc
+      os: linux
       addons:
         apt:
           sources:
