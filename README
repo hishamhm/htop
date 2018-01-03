@@ -56,6 +56,12 @@ inside `htop`) for a list of supported key commands.
 
 If not all keys work check your curses configuration.
 
+## Notes
+
+### macOS
+
+Some information (CPU/memory usage, process state, etc) is not available without `sudo`. See [wiki](https://github.com/hishamhm/htop/wiki/macOS:-run-without-sudo) to avoid using `sudo`.
+
 ## License
 
 GNU General Public License, version 2 (GPL-2.0)
