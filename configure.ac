@@ -266,6 +266,53 @@ then
    AC_DEFINE(HAVE_DELAYACCT, 1, [Define if delay accounting support should be enabled.])
 fi
 
+HTOP_LUA_VERSION=5.3.4
+
+AC_ARG_ENABLE(lua, [AS_HELP_STRING([--enable-lua], [enable Lua support])], ,enable_lua="yes")
+if test "x$enable_lua" = xyes; then
+
+   AC_ARG_ENABLE(bundled-lua, [AC_HELP_STRING([--enable-bundled-lua], [compile bundled copy of Lua])],, enable_bundled_lua="default")
+   
+   if test x"$enable_bundled_lua" = x"no"
+   then
+      AX_LUA_LIBS
+      if test x"$LUA_LIB" = x""
+      then
+         AC_MSG_ERROR([Could not find Lua libraries in the system.])
+      else
+         AX_LUA_HEADERS
+         AX_LUA_TRY_LIB_VERSION([501], [504], [], [
+            AC_MSG_ERROR([Could not find a suitable version of Lua.])
+         ])
+      fi
+   elif test x"$enable_bundled_lua" = x"default"
+   then
+      AX_LUA_LIBS
+      if test x"$LUA_LIB" = x""
+      then
+         enable_bundled_lua=yes
+      else
+         AX_LUA_HEADERS
+         AX_LUA_TRY_LIB_VERSION([501], [504], [], [enable_bundled_lua="yes"])
+      fi
+   fi
+   
+   if test x"$enable_bundled_lua" = x"yes"
+   then
+      AC_MSG_RESULT([Using bundled Lua])
+      lua_extra_libs=
+      AC_CHECK_LIB([m], [exp], [lua_extra_libs="$lua_extra_libs -lm"], [])
+      AC_CHECK_LIB([dl], [dlopen], [lua_extra_libs="$lua_extra_libs -ldl"], [])
+      LUA_INCLUDE=-Ilua-${HTOP_LUA_VERSION}/src
+      LUA_LIB="lua-${HTOP_LUA_VERSION}/src/liblua.a $lua_extra_libs"
+      LUA_DEP="lua-${HTOP_LUA_VERSION}/src/liblua.a"
+   fi
+   
+   AC_SUBST([LUA_INCLUDE])
+   AC_SUBST([LUA_LIB])
+   AC_SUBST([LUA_DEP])
+   AC_SUBST([HTOP_LUA_VERSION])
+fi
 
 # Bail out on errors.
 # ----------------------------------------------------------------------

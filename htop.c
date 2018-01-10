@@ -26,6 +26,9 @@ in the source distribution for its full text.
 #include <time.h>
 #include <unistd.h>
 
+#include <lua.h>
+#include <lauxlib.h>
+
 //#link m
 
 static void printVersionFlag() {
@@ -172,6 +175,8 @@ int main(int argc, char** argv) {
    else
       setlocale(LC_CTYPE, "");
 
+   lua_State* L = luaL_newstate();
+
    CommandLineSettings flags = parseArguments(argc, argv); // may exit()
 
 #ifdef HAVE_PROC
@@ -249,5 +254,8 @@ int main(int argc, char** argv) {
    if(flags.pidWhiteList) {
       Hashtable_delete(flags.pidWhiteList);
    }
+   
+   lua_close(L);
+   
    return 0;
 }

@@ -2,18 +2,31 @@
 ACLOCAL_AMFLAGS = -I m4
 AUTOMAKE_OPTIONS = subdir-objects
 
+LUA_FLAGS=-DLUA_COMPAT_5_1 -DLUA_COMPAT_5_2 -DLUA_USE_LINUX
+
 bin_PROGRAMS = htop
 
 dist_man_MANS = htop.1
 EXTRA_DIST = $(dist_man_MANS) htop.desktop htop.png scripts/MakeHeader.py \
-install-sh autogen.sh missing
+   install-sh autogen.sh missing \
+   lua-$(HTOP_LUA_VERSION)/src/*.[ch] \
+   lua-$(HTOP_LUA_VERSION)/src/Makefile \
+   lua-$(HTOP_LUA_VERSION)/README \
+   lua-$(HTOP_LUA_VERSION)/LICENSE
+
 applicationsdir = $(datadir)/applications
 applications_DATA = htop.desktop
 pixmapdir = $(datadir)/pixmaps
 pixmap_DATA = htop.png
 
-htop_CFLAGS = -pedantic -Wall $(wextra_flag) -std=c99 -D_XOPEN_SOURCE_EXTENDED -DSYSCONFDIR=\"$(sysconfdir)\" -I"$(top_srcdir)/$(my_htop_platform)"
+htop_CFLAGS = -pedantic -Wall $(wextra_flag) -std=c99 -D_XOPEN_SOURCE_EXTENDED -DSYSCONFDIR=\"$(sysconfdir)\" -I"$(top_srcdir)/$(my_htop_platform)" $(LUA_INCLUDE)
 htop_LDFLAGS = 
+htop_LDADD = $(LUA_LIB)
+htop_DEPENDENCIES = $(LUA_DEP)
+
+lua-$(HTOP_LUA_VERSION)/src/liblua.a:
+	cd lua-$(HTOP_LUA_VERSION)/src && make CC="$(CC)" MYCFLAGS="$(LUA_FLAGS)" MYLIBS="-Wl,-E -ldl" liblua.a 
+
 AM_CPPFLAGS = -DNDEBUG
 
 myhtopsources = AvailableMetersPanel.c CategoriesPanel.c CheckItem.c \
@@ -101,13 +114,16 @@ profile:
 	$(MAKE) all CFLAGS="-pg" AM_CPPFLAGS="-pg -O2 -DNDEBUG"
 
 debug:
-	$(MAKE) all CFLAGS="" AM_CPPFLAGS="-ggdb -DDEBUG"
+	$(MAKE) all CFLAGS="" AM_CPPFLAGS="-ggdb -DDEBUG -O0 $(LUA_FLAGS)"
 
 coverage:
 	$(MAKE) all CFLAGS="" AM_CPPFLAGS="-fprofile-arcs -ftest-coverage -DDEBUG" LDFLAGS="-lgcov"
 
 .c.h:
 	@srcdir@/scripts/MakeHeader.py $<
+
+clean-local:
+	cd lua-$(HTOP_LUA_VERSION)/src && make clean
 
 cppcheck:
 	cppcheck -q -v . --enable=all -DHAVE_CGROUP -DHAVE_OPENVZ -DHAVE_TASKSTATS
