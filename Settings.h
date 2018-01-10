@@ -25,6 +25,9 @@ typedef struct Settings_ {
    
    MeterColumnSettings columns[2];
 
+   char** plugins;
+   int nPlugins;
+
    ProcessField* fields;
    int flags;
    int colorScheme;

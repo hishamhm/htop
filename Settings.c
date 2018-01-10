@@ -34,6 +34,9 @@ typedef struct Settings_ {
    
    MeterColumnSettings columns[2];
 
+   char** plugins;
+   int nPlugins;
+
    ProcessField* fields;
    int flags;
    int colorScheme;
@@ -75,6 +78,7 @@ void Settings_delete(Settings* this) {
       String_freeArray(this->columns[i].names);
       free(this->columns[i].modes);
    }
+   String_freeArray(this->plugins);
    free(this);
 }
 
@@ -84,6 +88,12 @@ static void Settings_readMeters(Settings* this, char* line, int column) {
    char** ids = String_split(trim, ' ', &nIds);
    free(trim);
    this->columns[column].names = ids;
+}
+
+static void Settings_readPlugins(Settings* this, char* line) {
+   char* trim = String_trim(line);
+   this->plugins = String_split(trim, ' ', &(this->nPlugins));
+   free(trim);
 }
 
 static void Settings_readMeterModes(Settings* this, char* line, int column) {
@@ -242,6 +252,8 @@ static bool Settings_read(Settings* this, const char* fileName) {
       } else if (String_eq(option[0], "right_meter_modes")) {
          Settings_readMeterModes(this, option[1], 1);
          readMeters = true;
+      } else if (String_eq(option[0], "plugins")) {
+         Settings_readPlugins(this, option[1]);
       }
       String_freeArray(option);
    }
@@ -263,13 +275,17 @@ static void writeFields(FILE* fd, ProcessField* fields, const char* name) {
    fprintf(fd, "\n");
 }
 
-static void writeMeters(Settings* this, FILE* fd, int column) {
+static void writeList(FILE* fd, char** list, int len) {
    const char* sep = "";
-   for (int i = 0; i < this->columns[column].len; i++) {
-      fprintf(fd, "%s%s", sep, this->columns[column].names[i]);
+   for (int i = 0; i < len; i++) {
+      fprintf(fd, "%s%s", sep, list[i]);
       sep = " ";
    }
    fprintf(fd, "\n");
+}
+
+static void writeMeters(Settings* this, FILE* fd, int column) {
+   writeList(fd, this->columns[column].names, this->columns[column].len);
 }
 
 static void writeMeterModes(Settings* this, FILE* fd, int column) {
@@ -279,6 +295,10 @@ static void writeMeterModes(Settings* this, FILE* fd, int column) {
       sep = " ";
    }
    fprintf(fd, "\n");
+}
+
+static void writePlugins(Settings* this, FILE* fd) {
+   writeList(fd, this->plugins, this->nPlugins);
 }
 
 bool Settings_write(Settings* this) {
@@ -318,6 +338,9 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "left_meter_modes="); writeMeterModes(this, fd, 0);
    fprintf(fd, "right_meters="); writeMeters(this, fd, 1);
    fprintf(fd, "right_meter_modes="); writeMeterModes(this, fd, 1);
+   if (this->nPlugins > 0) {
+      fprintf(fd, "plugins="); writePlugins(this, fd);
+   }
    fclose(fd);
    return true;
 }
