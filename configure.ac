@@ -270,6 +270,7 @@ HTOP_LUA_VERSION=5.3.4
 
 AC_ARG_ENABLE(lua, [AS_HELP_STRING([--enable-lua], [enable Lua support])], ,enable_lua="yes")
 if test "x$enable_lua" = xyes; then
+   AC_DEFINE(HAVE_LUA, 1, [Define if Lua scripting is to be enabled.])
 
    AC_ARG_ENABLE(bundled-lua, [AC_HELP_STRING([--enable-bundled-lua], [compile bundled copy of Lua])],, enable_bundled_lua="default")
    
@@ -281,7 +282,7 @@ if test "x$enable_lua" = xyes; then
          AC_MSG_ERROR([Could not find Lua libraries in the system.])
       else
          AX_LUA_HEADERS
-         AX_LUA_TRY_LIB_VERSION([501], [504], [], [
+         AX_LUA_TRY_LIB_VERSION([503], [504], [], [
             AC_MSG_ERROR([Could not find a suitable version of Lua.])
          ])
       fi
@@ -293,7 +294,7 @@ if test "x$enable_lua" = xyes; then
          enable_bundled_lua=yes
       else
          AX_LUA_HEADERS
-         AX_LUA_TRY_LIB_VERSION([501], [504], [], [enable_bundled_lua="yes"])
+         AX_LUA_TRY_LIB_VERSION([503], [504], [], [enable_bundled_lua="yes"])
       fi
    fi
    
