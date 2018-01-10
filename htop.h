@@ -9,6 +9,9 @@ Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
+#ifdef HAVE_LUA
+#endif
+
 //#link m
 
 // ----------------------------------------

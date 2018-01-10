@@ -26,6 +26,12 @@ in the source distribution for its full text.
 #include <hwloc.h>
 #endif
 
+#ifdef HAVE_LUA
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+#endif
+
 #ifndef MAX_NAME
 #define MAX_NAME 128
 #endif
@@ -70,11 +76,19 @@ typedef struct ProcessList_ {
 
    int cpuCount;
 
+   #ifdef HAVE_LUA
+   lua_State* L;
+   #endif
+
 } ProcessList;
 
 ProcessList* ProcessList_new(UsersTable* ut, Hashtable* pidWhiteList, uid_t userId);
 void ProcessList_delete(ProcessList* pl);
 void ProcessList_goThroughEntries(ProcessList* pl);
+
+#ifdef HAVE_LUA
+void ProcessList_enableScripting(ProcessList* pl, lua_State* L);
+#endif
 
 }*/
 
@@ -113,10 +127,38 @@ void ProcessList_done(ProcessList* this) {
       hwloc_topology_destroy(this->topology);
    }
 #endif
+#ifdef HAVE_LUA
+   lua_close(this->L);
+#endif
    Hashtable_delete(this->processTable);
    Vector_delete(this->processes);
    Vector_delete(this->processes2);
 }
+
+#ifdef HAVE_LUA
+void ProcessList_initScripting(ProcessList* this) {
+   lua_State* L = luaL_newstate();
+   luaL_openlibs(L);
+
+   this->L = L;
+   lua_newtable(L);
+   lua_pushvalue(L, 1);
+   lua_setglobal(L, "htop");
+   for (int i = 0; i < this->settings->nPlugins; i++) {
+      char* plugin = this->settings->plugins[i];
+      lua_getglobal(L, "require");
+      lua_pushliteral(L, "htop-plugins.");
+      lua_pushstring(L, plugin);
+      lua_concat(L, 2);
+      int ok = lua_pcall(L, 1, 1, 0);
+      if (ok == LUA_OK) {
+         lua_setfield(L, 1, plugin);
+      } else {
+         lua_pop(L, 1);
+      }
+   }
+}
+#endif
 
 void ProcessList_setPanel(ProcessList* this, Panel* panel) {
    this->panel = panel;

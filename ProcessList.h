@@ -20,6 +20,12 @@ in the source distribution for its full text.
 #include <hwloc.h>
 #endif
 
+#ifdef HAVE_LUA
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+#endif
+
 #ifndef MAX_NAME
 #define MAX_NAME 128
 #endif
@@ -64,16 +70,28 @@ typedef struct ProcessList_ {
 
    int cpuCount;
 
+   #ifdef HAVE_LUA
+   lua_State* L;
+   #endif
+
 } ProcessList;
 
 ProcessList* ProcessList_new(UsersTable* ut, Hashtable* pidWhiteList, uid_t userId);
 void ProcessList_delete(ProcessList* pl);
 void ProcessList_goThroughEntries(ProcessList* pl);
 
+#ifdef HAVE_LUA
+void ProcessList_enableScripting(ProcessList* pl, lua_State* L);
+#endif
+
 
 ProcessList* ProcessList_init(ProcessList* this, ObjectClass* klass, UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId);
 
 void ProcessList_done(ProcessList* this);
+
+#ifdef HAVE_LUA
+void ProcessList_initScripting(ProcessList* this);
+#endif
 
 void ProcessList_setPanel(ProcessList* this, Panel* panel);
 

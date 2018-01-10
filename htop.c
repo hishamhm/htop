@@ -26,8 +26,11 @@ in the source distribution for its full text.
 #include <time.h>
 #include <unistd.h>
 
+#ifdef HAVE_LUA
 #include <lua.h>
+#include <lualib.h>
 #include <lauxlib.h>
+#endif
 
 //#link m
 
@@ -175,8 +178,6 @@ int main(int argc, char** argv) {
    else
       setlocale(LC_CTYPE, "");
 
-   lua_State* L = luaL_newstate();
-
    CommandLineSettings flags = parseArguments(argc, argv); // may exit()
 
 #ifdef HAVE_PROC
@@ -193,6 +194,10 @@ int main(int argc, char** argv) {
    
    Settings* settings = Settings_new(pl->cpuCount);
    pl->settings = settings;
+
+#ifdef HAVE_LUA
+   ProcessList_initScripting(pl);
+#endif
 
    Header* header = Header_new(pl, settings, 2);
 
@@ -254,8 +259,6 @@ int main(int argc, char** argv) {
    if(flags.pidWhiteList) {
       Hashtable_delete(flags.pidWhiteList);
    }
-   
-   lua_close(L);
-   
+      
    return 0;
 }
