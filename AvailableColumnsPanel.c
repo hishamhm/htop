@@ -18,10 +18,14 @@ in the source distribution for its full text.
 
 /*{
 #include "Panel.h"
+#include "ProcessList.h"
 
 typedef struct AvailableColumnsPanel_ {
    Panel super;
    Panel* columns;
+   #ifdef HAVE_LUA
+   lua_State* L;
+   #endif
 } AvailableColumnsPanel;
 
 }*/
@@ -46,7 +50,22 @@ static HandlerResult AvailableColumnsPanel_eventHandler(Panel* super, int ch) {
       case KEY_F(5):
       {
          int at = Panel_getSelectedIndex(this->columns);
-         Panel_insert(this->columns, at, (Object*) ListItem_new(Process_fields[key].name, key));
+         ListItem* item;
+         #ifdef HAVE_LUA
+         if (key > 1000) {
+
+            lua_State* L = this->L;
+            lua_getfield(L, LUA_REGISTRYINDEX, "htop_columns");
+            lua_geti(L, -1, key - 1000);
+            ProcessFieldData* pfd = (ProcessFieldData*) lua_touserdata(L, -1);
+            item = ListItem_new(pfd->name, key);
+            lua_pop(L, 2);
+         } else
+         #endif
+         {
+            item = ListItem_new(Process_fields[key].name, key);
+         }
+         Panel_insert(this->columns, at, (Object*) item);
          Panel_setSelected(this->columns, at+1);
          ColumnsPanel_update(this->columns);
          result = HANDLED;
@@ -70,7 +89,7 @@ PanelClass AvailableColumnsPanel_class = {
    .eventHandler = AvailableColumnsPanel_eventHandler
 };
 
-AvailableColumnsPanel* AvailableColumnsPanel_new(Panel* columns) {
+AvailableColumnsPanel* AvailableColumnsPanel_new(Panel* columns, ProcessList* pl) {
    AvailableColumnsPanel* this = AllocThis(AvailableColumnsPanel);
    Panel* super = (Panel*) this;
    FunctionBar* fuBar = FunctionBar_new(AvailableColumnsFunctions, NULL, NULL);
@@ -85,6 +104,24 @@ AvailableColumnsPanel* AvailableColumnsPanel_new(Panel* columns) {
          Panel_add(super, (Object*) ListItem_new(description, i));
       }
    }
+   #ifdef HAVE_LUA
+   lua_State* L = pl->L;
+   this->L = L;
+   int top = lua_gettop(L);
+   lua_getfield(L, LUA_REGISTRYINDEX, "htop_columns");
+   lua_len(L, -1);
+   int len = lua_tointeger(L, -1);
+   lua_pop(L, 1);
+   for (int a = 1; a <= len; a++) {
+      lua_geti(L, -1, a);
+      ProcessFieldData* pfd = (ProcessFieldData*) lua_touserdata(L, -1);
+      char description[256];
+      xSnprintf(description, sizeof(description), "%s - %s", pfd->name, pfd->description);
+      Panel_add(super, (Object*) ListItem_new(description, 1000 + a));
+      lua_pop(L, 1);
+   }
+   lua_settop(L, top);
+   #endif
    this->columns = columns;
    return this;
 }

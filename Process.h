@@ -129,6 +129,7 @@ typedef struct ProcessFieldData_ {
    const char* name;
    const char* title;
    const char* description;
+   const char* format;
    int flags;
 } ProcessFieldData;
 

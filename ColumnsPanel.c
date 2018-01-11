@@ -160,7 +160,7 @@ void ColumnsPanel_update(Panel* super) {
    for (int i = 0; i < size; i++) {
       int key = ((ListItem*) Panel_get(super, i))->key;
       this->settings->fields[i] = key;
-      this->settings->flags |= Process_fields[key].flags;
+      this->settings->flags |= key < 1000 ? Process_fields[key].flags : 0;
    }
    this->settings->fields[size] = 0;
 }

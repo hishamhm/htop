@@ -10,6 +10,7 @@ in the source distribution for its full text.
 
 #include "CRT.h"
 #include "StringUtils.h"
+#include "API.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -136,26 +137,22 @@ void ProcessList_done(ProcessList* this) {
 }
 
 #ifdef HAVE_LUA
+
 void ProcessList_initScripting(ProcessList* this) {
    lua_State* L = luaL_newstate();
    luaL_openlibs(L);
 
    this->L = L;
-   lua_newtable(L);
-   lua_pushvalue(L, 1);
-   lua_setglobal(L, "htop");
+   luaL_requiref(L, "htop", API_new, 0);
+   lua_pop(L, 1);
    for (int i = 0; i < this->settings->nPlugins; i++) {
       char* plugin = this->settings->plugins[i];
       lua_getglobal(L, "require");
       lua_pushliteral(L, "htop-plugins.");
       lua_pushstring(L, plugin);
       lua_concat(L, 2);
-      int ok = lua_pcall(L, 1, 1, 0);
-      if (ok == LUA_OK) {
-         lua_setfield(L, 1, plugin);
-      } else {
-         lua_pop(L, 1);
-      }
+      lua_pcall(L, 1, 1, 0);
+      lua_pop(L, 1);
    }
 }
 #endif
@@ -168,12 +165,26 @@ void ProcessList_printHeader(ProcessList* this, RichString* header) {
    RichString_prune(header);
    ProcessField* fields = this->settings->fields;
    for (int i = 0; fields[i]; i++) {
-      const char* field = Process_fields[fields[i]].title;
+      unsigned int key = fields[i];
+      const char* field;
+      #ifdef HAVE_LUA
+      if (key > 1000) {
+         lua_State* L = this->L;
+         lua_getfield(L, LUA_REGISTRYINDEX, "htop_columns");
+         lua_geti(L, -1, key - 1000);
+         ProcessFieldData* pfd = (ProcessFieldData*) lua_touserdata(L, -1);
+         field = pfd->title;
+         lua_pop(L, 2);
+      } else
+      #endif
+      {
+         field = Process_fields[key].title;
+      }
       if (!field) field = "- ";
-      if (!this->settings->treeView && this->settings->sortKey == fields[i])
-         RichString_append(header, CRT_colors[PANEL_SELECTION_FOCUS], field);
-      else
-         RichString_append(header, CRT_colors[PANEL_HEADER_FOCUS], field);
+      int color = (!this->settings->treeView && this->settings->sortKey == key)
+                ? CRT_colors[PANEL_SELECTION_FOCUS]
+                : CRT_colors[PANEL_HEADER_FOCUS];
+      RichString_append(header, color, field);
    }
 }
 

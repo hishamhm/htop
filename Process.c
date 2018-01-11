@@ -150,6 +150,7 @@ typedef struct ProcessFieldData_ {
    const char* name;
    const char* title;
    const char* description;
+   const char* format;
    int flags;
 } ProcessFieldData;
 
@@ -366,6 +367,19 @@ void Process_writeField(Process* this, RichString* str, ProcessField field) {
    int baseattr = CRT_colors[PROCESS_BASENAME];
    int n = sizeof(buffer) - 1;
    bool coloring = this->settings->highlightMegabytes;
+
+   #ifdef HAVE_LUA
+   if (field > 1000) {
+      lua_State* L = this->settings->L;
+      lua_getfield(L, LUA_REGISTRYINDEX, "htop_columns");
+      lua_geti(L, -1, field - 1000);
+      ProcessFieldData* pfd = (ProcessFieldData*) lua_touserdata(L, -1);
+      xSnprintf(buffer, n, pfd->format, 123); 
+      lua_pop(L, 2);
+      RichString_append(str, attr, buffer);
+      return;
+   }
+   #endif
 
    switch (field) {
    case PERCENT_CPU: {

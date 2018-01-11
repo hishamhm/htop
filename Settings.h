@@ -14,6 +14,12 @@ in the source distribution for its full text.
 #include "Process.h"
 #include <stdbool.h>
 
+#ifdef HAVE_LUA
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+#endif
+
 typedef struct {
    int len;
    char** names;
@@ -22,6 +28,10 @@ typedef struct {
 
 typedef struct Settings_ {
    char* filename;
+   
+   #ifdef HAVE_LUA
+   lua_State* L;
+   #endif
    
    MeterColumnSettings columns[2];
 

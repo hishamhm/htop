@@ -10,15 +10,19 @@ in the source distribution for its full text.
 */
 
 #include "Panel.h"
+#include "ProcessList.h"
 
 typedef struct AvailableColumnsPanel_ {
    Panel super;
    Panel* columns;
+   #ifdef HAVE_LUA
+   lua_State* L;
+   #endif
 } AvailableColumnsPanel;
 
 
 extern PanelClass AvailableColumnsPanel_class;
 
-AvailableColumnsPanel* AvailableColumnsPanel_new(Panel* columns);
+AvailableColumnsPanel* AvailableColumnsPanel_new(Panel* columns, ProcessList* pl);
 
 #endif

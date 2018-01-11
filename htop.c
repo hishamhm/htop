@@ -197,6 +197,7 @@ int main(int argc, char** argv) {
 
 #ifdef HAVE_LUA
    ProcessList_initScripting(pl);
+   settings->L = pl->L;
 #endif
 
    Header* header = Header_new(pl, settings, 2);

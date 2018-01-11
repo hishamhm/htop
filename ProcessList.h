@@ -90,6 +90,7 @@ ProcessList* ProcessList_init(ProcessList* this, ObjectClass* klass, UsersTable*
 void ProcessList_done(ProcessList* this);
 
 #ifdef HAVE_LUA
+
 void ProcessList_initScripting(ProcessList* this);
 #endif
 
