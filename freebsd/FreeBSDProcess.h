@@ -10,13 +10,21 @@ in the source distribution for its full text.
 */
 
 
+#include <kvm.h>
+#include <sys/param.h>
+#include <sys/jail.h>
+#include <sys/uio.h>
+#include <sys/resource.h>
+
+#define JAIL_ERRMSGLEN	1024
+char jail_errmsg[JAIL_ERRMSGLEN];
+
 typedef enum FreeBSDProcessFields {
    // Add platform-specific fields here, with ids >= 100
    JID   = 100,
    JAIL  = 101,
    LAST_PROCESSFIELD = 102,
 } FreeBSDProcessField;
-
 
 typedef struct FreeBSDProcess_ {
    Process super;
@@ -25,30 +33,31 @@ typedef struct FreeBSDProcess_ {
    char* jname;
 } FreeBSDProcess;
 
-
-#ifndef Process_isKernelThread
-#define Process_isKernelThread(_process) (_process->kernel == 1)
-#endif
-
-#ifndef Process_isUserlandThread
-#define Process_isUserlandThread(_process) (_process->pid != _process->tgid)
-#endif
+typedef struct FreeBSDProcessScanData_ {
+   int pageSizeKb;
+   int kernelFScale;
+   struct kinfo_proc* kproc;
+} FreeBSDProcessScanData;
 
 
-extern ProcessClass FreeBSDProcess_class;
+extern ObjectClass FreeBSDProcess_class;
 
 extern ProcessFieldData Process_fields[];
 
 extern ProcessPidColumn Process_pidColumns[];
 
-FreeBSDProcess* FreeBSDProcess_new(Settings* settings);
+Process* Process_new(Settings* settings);
 
 void Process_delete(Object* cast);
 
-void FreeBSDProcess_writeField(Process* this, RichString* str, ProcessField field);
+void Process_writeField(Process* this, RichString* str, ProcessField field);
 
 long FreeBSDProcess_compare(const void* v1, const void* v2);
 
-bool Process_isThread(Process* this);
+char* FreeBSDProcess_readJailName(struct kinfo_proc* kproc);
+
+char* FreeBSDProcess_readProcessName(kvm_t* kd, struct kinfo_proc* kproc, int* basenameEnd);
+
+bool Process_update(Process* proc, bool isNew, ProcessList* pl, ProcessScanData* psd);
 
 #endif

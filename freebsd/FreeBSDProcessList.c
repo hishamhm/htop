@@ -27,9 +27,6 @@ in the source distribution for its full text.
 #include <sys/uio.h>
 #include <sys/resource.h>
 
-#define JAIL_ERRMSGLEN	1024
-char jail_errmsg[JAIL_ERRMSGLEN];
-
 typedef struct CPUData_ {
 
    double userPercent;
@@ -349,183 +346,22 @@ static inline void FreeBSDProcessList_scanMemoryInfo(ProcessList* pl) {
    pl->sharedMem = 0;  // currently unused
 }
 
-char* FreeBSDProcessList_readProcessName(kvm_t* kd, struct kinfo_proc* kproc, int* basenameEnd) {
-   char** argv = kvm_getargv(kd, kproc, 0);
-   if (!argv) {
-      return xStrdup(kproc->ki_comm);
-   }
-   int len = 0;
-   for (int i = 0; argv[i]; i++) {
-      len += strlen(argv[i]) + 1;
-   }
-   char* comm = xMalloc(len);
-   char* at = comm;
-   *basenameEnd = 0;
-   for (int i = 0; argv[i]; i++) {
-      at = stpcpy(at, argv[i]);
-      if (!*basenameEnd) {
-         *basenameEnd = at - comm;
-      }
-      *at = ' ';
-      at++;
-   }
-   at--;
-   *at = '\0';
-   return comm;
-}
-
-char* FreeBSDProcessList_readJailName(struct kinfo_proc* kproc) {
-   int    jid;
-   struct iovec jiov[6];
-   char*  jname;
-   char   jnamebuf[MAXHOSTNAMELEN];
-
-   if (kproc->ki_jid != 0 ){
-      memset(jnamebuf, 0, sizeof(jnamebuf));
-      *(const void **)&jiov[0].iov_base = "jid";
-      jiov[0].iov_len = sizeof("jid");
-      jiov[1].iov_base = &kproc->ki_jid;
-      jiov[1].iov_len = sizeof(kproc->ki_jid);
-      *(const void **)&jiov[2].iov_base = "name";
-      jiov[2].iov_len = sizeof("name");
-      jiov[3].iov_base = jnamebuf;
-      jiov[3].iov_len = sizeof(jnamebuf);
-      *(const void **)&jiov[4].iov_base = "errmsg";
-      jiov[4].iov_len = sizeof("errmsg");
-      jiov[5].iov_base = jail_errmsg;
-      jiov[5].iov_len = JAIL_ERRMSGLEN;
-      jail_errmsg[0] = 0;
-      jid = jail_get(jiov, 6, 0);
-      if (jid < 0) {
-         if (!jail_errmsg[0])
-            xSnprintf(jail_errmsg, JAIL_ERRMSGLEN, "jail_get: %s", strerror(errno));
-            return NULL;
-      } else if (jid == kproc->ki_jid) {
-         jname = xStrdup(jnamebuf);
-         if (jname == NULL)
-            strerror_r(errno, jail_errmsg, JAIL_ERRMSGLEN);
-         return jname;
-      } else {
-         return NULL;
-      }
-   } else {
-      jnamebuf[0]='-';
-      jnamebuf[1]='\0';
-      jname = xStrdup(jnamebuf);
-   }
-   return jname;
-}
-
 void ProcessList_goThroughEntries(ProcessList* this) {
    FreeBSDProcessList* fpl = (FreeBSDProcessList*) this;
-   Settings* settings = this->settings;
-   bool hideKernelThreads = settings->hideKernelThreads;
-   bool hideUserlandThreads = settings->hideUserlandThreads;
 
    FreeBSDProcessList_scanMemoryInfo(this);
    FreeBSDProcessList_scanCPUTime(this);
 
-   int cpus = this->cpuCount;
    int count = 0;
    struct kinfo_proc* kprocs = kvm_getprocs(fpl->kd, KERN_PROC_PROC, 0, &count);
 
+   FreeBSDProcessScanData psd;
+   psd.pageSizeKb = pageSizeKb;
+   psd.kernelFScale = kernelFScale;
+
    for (int i = 0; i < count; i++) {
       struct kinfo_proc* kproc = &kprocs[i];
-      bool preExisting = false;
-      bool isIdleProcess = false;
-      Process* proc = ProcessList_getProcess(this, kproc->ki_pid, &preExisting, (Process_New) FreeBSDProcess_new);
-      FreeBSDProcess* fp = (FreeBSDProcess*) proc;
-
-      proc->show = ! ((hideKernelThreads && Process_isKernelThread(fp)) || (hideUserlandThreads && Process_isUserlandThread(proc)));
-
-      if (!preExisting) {
-         fp->jid = kproc->ki_jid;
-         proc->pid = kproc->ki_pid;
-         if ( ! ((kproc->ki_pid == 0) || (kproc->ki_pid == 1) ) && kproc->ki_flag & P_SYSTEM)
-           fp->kernel = 1;
-         else
-           fp->kernel = 0;
-         proc->ppid = kproc->ki_ppid;
-         proc->tpgid = kproc->ki_tpgid;
-         proc->tgid = kproc->ki_pid;
-         proc->session = kproc->ki_sid;
-         proc->tty_nr = kproc->ki_tdev;
-         proc->pgrp = kproc->ki_pgid;
-         proc->st_uid = kproc->ki_uid;
-         proc->starttime_ctime = kproc->ki_start.tv_sec;
-         proc->user = UsersTable_getRef(this->usersTable, proc->st_uid);
-         ProcessList_add((ProcessList*)this, proc);
-         proc->comm = FreeBSDProcessList_readProcessName(fpl->kd, kproc, &proc->basenameOffset);
-         fp->jname = FreeBSDProcessList_readJailName(kproc);
-      } else {
-         if(fp->jid != kproc->ki_jid) {
-            // process can enter jail anytime
-            fp->jid = kproc->ki_jid;
-            free(fp->jname);
-            fp->jname = FreeBSDProcessList_readJailName(kproc);
-         }
-         if (proc->ppid != kproc->ki_ppid) {
-            // if there are reapers in the system, process can get reparented anytime
-            proc->ppid = kproc->ki_ppid;
-         }
-         if(proc->st_uid != kproc->ki_uid) {
-            // some processes change users (eg. to lower privs)
-            proc->st_uid = kproc->ki_uid;
-            proc->user = UsersTable_getRef(this->usersTable, proc->st_uid);
-         }
-         if (settings->updateProcessNames) {
-            free(proc->comm);
-            proc->comm = FreeBSDProcessList_readProcessName(fpl->kd, kproc, &proc->basenameOffset);
-         }
-      }
-
-      // from FreeBSD source /src/usr.bin/top/machine.c
-      proc->m_size = kproc->ki_size / 1024 / pageSizeKb;
-      proc->m_resident = kproc->ki_rssize;
-      proc->percent_mem = (proc->m_resident * PAGE_SIZE_KB) / (double)(this->totalMem) * 100.0;
-      proc->nlwp = kproc->ki_numthreads;
-      proc->time = (kproc->ki_runtime + 5000) / 10000;
-
-      proc->percent_cpu = 100.0 * ((double)kproc->ki_pctcpu / (double)kernelFScale);
-      proc->percent_mem = 100.0 * (proc->m_resident * PAGE_SIZE_KB) / (double)(this->totalMem);
-
-      if (proc->percent_cpu > 0.1) {
-         // system idle process should own all CPU time left regardless of CPU count
-         if ( strcmp("idle", kproc->ki_comm) == 0 ) {
-            isIdleProcess = true;
-         }
-      }
-
-      proc->priority = kproc->ki_pri.pri_level - PZERO;
-
-      if (strcmp("intr", kproc->ki_comm) == 0 && kproc->ki_flag & P_SYSTEM) {
-         proc->nice = 0; //@etosan: intr kernel process (not thread) has weird nice value
-      } else if (kproc->ki_pri.pri_class == PRI_TIMESHARE) {
-         proc->nice = kproc->ki_nice - NZERO;
-      } else if (PRI_IS_REALTIME(kproc->ki_pri.pri_class)) {
-         proc->nice = PRIO_MIN - 1 - (PRI_MAX_REALTIME - kproc->ki_pri.pri_level);
-      } else {
-         proc->nice = PRIO_MAX + 1 + kproc->ki_pri.pri_level - PRI_MIN_IDLE;
-      }
-
-      switch (kproc->ki_stat) {
-      case SIDL:   proc->state = 'I'; break;
-      case SRUN:   proc->state = 'R'; break;
-      case SSLEEP: proc->state = 'S'; break;
-      case SSTOP:  proc->state = 'T'; break;
-      case SZOMB:  proc->state = 'Z'; break;
-      case SWAIT:  proc->state = 'D'; break;
-      case SLOCK:  proc->state = 'L'; break;
-      default:     proc->state = '?';
-      }
-
-      if (Process_isKernelThread(fp)) {
-         this->kernelThreads++;
-      }
-
-      this->totalTasks++;
-      if (proc->state == 'R')
-         this->runningTasks++;
-      proc->updated = true;
+      psd.kproc = kproc;
+      ProcessList_scanProcess(this, kproc->ki_pid, (ProcessScanData*) &psd);
    }
 }
