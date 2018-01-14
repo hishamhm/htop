@@ -36,6 +36,11 @@ typedef struct DarwinProcessList_ {
    uint64_t global_diff;
 } DarwinProcessList;
 
+typedef struct DarwinProcessScanData_ {
+   time_t nowSec;
+   struct kinfo_proc* kinfo;
+} DarwinProcessScanData;
+
 }*/
 
 void ProcessList_getHostInfo(host_basic_info_data_t *p) {
@@ -69,10 +74,10 @@ unsigned ProcessList_allocateCPULoadInfo(processor_cpu_load_info_t *p) {
 }
 
 void ProcessList_getVMStats(vm_statistics_t p) {
-    mach_msg_type_number_t info_size = HOST_VM_INFO_COUNT;
+   mach_msg_type_number_t info_size = HOST_VM_INFO_COUNT;
 
-    if (host_statistics(mach_host_self(), HOST_VM_INFO, (host_info_t)p, &info_size) != 0)
-       CRT_fatalError("Unable to retrieve VM statistics\n");
+   if (host_statistics(mach_host_self(), HOST_VM_INFO, (host_info_t)p, &info_size) != 0)
+      CRT_fatalError("Unable to retrieve VM statistics\n");
 }
 
 struct kinfo_proc *ProcessList_getKInfoProcs(size_t *count) {
@@ -127,60 +132,40 @@ void ProcessList_delete(ProcessList* this) {
 }
 
 void ProcessList_goThroughEntries(ProcessList* super) {
-    DarwinProcessList *dpl = (DarwinProcessList *)super;
-    DarwinProcess *proc;
-    struct timeval tv;
+   DarwinProcessList *dpl = (DarwinProcessList *)super;
 
-    gettimeofday(&tv, NULL); /* Start processing time */
+   struct timeval tv;
+   gettimeofday(&tv, NULL); /* Start processing time */
 
-    /* Update the global data (CPU times and VM stats) */
-    ProcessList_freeCPULoadInfo(&dpl->prev_load);
-    dpl->prev_load = dpl->curr_load;
-    ProcessList_allocateCPULoadInfo(&dpl->curr_load);
-    ProcessList_getVMStats(&dpl->vm_stats);
+   /* Update the global data (CPU times and VM stats) */
+   ProcessList_freeCPULoadInfo(&dpl->prev_load);
+   dpl->prev_load = dpl->curr_load;
+   ProcessList_allocateCPULoadInfo(&dpl->curr_load);
+   ProcessList_getVMStats(&dpl->vm_stats);
 
-    /* Get the time difference */
-    dpl->global_diff = 0;
-    for(int i = 0; i < dpl->super.cpuCount; ++i) {
-        for(size_t j = 0; j < CPU_STATE_MAX; ++j) {
-            dpl->global_diff += dpl->curr_load[i].cpu_ticks[j] - dpl->prev_load[i].cpu_ticks[j];
-        }
-    }
-
-    /* Clear the thread counts */
-    super->kernelThreads = 0;
-    super->userlandThreads = 0;
-    super->totalTasks = 0;
-    super->runningTasks = 0;
-
-    /* We use kinfo_procs for initial data since :
-     *
-     * 1) They always succeed.
-     * 2) The contain the basic information.
-     *
-     * We attempt to fill-in additional information with libproc.
-     */
-
-    size_t count;
-    struct kinfo_proc* ps = ProcessList_getKInfoProcs(&count);
-
-    for(size_t i = 0; i < count; ++i) {
-       bool preExisting = true;
-       proc = (DarwinProcess *)ProcessList_getProcess(super, ps[i].kp_proc.p_pid, &preExisting, (Process_New)DarwinProcess_new);
-
-       DarwinProcess_setFromKInfoProc(&proc->super, &ps[i], tv.tv_sec, preExisting);
-       DarwinProcess_setFromLibprocPidinfo(proc, dpl);
-       
-       DarwinProcess_scanThreads(proc);
-
-       super->totalTasks += 1;
-
-       if(!preExisting) {
-           proc->super.user = UsersTable_getRef(super->usersTable, proc->super.st_uid);
-
-           ProcessList_add(super, &proc->super);
+   /* Get the time difference */
+   dpl->global_diff = 0;
+   for(int i = 0; i < dpl->super.cpuCount; ++i) {
+       for(size_t j = 0; j < CPU_STATE_MAX; ++j) {
+           dpl->global_diff += dpl->curr_load[i].cpu_ticks[j] - dpl->prev_load[i].cpu_ticks[j];
        }
-    }
+   }
 
-    free(ps);
+   DarwinProcessScanData psd;
+   psd.nowSec = tv.tv_sec;
+
+   /* We use kinfo_procs for initial data since :
+    *
+    * 1) They always succeed.
+    * 2) The contain the basic information.
+    *
+    * We attempt to fill-in additional information with libproc.
+    */
+   size_t count;
+   struct kinfo_proc* ps = ProcessList_getKInfoProcs(&count);
+   for(size_t i = 0; i < count; ++i) {
+      psd.kinfo = ps[i];
+      ProcessList_scanProcess(super, ps[i].kp_proc.p_pid, (ProcessScanData*) psd);
+   }
+   free(ps);
 }

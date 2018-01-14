@@ -60,11 +60,6 @@ void Process_delete(Object* cast) {
    free(this);
 }
 
-bool Process_isThread(Process* this) {
-   (void) this;
-   return false;
-}
-
 void DarwinProcess_setStartTime(Process *proc, struct extern_proc *ep, time_t now) {
    struct tm date;
 
@@ -360,4 +355,13 @@ void DarwinProcess_scanThreads(DarwinProcess *dp) {
       case TH_STATE_HALTED: state = 'H'; break;
    }
    proc->state = state;
+}
+
+bool Process_update(Process* proc, bool isNew, ProcessList* pl, ProcessScanData* psd) {
+   DarwinProcess_setFromKInfoProc(&proc->super, ps->kinfo, tv.tv_sec, preExisting);
+   DarwinProcess_setFromLibprocPidinfo(proc, dpl);
+   DarwinProcess_scanThreads(proc);
+   if(isNew) {
+      proc->super.user = UsersTable_getRef(super->usersTable, proc->super.st_uid);
+   }
 }
