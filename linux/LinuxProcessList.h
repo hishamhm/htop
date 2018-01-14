@@ -50,16 +50,26 @@ typedef struct TtyDriver_ {
    unsigned int minorTo;
 } TtyDriver;
 
-typedef struct LinuxProcessList_ {
-   ProcessList super;
-   
-   CPUData* cpus;
-   TtyDriver* ttyDrivers;
-   
+typedef struct LinuxProcessScanData_ {
+   const char* name;
+   const char* dirname;
+   pid_t mainProcess;
+   double period;
+   time_t nowSec;
+   unsigned long long nowMsec;
    #ifdef HAVE_DELAYACCT
    struct nl_sock *netlink_socket;
    int netlink_family;
    #endif
+} LinuxProcessScanData;
+
+typedef struct LinuxProcessList_ {
+   ProcessList super;
+
+   CPUData* cpus;
+   TtyDriver* ttyDrivers;
+
+   LinuxProcessScanData psd;
 } LinuxProcessList;
 
 #ifndef PROCDIR
@@ -95,26 +105,7 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
 
 void ProcessList_delete(ProcessList* pl);
 
-
-#ifdef HAVE_TASKSTATS
-
-#endif
-
-#ifdef HAVE_OPENVZ
-
-#endif
-
-#ifdef HAVE_CGROUP
-
-#endif
-
-#ifdef HAVE_VSERVER
-
-#endif
-
-#ifdef HAVE_DELAYACCT
-
-#endif
+char* LinuxProcessList_updateTtyDevice(LinuxProcessList* this, unsigned int tty_nr);
 
 void ProcessList_goThroughEntries(ProcessList* super);
 

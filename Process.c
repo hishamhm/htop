@@ -97,6 +97,7 @@ typedef struct Process_ {
    bool updated;
 
    char state;
+   char threadFlags;
    bool tag;
    bool showChildren;
    bool show;
@@ -105,6 +106,7 @@ typedef struct Process_ {
    unsigned int tty_nr;
    int tpgid;
    uid_t st_uid;
+   uid_t old_st_uid;
    unsigned long int flags;
    int processor;
 
@@ -154,8 +156,13 @@ typedef struct ProcessFieldData_ {
    int flags;
 } ProcessFieldData;
 
+typedef struct ProcessList_ ProcessList;
+typedef struct ProcessScanData_ ProcessScanData;
+
 // Implemented in platform-specific code:
+Process* Process_new(struct Settings_*);
 void Process_writeField(Process* this, RichString* str, ProcessField field);
+bool Process_update(Process* proc, bool isNew, ProcessList* pl, ProcessScanData* psd);
 long Process_compare(const void* v1, const void* v2);
 void Process_delete(Object* cast);
 bool Process_isThread(Process* this);
@@ -163,15 +170,12 @@ extern ProcessFieldData Process_fields[];
 extern ProcessPidColumn Process_pidColumns[];
 extern char Process_pidFormat[20];
 
-typedef Process*(*Process_New)(struct Settings_*);
-typedef void (*Process_WriteField)(Process*, RichString*, ProcessField);
+#define PROCESS_USERLAND_THREAD 0x01
+#define PROCESS_KERNEL_THREAD 0x02
 
-typedef struct ProcessClass_ {
-   const ObjectClass super;
-   const Process_WriteField writeField;
-} ProcessClass;
-
-#define As_Process(this_)              ((ProcessClass*)((this_)->super.klass))
+#define Process_isThread(proc_) ((proc_)->threadFlags & (PROCESS_KERNEL_THREAD | PROCESS_USERLAND_THREAD))
+#define Process_isKernelThread(proc_) ((proc_)->threadFlags & PROCESS_KERNEL_THREAD)
+#define Process_isUserlandThread(proc_) ((proc_)->threadFlags & PROCESS_USERLAND_THREAD)
 
 #define Process_isChildOf(process_, pid_) (process_->tgid == pid_ || (process_->tgid == process_->pid && process_->ppid == pid_))
 
@@ -361,7 +365,7 @@ void Process_outputRate(RichString* str, char* buffer, int n, double rate, int c
    }
 }
 
-void Process_writeField(Process* this, RichString* str, ProcessField field) {
+void Process_defaultWriteField(Process* this, RichString* str, ProcessField field) {
    char buffer[256]; buffer[255] = '\0';
    int attr = CRT_colors[DEFAULT_COLOR];
    int baseattr = CRT_colors[PROCESS_BASENAME];
@@ -500,7 +504,7 @@ void Process_display(Object* cast, RichString* out) {
    ProcessField* fields = this->settings->fields;
    RichString_prune(out);
    for (int i = 0; fields[i]; i++)
-      As_Process(this)->writeField(this, out, fields[i]);
+      Process_writeField(this, out, fields[i]);
    if (this->settings->shadowOtherUsers && (int)this->st_uid != Process_getuid)
       RichString_setAttr(out, CRT_colors[PROCESS_SHADOW]);
    if (this->tag == true)
@@ -513,14 +517,11 @@ void Process_done(Process* this) {
    free(this->comm);
 }
 
-ProcessClass Process_class = {
-   .super = {
-      .extends = Class(Object),
-      .display = Process_display,
-      .delete = Process_delete,
-      .compare = Process_compare
-   },
-   .writeField = Process_writeField,
+ObjectClass Process_class = {
+   .extends = Class(Object),
+   .display = Process_display,
+   .delete = Process_delete,
+   .compare = Process_compare
 };
 
 void Process_init(Process* this, struct Settings_* settings) {
@@ -546,6 +547,16 @@ bool Process_setPriority(Process* this, int priority) {
       this->nice = priority;
    }
    return (err == 0);
+}
+
+void Process_setCommand(Process* process, const char* command, int len) {
+   if (process->comm && process->commLen >= len) {
+      strncpy(process->comm, command, len + 1);
+   } else {
+      free(process->comm);
+      process->comm = xStrdup(command);
+   }
+   process->commLen = len;
 }
 
 bool Process_changePriorityBy(Process* this, size_t delta) {

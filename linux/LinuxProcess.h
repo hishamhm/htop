@@ -9,6 +9,9 @@ Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
+#ifdef HAVE_DELAYACCT
+#endif
+
 
 #define PROCESS_FLAG_LINUX_IOPRIO   0x0100
 #define PROCESS_FLAG_LINUX_OPENVZ   0x0200
@@ -133,22 +136,14 @@ typedef struct LinuxProcess_ {
    #endif
 } LinuxProcess;
 
-#ifndef Process_isKernelThread
-#define Process_isKernelThread(_process) (_process->pgrp == 0)
-#endif
-
-#ifndef Process_isUserlandThread
-#define Process_isUserlandThread(_process) (_process->pid != _process->tgid)
-#endif
-
 
 extern ProcessFieldData Process_fields[];
 
 extern ProcessPidColumn Process_pidColumns[];
 
-extern ProcessClass LinuxProcess_class;
+extern ObjectClass LinuxProcess_class;
 
-LinuxProcess* LinuxProcess_new(Settings* settings);
+Process* Process_new(Settings* settings);
 
 void Process_delete(Object* cast);
 
@@ -170,11 +165,31 @@ bool LinuxProcess_setIOPriority(LinuxProcess* this, IOPriority ioprio);
 void LinuxProcess_printDelay(float delay_percent, char* buffer, int n);
 #endif
 
-void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field);
+void Process_writeField(Process* this, RichString* str, ProcessField field);
 
 long LinuxProcess_compare(const void* v1, const void* v2);
 
-bool Process_isThread(Process* this);
+#ifdef HAVE_TASKSTATS
 
+#endif
+
+
+#ifdef HAVE_OPENVZ
+
+#endif
+
+#ifdef HAVE_CGROUP
+
+#endif
+
+#ifdef HAVE_VSERVER
+
+#endif
+
+#ifdef HAVE_DELAYACCT
+
+#endif
+
+bool Process_update(Process* proc, bool isNew, ProcessList* pl, ProcessScanData* psd);
 
 #endif

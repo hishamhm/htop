@@ -10,6 +10,7 @@
 #include <err.h>
 #include <assert.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 void* xMalloc(size_t size);
 
@@ -36,5 +37,7 @@ char* xStrdup_(const char* str) __attribute__((nonnull));
 #endif // __has_attribute(nonnull) || GNU C 3.3 or later
 
 char* xStrdup_(const char* str);
+
+ssize_t xRead(int fd, void *buf, size_t count);
 
 #endif

@@ -128,9 +128,6 @@ void ProcessList_delete(ProcessList* this) {
 
 void ProcessList_goThroughEntries(ProcessList* super) {
     DarwinProcessList *dpl = (DarwinProcessList *)super;
-	bool preExisting = true;
-	struct kinfo_proc *ps;
-	size_t count;
     DarwinProcess *proc;
     struct timeval tv;
 
@@ -163,9 +160,12 @@ void ProcessList_goThroughEntries(ProcessList* super) {
      *
      * We attempt to fill-in additional information with libproc.
      */
-    ps = ProcessList_getKInfoProcs(&count);
+
+    size_t count;
+    struct kinfo_proc* ps = ProcessList_getKInfoProcs(&count);
 
     for(size_t i = 0; i < count; ++i) {
+       bool preExisting = true;
        proc = (DarwinProcess *)ProcessList_getProcess(super, ps[i].kp_proc.p_pid, &preExisting, (Process_New)DarwinProcess_new);
 
        DarwinProcess_setFromKInfoProc(&proc->super, &ps[i], tv.tv_sec, preExisting);
