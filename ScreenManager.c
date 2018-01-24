@@ -191,6 +191,7 @@ void ScreenManager_run(ScreenManager* this, Panel** lastFocus, int* lastKey) {
       int prevCh = ch;
       set_escdelay(25);
       ch = getch();
+      if(ch == 'z') do ch = getch(); while ( ch == -1);
 
       HandlerResult result = IGNORED;
       if (ch == KEY_MOUSE) {
