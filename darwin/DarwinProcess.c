@@ -314,6 +314,10 @@ void DarwinProcess_scanThreads(DarwinProcess *dp) {
    task_t port;
    ret = task_for_pid(mach_task_self(), proc->pid, &port);
    if (ret != KERN_SUCCESS) {
+      /*
+       * Always reaches here when htop is executed by non-root user and proc is
+       * not myself.
+       */
       dp->taskAccess = false;
       return;
    }
