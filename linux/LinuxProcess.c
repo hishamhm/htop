@@ -936,6 +936,7 @@ bool Process_update(Process* proc, bool isNew, ProcessList* pl, ProcessScanData*
    proc->percent_mem = (proc->m_resident * PAGE_SIZE_KB) / (double)(pl->totalMem) * 100.0;
 
    if(isNew) {
+      proc->tgid = lpsd->mainProcess ? lpsd->mainProcess : proc->pid;
       proc->threadFlags = ((proc->pgrp == 0) ? PROCESS_KERNEL_THREAD : 0)
                         | ((proc->pid != proc->tgid) ? PROCESS_USERLAND_THREAD : 0);
 
@@ -955,7 +956,6 @@ bool Process_update(Process* proc, bool isNew, ProcessList* pl, ProcessScanData*
       if (! LinuxProcess_readCmdlineFile(proc, dirname, name)) {
          return false;
       }
-      proc->tgid = lpsd->mainProcess ? lpsd->mainProcess : proc->pid;
    } else {
       if (settings->updateProcessNames && proc->state != 'Z') {
          if (! LinuxProcess_readCmdlineFile(proc, dirname, name)) {
