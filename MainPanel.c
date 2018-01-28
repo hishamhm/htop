@@ -109,7 +109,7 @@ static HandlerResult MainPanel_eventHandler(Panel* super, int ch) {
 
    if (reaction & HTOP_REDRAW_BAR) {
       MainPanel_updateTreeFunctions(this, this->state->settings->treeView);
-      IncSet_drawBar(this->inc);
+      IncSet_drawBar(this->inc, CRT_colors[FUNCTION_BAR]);
    }
    if (reaction & HTOP_UPDATE_PANELHDR) {
       ProcessList_printHeader(this->state->pl, Panel_getHeader(super));
