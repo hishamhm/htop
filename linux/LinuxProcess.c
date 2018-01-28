@@ -268,8 +268,7 @@ ObjectClass LinuxProcess_class = {
 };
 
 Process* Process_new(Settings* settings) {
-   LinuxProcess* this = xCalloc(1, sizeof(LinuxProcess));
-   Object_setClass(this, Class(LinuxProcess));
+   LinuxProcess* this = AllocThis(LinuxProcess);
    Process_init(&this->super, settings);
    return (Process*) this;
 }
@@ -441,9 +440,9 @@ long LinuxProcess_compare(const void* v1, const void* v2) {
    case RBYTES: diff = p2->io_read_bytes - p1->io_read_bytes; goto test_diff;
    case WBYTES: diff = p2->io_write_bytes - p1->io_write_bytes; goto test_diff;
    case CNCLWB: diff = p2->io_cancelled_write_bytes - p1->io_cancelled_write_bytes; goto test_diff;
-   case IO_READ_RATE:  diff = p2->io_rate_read_bps - p1->io_rate_read_bps; goto test_diff;
-   case IO_WRITE_RATE: diff = p2->io_rate_write_bps - p1->io_rate_write_bps; goto test_diff;
-   case IO_RATE: diff = (p2->io_rate_read_bps + p2->io_rate_write_bps) - (p1->io_rate_read_bps + p1->io_rate_write_bps); goto test_diff;
+   case IO_READ_RATE:  return p2->io_rate_read_bps > p1->io_rate_read_bps ? 1 : -1;
+   case IO_WRITE_RATE: return p2->io_rate_write_bps > p1->io_rate_write_bps ? 1 : -1;
+   case IO_RATE: return (p2->io_rate_read_bps + p2->io_rate_write_bps) > (p1->io_rate_read_bps + p1->io_rate_write_bps) ? 1 : -1;
    #endif
    #ifdef HAVE_OPENVZ
    case CTID:

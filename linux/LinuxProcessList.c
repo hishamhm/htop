@@ -6,6 +6,7 @@ in the source distribution for its full text.
 */
 
 #include "LinuxProcessList.h"
+#include "LinuxProcess.h"
 #include "CRT.h"
 #include "StringUtils.h"
 #include <errno.h>
@@ -217,7 +218,7 @@ static void LinuxProcessList_initNetlinkSocket(LinuxProcessList* this) {
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId) {
    LinuxProcessList* this = xCalloc(1, sizeof(LinuxProcessList));
    ProcessList* pl = &(this->super);
-   ProcessList_init(pl, Class(Process), usersTable, pidWhiteList, userId);
+   ProcessList_init(pl, Class(LinuxProcess), usersTable, pidWhiteList, userId);
 
    LinuxProcessList_initTtyDrivers(this);
 
