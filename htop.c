@@ -196,7 +196,7 @@ int main(int argc, char** argv) {
    pl->settings = settings;
 
 #ifdef HAVE_LUA
-   ProcessList_initScripting(pl);
+   ProcessList_initPlugins(pl);
    settings->L = pl->L;
 #endif
 

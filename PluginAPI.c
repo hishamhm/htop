@@ -1,6 +1,6 @@
 
 #include "config.h"
-#include "API.h"
+#include "PluginAPI.h"
 #include "Process.h"
 
 #ifdef HAVE_LUA
@@ -32,7 +32,7 @@
 
 }*/
 
-int API_newColumn(lua_State* L) {
+int PluginAPI_newColumn(lua_State* L) {
    luaL_checktype(L, 1, LUA_TTABLE);
 
    check_field("name",        LUA_TSTRING,   "expected 'name' field of type string");
@@ -58,19 +58,19 @@ int API_newColumn(lua_State* L) {
    return 1;
 }
 
-static luaL_Reg API_functions[] = {
-   { .name = "new_column", .func = API_newColumn },
+static luaL_Reg PluginAPI_functions[] = {
+   { .name = "new_column", .func = PluginAPI_newColumn },
    { .name = NULL, .func = NULL },
 };
 
-int API_new(lua_State* L) {
+int PluginAPI_new(lua_State* L) {
    lua_settop(L, 0);
 
    lua_newtable(L);
    lua_setfield(L, LUA_REGISTRYINDEX, "htop_columns");
 
    lua_newtable(L);
-   luaL_setfuncs(L, API_functions, 0);
+   luaL_setfuncs(L, PluginAPI_functions, 0);
    return 1;   
 }
 

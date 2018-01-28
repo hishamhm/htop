@@ -10,7 +10,7 @@ in the source distribution for its full text.
 
 #include "CRT.h"
 #include "StringUtils.h"
-#include "API.h"
+#include "PluginAPI.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -87,10 +87,6 @@ ProcessList* ProcessList_new(UsersTable* ut, Hashtable* pidWhiteList, uid_t user
 void ProcessList_delete(ProcessList* pl);
 void ProcessList_goThroughEntries(ProcessList* pl);
 
-#ifdef HAVE_LUA
-void ProcessList_enableScripting(ProcessList* pl, lua_State* L);
-#endif
-
 }*/
 
 ProcessList* ProcessList_init(ProcessList* this, ObjectClass* klass, UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId) {
@@ -138,12 +134,12 @@ void ProcessList_done(ProcessList* this) {
 
 #ifdef HAVE_LUA
 
-void ProcessList_initScripting(ProcessList* this) {
+void ProcessList_initPlugins(ProcessList* this) {
    lua_State* L = luaL_newstate();
    luaL_openlibs(L);
 
    this->L = L;
-   luaL_requiref(L, "htop", API_new, 0);
+   luaL_requiref(L, "htop", PluginAPI_new, 0);
    lua_pop(L, 1);
    for (int i = 0; i < this->settings->nPlugins; i++) {
       char* plugin = this->settings->plugins[i];

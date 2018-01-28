@@ -80,10 +80,6 @@ ProcessList* ProcessList_new(UsersTable* ut, Hashtable* pidWhiteList, uid_t user
 void ProcessList_delete(ProcessList* pl);
 void ProcessList_goThroughEntries(ProcessList* pl);
 
-#ifdef HAVE_LUA
-void ProcessList_enableScripting(ProcessList* pl, lua_State* L);
-#endif
-
 
 ProcessList* ProcessList_init(ProcessList* this, ObjectClass* klass, UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId);
 
@@ -91,7 +87,7 @@ void ProcessList_done(ProcessList* this);
 
 #ifdef HAVE_LUA
 
-void ProcessList_initScripting(ProcessList* this);
+void ProcessList_initPlugins(ProcessList* this);
 #endif
 
 void ProcessList_setPanel(ProcessList* this, Panel* panel);
