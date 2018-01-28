@@ -38,6 +38,9 @@ typedef struct Settings_ {
    char** plugins;
    int nPlugins;
 
+   char** screens;
+   int nScreens;
+
    ProcessField* fields;
    int flags;
    int colorScheme;
