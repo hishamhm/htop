@@ -26,6 +26,15 @@ typedef struct {
    int* modes;
 } MeterColumnSettings;
 
+typedef struct {
+   char* name;
+   ProcessField* fields;
+   int flags;
+   int direction;
+   ProcessField sortKey;
+   bool treeView;
+} ScreenSettings;
+
 typedef struct Settings_ {
    char* filename;
    
@@ -33,26 +42,24 @@ typedef struct Settings_ {
    lua_State* L;
    #endif
    
-   MeterColumnSettings columns[2];
+   MeterColumnSettings meterColumns[2];
 
    char** plugins;
    int nPlugins;
 
-   char** screens;
-   int nScreens;
+   ScreenSettings** screens;
+   unsigned int nScreens;
+   unsigned int ssIndex;
+   ScreenSettings* ss;
 
-   ProcessField* fields;
    int flags;
    int colorScheme;
    int delay;
 
    int cpuCount;
-   int direction;
-   ProcessField sortKey;
 
    bool countCPUsFromZero;
    bool detailedCPUTime;
-   bool treeView;
    bool showProgramPath;
    bool hideThreads;
    bool shadowOtherUsers;
@@ -74,12 +81,16 @@ typedef struct Settings_ {
 #endif
 
 
+/*
+
+*/
+
 void Settings_delete(Settings* this);
 
 bool Settings_write(Settings* this);
 
 Settings* Settings_new(int cpuCount);
 
-void Settings_invertSortOrder(Settings* this);
+void ScreenSettings_invertSortOrder(ScreenSettings* this);
 
 #endif
