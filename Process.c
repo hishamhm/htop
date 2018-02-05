@@ -19,6 +19,9 @@ in the source distribution for its full text.
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#ifdef HAVE_SYS_SYSMACROS_H
+# include <sys/sysmacros.h>	/* for major, minor */
+#endif
 #include <unistd.h>
 #include <stdlib.h>
 #include <signal.h>
