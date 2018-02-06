@@ -18,6 +18,53 @@ in the source distribution for its full text.
 #include <sys/mman.h>
 #include <utmpx.h>
 #include <err.h>
+#include <sys/sysctl.h>
+#include <stdbool.h>
+
+void GetKernelVersion(int * major, int * minor, int * internal) {
+   static int cMajor = 0;
+   static int cMinor = 0;
+   static int cInternal = 0;
+   if (!cMajor) {
+      // just in case it fails someday
+      cMajor = cMinor = cInternal = -1;
+      char str[256] = {0};
+      size_t size = sizeof(str);
+      int ret = sysctlbyname("kern.osrelease", str, &size, NULL, 0);
+      if (ret == 0) {
+         sscanf(str, "%d.%d.%d", &cMajor, &cMinor, &cInternal);
+      }
+    }
+    *major = cMajor;
+    *minor = cMinor;
+    *internal = cInternal;
+}
+
+bool IsKernelVersionUpperOrEqual(int major, int minor, int internal) {
+   int maj, min, inter;
+
+   GetKernelVersion(&maj, &min, &inter);
+
+   if ( maj > major) return true;
+   if ( maj == major) {
+      if ( min > minor ) return true;
+      else if ( min == minor && inter >= internal ) return true;
+   }
+   return false;
+}
+
+bool IsKernelVersionLessOrEqual(int major, int minor, int internal) {
+   int maj, min, inter;
+
+   GetKernelVersion(&maj, &min, &inter);
+
+   if ( maj < major) return true;
+   if ( maj == major) {
+      if ( min < minor ) return true;
+      else if ( min == minor && inter <= internal ) return true;
+   }
+   return false;
+}
 
 /*{
 #include "ProcessList.h"
@@ -170,9 +217,13 @@ void ProcessList_goThroughEntries(ProcessList* super) {
 
        DarwinProcess_setFromKInfoProc(&proc->super, &ps[i], tv.tv_sec, preExisting);
        DarwinProcess_setFromLibprocPidinfo(proc, dpl);
-       
-       // Disabled due to bug in macOS High Sierra
-       // DarwinProcess_scanThreads(proc);
+
+       // Disabled for High Sierra due to bug in macOS High Sierra
+       bool isScanThreadSupported  = ! ( IsKernelVersionUpperOrEqual(17, 0, 0) && IsKernelVersionLessOrEqual(17, 4, 0));
+
+       if (isScanThreadSupported){
+           DarwinProcess_scanThreads(proc);
+       }
 
        super->totalTasks += 1;
 
