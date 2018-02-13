@@ -283,11 +283,11 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
       attrset(CRT_colors[RESET_COLOR]);
       return;
    }
-   char bar[w + 1];
+   char bar[MAX(w, 10) + 1];
    
    int blockSizes[10];
 
-   xSnprintf(bar, w + 1, "%*s", w, buffer);
+   xSnprintf(bar, MAX(w, 10) + 1, "%*s", w, buffer);
 
    // First draw in the bar[] buffer...
    int offset = 0;
