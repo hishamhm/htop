@@ -123,19 +123,19 @@ int Platform_numberOfFields = LAST_PROCESSFIELD;
 extern char Process_pidFormat[20];
 
 int Platform_getUptime() {
-	int boot_time = 0;
-	int curr_time = time(NULL);   
-	struct utmpx * ent;
+   int boot_time = 0;
+   int curr_time = time(NULL);   
+   struct utmpx * ent;
 
-	while (( ent = getutxent() )) {
-		if ( !strcmp("system boot", ent->ut_line )) {
-			boot_time = ent->ut_tv.tv_sec;
-		}      
-	}
+   while (( ent = getutxent() )) {
+      if ( !strcmp("system boot", ent->ut_line )) {
+         boot_time = ent->ut_tv.tv_sec;
+      }
+   }
 
-	endutxent();
+   endutxent();
 
-	return (curr_time-boot_time);
+   return (curr_time-boot_time);
 }
 
 void Platform_getLoadAverage(double* one, double* five, double* fifteen) {

@@ -44,7 +44,6 @@ typedef struct SolarisProcessList_ {
    CPUData* cpus;
 } SolarisProcessList;
 
-
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId);
 
 void ProcessList_delete(ProcessList* this);
@@ -52,6 +51,5 @@ void ProcessList_delete(ProcessList* this);
 void ProcessList_goThroughEntries(ProcessList* this);
 
 void SolarisProcessList_scan(ProcessList* this);
-
 
 #endif

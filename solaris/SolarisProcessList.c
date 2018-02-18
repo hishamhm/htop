@@ -220,7 +220,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
       swapdev = sl->swt_ent;
       for (int i = 0; i < nswap; i++, swapdev++) {
          swapdev->ste_path = spath;
-	 spath += MAXPATHLEN;
+         spath += MAXPATHLEN;
       }
       sl->swt_n = nswap;
    }
@@ -228,9 +228,9 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    if (nswap > 0) { 
       swapdev = sl->swt_ent;
       for (int i = 0; i < nswap; i++, swapdev++) {
-			totalswap += swapdev->ste_pages;
-			totalfree += swapdev->ste_free;
-			free(swapdev->ste_path);
+         totalswap += swapdev->ste_pages;
+         totalfree += swapdev->ste_free;
+         free(swapdev->ste_path);
       }
       free(sl);
    }
@@ -247,163 +247,162 @@ void ProcessList_delete(ProcessList* this) {
 }
 
 void ProcessList_goThroughEntries(ProcessList* this) {
-    SolarisProcessList* spl = (SolarisProcessList*) this;
-    Settings* settings = this->settings;
-    bool hideKernelThreads = settings->hideKernelThreads;
-    bool hideUserlandThreads = settings->hideUserlandThreads;
-    DIR* dir;
-    struct dirent* entry;
-    char*  name;
-    int    pid;
-    bool   preExisting = false;
-    Process* proc;
-    Process* parent = NULL;
-    SolarisProcess* sproc;
-    psinfo_t _psinfo;
-    pstatus_t _pstatus;
-    prusage_t _prusage;
-    char filename[MAX_NAME+1];
-    FILE *fp;
-    uint64_t addRunning = 0;
-    uint64_t addTotal = 0;
-    struct timeval tv;
-    struct tm date;
+   SolarisProcessList* spl = (SolarisProcessList*) this;
+   Settings* settings = this->settings;
+   bool hideKernelThreads = settings->hideKernelThreads;
+   bool hideUserlandThreads = settings->hideUserlandThreads;
+   DIR* dir;
+   struct dirent* entry;
+   char*  name;
+   int    pid;
+   bool   preExisting = false;
+   Process* proc;
+   Process* parent = NULL;
+   SolarisProcess* sproc;
+   psinfo_t _psinfo;
+   pstatus_t _pstatus;
+   prusage_t _prusage;
+   char filename[MAX_NAME+1];
+   FILE *fp;
+   uint64_t addRunning = 0;
+   uint64_t addTotal = 0;
+   struct timeval tv;
+   struct tm date;
 
-    gettimeofday(&tv, NULL);
+   gettimeofday(&tv, NULL);
 
-    SolarisProcessList_scanCPUTime(this);
-    SolarisProcessList_scanMemoryInfo(this);
+   SolarisProcessList_scanCPUTime(this);
+   SolarisProcessList_scanMemoryInfo(this);
 
-    dir = opendir(PROCDIR); 
-    if (!dir) return;
-    while ((entry = readdir(dir)) != NULL) {
-	addRunning = 0;
-	addTotal = 0;
-        name = entry->d_name;
-        pid  = atoi(name);
-        proc = ProcessList_getProcess(this, pid, &preExisting, (Process_New) SolarisProcess_new);
-        proc->tgid = parent ? parent->pid : pid;
-        sproc = (SolarisProcess *) proc;
-        xSnprintf(filename, MAX_NAME, "%s/%s/psinfo", PROCDIR, name);
-	fp   = fopen(filename, "r");
-	if ( fp == NULL ) continue;
-	fread(&_psinfo,sizeof(psinfo_t),1,fp);
-	fclose(fp);
-	xSnprintf(filename, MAX_NAME, "%s/%s/status", PROCDIR, name);
-	fp   = fopen(filename, "r");
-	if ( fp != NULL ) {
-	    fread(&_pstatus,sizeof(pstatus_t),1,fp);
-	}
-	fclose(fp);
-	xSnprintf(filename, MAX_NAME, "%s/%s/usage", PROCDIR, name);
-	fp   = fopen(filename,"r");
-	if ( fp == NULL ) continue;
-	fread(&_prusage,sizeof(prusage_t),1,fp);
-	fclose(fp);
+   dir = opendir(PROCDIR); 
+   if (!dir) return;
+   while ((entry = readdir(dir)) != NULL) {
+      addRunning = 0;
+      addTotal = 0;
+      name = entry->d_name;
+      pid = atoi(name);
+      proc = ProcessList_getProcess(this, pid, &preExisting, (Process_New) SolarisProcess_new);
+      proc->tgid = parent ? parent->pid : pid;
+      sproc = (SolarisProcess *) proc;
+      xSnprintf(filename, MAX_NAME, "%s/%s/psinfo", PROCDIR, name);
+      fp = fopen(filename, "r");
+      if ( fp == NULL ) continue;
+      fread(&_psinfo,sizeof(psinfo_t),1,fp);
+      fclose(fp);
+      xSnprintf(filename, MAX_NAME, "%s/%s/status", PROCDIR, name);
+      fp   = fopen(filename, "r");
+      if ( fp != NULL ) {
+         fread(&_pstatus,sizeof(pstatus_t),1,fp);
+      }
+      fclose(fp);
+      xSnprintf(filename, MAX_NAME, "%s/%s/usage", PROCDIR, name);
+      fp = fopen(filename,"r");
+      if ( fp == NULL ) continue;
+      fread(&_prusage,sizeof(prusage_t),1,fp);
+      fclose(fp);
 
-        if(!preExisting) {
-	    sproc->kernel          = false;
-             proc->pid             = _psinfo.pr_pid;
-             proc->ppid            = _psinfo.pr_ppid;
-             proc->tgid            = _psinfo.pr_pid;
-            sproc->zoneid          = _psinfo.pr_zoneid;
-             proc->tty_nr          = _psinfo.pr_ttydev;
-             proc->pgrp            = _psinfo.pr_pgid;
-	     // NOTE: These 'percentages' are 16-bit BINARY FRACTIONS where 1.0 = 0x8000
-	     // Source: https://docs.oracle.com/cd/E19253-01/816-5174/proc-4/index.html
-	     // (accessed on 18 November 2017)
-             proc->percent_cpu     = ((uint16_t)_psinfo.pr_pctcpu/(double)32768)*(double)100.0;
-             proc->percent_mem     = ((uint16_t)_psinfo.pr_pctmem/(double)32768)*(double)100.0;
-             proc->st_uid          = _psinfo.pr_euid;
-             proc->user            = UsersTable_getRef(this->usersTable, proc->st_uid);
-             proc->nlwp            = _psinfo.pr_nlwp;
-	     proc->session         = _pstatus.pr_sid;
-             setCommand(proc,_psinfo.pr_fname,PRFNSZ);
-	     setZoneName(spl->kd,sproc);
-	     proc->majflt          = _prusage.pr_majf;
+      if(!preExisting) {
+         sproc->kernel         = false;
+         proc->pid             = _psinfo.pr_pid;
+         proc->ppid            = _psinfo.pr_ppid;
+         proc->tgid            = _psinfo.pr_pid;
+         sproc->zoneid         = _psinfo.pr_zoneid;
+         proc->tty_nr          = _psinfo.pr_ttydev;
+         proc->pgrp            = _psinfo.pr_pgid;
+         // NOTE: These 'percentages' are 16-bit BINARY FRACTIONS where 1.0 = 0x8000
+         // Source: https://docs.oracle.com/cd/E19253-01/816-5174/proc-4/index.html
+         // (accessed on 18 November 2017)
+         proc->percent_cpu     = ((uint16_t)_psinfo.pr_pctcpu/(double)32768)*(double)100.0;
+         proc->percent_mem     = ((uint16_t)_psinfo.pr_pctmem/(double)32768)*(double)100.0;
+         proc->st_uid          = _psinfo.pr_euid;
+         proc->user            = UsersTable_getRef(this->usersTable, proc->st_uid);
+         proc->nlwp            = _psinfo.pr_nlwp;
+         proc->session         = _pstatus.pr_sid;
+         setCommand(proc,_psinfo.pr_fname,PRFNSZ);
+         setZoneName(spl->kd,sproc);
+         proc->majflt          = _prusage.pr_majf;
 	     proc->minflt          = _prusage.pr_minf; 
 	     proc->m_resident      = (_psinfo.pr_rssize)/8;
 	     proc->m_size          = (_psinfo.pr_size)/8;
-             proc->priority        = _psinfo.pr_lwp.pr_pri;
-             proc->nice            = _psinfo.pr_lwp.pr_nice;
-             proc->processor       = _psinfo.pr_lwp.pr_onpro;
-             proc->state           = _psinfo.pr_lwp.pr_sname;
+         proc->priority        = _psinfo.pr_lwp.pr_pri;
+         proc->nice            = _psinfo.pr_lwp.pr_nice;
+         proc->processor       = _psinfo.pr_lwp.pr_onpro;
+         proc->state           = _psinfo.pr_lwp.pr_sname;
 	     proc->time            = _psinfo.pr_time.tv_sec;
-            sproc->taskid          = _psinfo.pr_taskid;
-            sproc->projid          = _psinfo.pr_projid;
-	    sproc->poolid          = _psinfo.pr_poolid;
-	    sproc->contid          = _psinfo.pr_contract;
-	     proc->starttime_ctime = _psinfo.pr_start.tv_sec;
-             (void) localtime_r((time_t*) &proc->starttime_ctime, &date);
-	     strftime(proc->starttime_show, 7, ((proc->starttime_ctime > tv.tv_sec - 86400) ? "%R " : "%b%d "), &date); 
-	     ProcessList_add(this, proc);
-	} else {
-	     proc->ppid            = _psinfo.pr_ppid;
-	    sproc->zoneid          = _psinfo.pr_zoneid;
-	     // See note above about these percentages
-	     proc->percent_cpu     = ((uint16_t)_psinfo.pr_pctcpu/(double)32768)*(double)100.0;
-	     proc->percent_mem     = ((uint16_t)_psinfo.pr_pctmem/(double)32768)*(double)100.0;
-	     proc->st_uid          = _psinfo.pr_euid;
-	     proc->pgrp            = _psinfo.pr_pgid;
-	     proc->nlwp            = _psinfo.pr_nlwp;
-	     proc->user            = UsersTable_getRef(this->usersTable, proc->st_uid);
-             setCommand(proc,_psinfo.pr_fname,PRFNSZ);
-	     setZoneName(spl->kd,sproc);
-             proc->majflt          = _prusage.pr_majf;
-             proc->minflt          = _prusage.pr_minf;
-             proc->m_resident      = (_psinfo.pr_rssize)/8;
-             proc->m_size          = (_psinfo.pr_size)/8;
-             proc->priority        = _psinfo.pr_lwp.pr_pri;
-             proc->nice            = _psinfo.pr_lwp.pr_nice;
-             proc->processor       = _psinfo.pr_lwp.pr_onpro;
-             proc->state           = _psinfo.pr_lwp.pr_sname;
-             proc->time            = _psinfo.pr_time.tv_sec;
-	    sproc->taskid          = _psinfo.pr_taskid;
-	    sproc->projid          = _psinfo.pr_projid;
-            sproc->poolid          = _psinfo.pr_poolid;
-            sproc->contid          = _psinfo.pr_contract;
-	}
-	proc->show = !(hideKernelThreads && (_pstatus.pr_flags & PR_ISSYS));
-	if (_pstatus.pr_flags & PR_ISSYS) {
-		if (hideKernelThreads) {
-                   addRunning = 0;
-	           addTotal   = 0;
-		} else {
-		   this->kernelThreads += proc->nlwp;
-		   if (proc->state == 'O') {
-			   addRunning++;
-		           addTotal = proc->nlwp+1;
-		   } else {
-			   addTotal = proc->nlwp+1;
-		   }
-	        }
-	} else {
-		if (hideUserlandThreads) {
-			if(proc->state == 'O') {
-				addRunning++;
-				addTotal++;
-			} else {
-				addTotal++;
-			}
-		} else {
-			this->userlandThreads += proc->nlwp;
-			if(proc->state == 'O') {
-				addRunning++;
-				addTotal = proc->nlwp+1;
-			} else {
-				addTotal = proc->nlwp+1;
-			}
-		}
-	}
-	this->runningTasks+=addRunning;
-        this->totalTasks+=addTotal;
-	proc->updated = true;
-    }    
-    closedir(dir);
+         sproc->taskid         = _psinfo.pr_taskid;
+         sproc->projid         = _psinfo.pr_projid;
+         sproc->poolid         = _psinfo.pr_poolid;
+         sproc->contid         = _psinfo.pr_contract;
+         proc->starttime_ctime = _psinfo.pr_start.tv_sec;
+         (void) localtime_r((time_t*) &proc->starttime_ctime, &date);
+         strftime(proc->starttime_show, 7, ((proc->starttime_ctime > tv.tv_sec - 86400) ? "%R " : "%b%d "), &date); 
+         ProcessList_add(this, proc);
+      } else {
+         proc->ppid            = _psinfo.pr_ppid;
+         sproc->zoneid         = _psinfo.pr_zoneid;
+         // See note above about these percentages
+         proc->percent_cpu     = ((uint16_t)_psinfo.pr_pctcpu/(double)32768)*(double)100.0;
+         proc->percent_mem     = ((uint16_t)_psinfo.pr_pctmem/(double)32768)*(double)100.0;
+         proc->st_uid          = _psinfo.pr_euid;
+         proc->pgrp            = _psinfo.pr_pgid;
+         proc->nlwp            = _psinfo.pr_nlwp;
+         proc->user            = UsersTable_getRef(this->usersTable, proc->st_uid);
+         setCommand(proc,_psinfo.pr_fname,PRFNSZ);
+         setZoneName(spl->kd,sproc);
+         proc->majflt          = _prusage.pr_majf;
+         proc->minflt          = _prusage.pr_minf;
+         proc->m_resident      = (_psinfo.pr_rssize)/8;
+         proc->m_size          = (_psinfo.pr_size)/8;
+         proc->priority        = _psinfo.pr_lwp.pr_pri;
+         proc->nice            = _psinfo.pr_lwp.pr_nice;
+         proc->processor       = _psinfo.pr_lwp.pr_onpro;
+         proc->state           = _psinfo.pr_lwp.pr_sname;
+         proc->time            = _psinfo.pr_time.tv_sec;
+         sproc->taskid         = _psinfo.pr_taskid;
+         sproc->projid         = _psinfo.pr_projid;
+         sproc->poolid         = _psinfo.pr_poolid;
+         sproc->contid         = _psinfo.pr_contract;
+      }
+      proc->show = !(hideKernelThreads && (_pstatus.pr_flags & PR_ISSYS));
+      if (_pstatus.pr_flags & PR_ISSYS) {
+         if (hideKernelThreads) {
+            addRunning = 0;
+            addTotal   = 0;
+         } else {
+            this->kernelThreads += proc->nlwp;
+            if (proc->state == 'O') {
+               addRunning++;
+               addTotal = proc->nlwp+1;
+            } else {
+               addTotal = proc->nlwp+1;
+            }
+         }
+      } else {
+         if (hideUserlandThreads) {
+            if(proc->state == 'O') {
+               addRunning++;
+               addTotal++;
+            } else {
+               addTotal++;
+            }
+         } else {
+            this->userlandThreads += proc->nlwp;
+            if(proc->state == 'O') {
+               addRunning++;
+               addTotal = proc->nlwp+1;
+            } else {
+               addTotal = proc->nlwp+1;
+            }
+         }
+      }
+      this->runningTasks+=addRunning;
+      this->totalTasks+=addTotal;
+      proc->updated = true;
+   } // while ((entry = readdir(dir)) != NULL)
+   closedir(dir);
 }
 
 void SolarisProcessList_scan(ProcessList* this) {
    (void) this;
    // stub!
 }
-
