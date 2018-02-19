@@ -50,6 +50,4 @@ void ProcessList_delete(ProcessList* this);
 
 void ProcessList_goThroughEntries(ProcessList* this);
 
-void SolarisProcessList_scan(ProcessList* this);
-
 #endif

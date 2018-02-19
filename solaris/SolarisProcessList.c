@@ -402,7 +402,3 @@ void ProcessList_goThroughEntries(ProcessList* this) {
    closedir(dir);
 }
 
-void SolarisProcessList_scan(ProcessList* this) {
-   (void) this;
-   // stub!
-}
