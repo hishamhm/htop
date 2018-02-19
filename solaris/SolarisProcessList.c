@@ -327,14 +327,14 @@ void ProcessList_goThroughEntries(ProcessList* this) {
          setCommand(proc,_psinfo.pr_fname,PRFNSZ);
          setZoneName(spl->kd,sproc);
          proc->majflt          = _prusage.pr_majf;
-	     proc->minflt          = _prusage.pr_minf; 
-	     proc->m_resident      = (_psinfo.pr_rssize)/8;
-	     proc->m_size          = (_psinfo.pr_size)/8;
+         proc->minflt          = _prusage.pr_minf; 
+         proc->m_resident      = (_psinfo.pr_rssize)/8;
+         proc->m_size          = (_psinfo.pr_size)/8;
          proc->priority        = _psinfo.pr_lwp.pr_pri;
          proc->nice            = _psinfo.pr_lwp.pr_nice;
          proc->processor       = _psinfo.pr_lwp.pr_onpro;
          proc->state           = _psinfo.pr_lwp.pr_sname;
-	     proc->time            = _psinfo.pr_time.tv_sec;
+         proc->time            = _psinfo.pr_time.tv_sec;
          sproc->taskid         = _psinfo.pr_taskid;
          sproc->projid         = _psinfo.pr_projid;
          sproc->poolid         = _psinfo.pr_poolid;
