@@ -157,7 +157,7 @@ void SolarisProcess_writeField(Process* this, RichString* str, ProcessField fiel
 
 long SolarisProcess_compare(const void* v1, const void* v2) {
    SolarisProcess *p1, *p2;
-   Settings *settings = ((Process*)v1)->settings;
+   Settings* settings = ((Process*)v1)->settings;
    if (settings->direction == 1) {
       p1 = (SolarisProcess*)v1;
       p2 = (SolarisProcess*)v2;

@@ -146,25 +146,25 @@ void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
 }
 
 int Platform_getMaxPid() {
-   kstat_ctl_t    *kc;
-   kstat_t        *kshandle;
-   kvar_t         *ksvar;
-   int            vproc = 32778; // Reasonable Solaris default
+   kstat_ctl_t *kc = NULL;
+   kstat_t *kshandle = NULL;
+   kvar_t *ksvar = NULL;
+   int vproc = 32778; // Reasonable Solaris default
    kc = kstat_open();
-   if (kc       != NULL) { kshandle = kstat_lookup(kc,"unix",0,"var"); }
+   if (kc != NULL) { kshandle = kstat_lookup(kc,"unix",0,"var"); }
    if (kshandle != NULL) { kstat_read(kc,kshandle,NULL); }
    ksvar = kshandle->ks_data;
    if (ksvar->v_proc > 0 ) {
       vproc = ksvar->v_proc;
    }
-   if (kc       != NULL) { kstat_close(kc); }
+   if (kc != NULL) { kstat_close(kc); }
    return vproc; 
 }
 
 double Platform_setCPUValues(Meter* this, int cpu) {
    SolarisProcessList* spl = (SolarisProcessList*) this->pl;
    int cpus = this->pl->cpuCount;
-   CPUData* cpuData;
+   CPUData* cpuData = NULL;
 
    if (cpus == 1) {
      // single CPU box has everything in spl->cpus[0]
@@ -173,7 +173,7 @@ double Platform_setCPUValues(Meter* this, int cpu) {
      cpuData = &(spl->cpus[cpu]);
    }
 
-   double  percent;
+   double percent;
    double* v = this->values;
 
    v[CPU_METER_NICE]   = cpuData->nicePercent;
@@ -195,7 +195,7 @@ double Platform_setCPUValues(Meter* this, int cpu) {
 }
 
 void Platform_setMemoryValues(Meter* this) {
-   ProcessList *pl = (ProcessList*) this->pl;
+   ProcessList* pl = (ProcessList*) this->pl;
    this->total = pl->totalMem;
    this->values[0] = pl->usedMem;
    this->values[1] = pl->buffersMem;

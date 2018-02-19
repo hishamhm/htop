@@ -103,10 +103,13 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
 
 static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
    const SolarisProcessList* spl = (SolarisProcessList*) pl;
-   int cpus   = pl->cpuCount;
-   kstat_t *cpuinfo;
+   int cpus = pl->cpuCount;
+   kstat_t *cpuinfo = NULL;
    int kchain = 0;
-   kstat_named_t *idletime, *intrtime, *krnltime, *usertime;
+   kstat_named_t *idletime = NULL;
+   kstat_named_t *intrtime = NULL;
+   kstat_named_t *krnltime = NULL;
+   kstat_named_t *usertime = NULL;
    double idlebuf = 0;
    double intrbuf = 0;
    double krnlbuf = 0;
@@ -136,7 +139,7 @@ static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
       assert( (idletime != NULL) && (intrtime != NULL)
            && (krnltime != NULL) && (usertime != NULL) );
 
-      CPUData* cpuData          = &(spl->cpus[i+arrskip]);
+      CPUData* cpuData = &(spl->cpus[i+arrskip]);
       totaltime = (idletime->value.ui64 - cpuData->lidle)
                 + (intrtime->value.ui64 - cpuData->lintr)
                 + (krnltime->value.ui64 - cpuData->lkrnl)
@@ -175,11 +178,13 @@ static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
 
 static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    SolarisProcessList* spl = (SolarisProcessList*) pl;
-   kstat_t             *meminfo;
-   int                 ksrphyserr;
-   kstat_named_t       *totalmem_pgs, *lockedmem_pgs, *pages;
-   struct swaptable    *sl;
-   struct swapent      *swapdev;
+   kstat_t             *meminfo = NULL;
+   int                 ksrphyserr = 0;
+   kstat_named_t       *totalmem_pgs = NULL;
+   kstat_named_t       *lockedmem_pgs = NULL;
+   kstat_named_t       *pages = NULL;
+   struct swaptable    *sl = NULL;
+   struct swapent      *swapdev = NULL;
    uint64_t            totalswap = 0;
    uint64_t            totalfree = 0;
    int                 nswap = 0;
@@ -251,19 +256,19 @@ void ProcessList_goThroughEntries(ProcessList* this) {
    Settings* settings = this->settings;
    bool hideKernelThreads = settings->hideKernelThreads;
    bool hideUserlandThreads = settings->hideUserlandThreads;
-   DIR* dir;
-   struct dirent* entry;
-   char*  name;
+   DIR* dir = NULL;
+   struct dirent* entry = NULL;
+   char*  name = NULL;
    int    pid;
    bool   preExisting = false;
-   Process* proc;
+   Process* proc = NULL;
    Process* parent = NULL;
-   SolarisProcess* sproc;
+   SolarisProcess* sproc = NULL;
    psinfo_t _psinfo;
    pstatus_t _pstatus;
    prusage_t _prusage;
    char filename[MAX_NAME+1];
-   FILE *fp;
+   FILE *fp = NULL;
    uint64_t addRunning = 0;
    uint64_t addTotal = 0;
    struct timeval tv;
@@ -271,11 +276,12 @@ void ProcessList_goThroughEntries(ProcessList* this) {
 
    gettimeofday(&tv, NULL);
 
+   // If these fail, then the relevant metrics will simply display as zero
    SolarisProcessList_scanCPUTime(this);
    SolarisProcessList_scanMemoryInfo(this);
 
    dir = opendir(PROCDIR); 
-   if (!dir) return;
+   if (!dir) return; // Is proc mounted?
    while ((entry = readdir(dir)) != NULL) {
       addRunning = 0;
       addTotal = 0;
