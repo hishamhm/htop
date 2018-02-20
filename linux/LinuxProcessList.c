@@ -25,6 +25,7 @@ in the source distribution for its full text.
 #include <time.h>
 #include <assert.h>
 #include <sys/types.h>
+#include <sys/sysmacros.h>
 #include <fcntl.h>
 
 #ifdef HAVE_DELAYACCT
