@@ -4,6 +4,8 @@
 AC_PREREQ(2.65)
 AC_INIT([htop],[2.1.0],[hisham@gobolinux.org])
 
+PKG_PREREQ(0.29)
+
 SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(date +%s)}"
 year=$(date -u -d "@$SOURCE_DATE_EPOCH" "+%Y" 2>/dev/null || date -u -r "$SOURCE_DATE_EPOCH" "+%Y" 2>/dev/null || date -u "+%Y")
 
