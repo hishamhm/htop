@@ -4,6 +4,9 @@
 AC_PREREQ(2.65)
 AC_INIT([htop],[2.1.0],[hisham@gobolinux.org])
 
+m4_ifndef([PKG_PROG_PKG_CONFIG],
+   [m4_fatal([PKG_PROG_PKG_CONFIG not defined in pkg.m4. pkg-config 0.16 or later is required to generate configure script])])
+
 SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(date +%s)}"
 year=$(date -u -d "@$SOURCE_DATE_EPOCH" "+%Y" 2>/dev/null || date -u -r "$SOURCE_DATE_EPOCH" "+%Y" 2>/dev/null || date -u "+%Y")
 
