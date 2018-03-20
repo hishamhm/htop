@@ -78,4 +78,3 @@ void Battery_getData(double* level, ACPresence* isOnAC) {
    } else
       *isOnAC = AC_ERROR;
 }
-
