@@ -1,10 +1,10 @@
 /*
-   htop - openbsd/Battery.c
-   (C) 2015 Hisham H. Muhammad
-   (C) 2015 Michael McConville
-   Released under the GNU GPL, see the COPYING file
-   in the source distribution for its full text.
-   */
+htop - openbsd/Battery.c
+(C) 2015 Hisham H. Muhammad
+(C) 2015 Michael McConville
+Released under the GNU GPL, see the COPYING file
+in the source distribution for its full text.
+*/
 
 #include "BatteryMeter.h"
 #include <sys/sysctl.h>
@@ -17,10 +17,8 @@ void Battery_getData(double* level, ACPresence* isOnAC) {
    static int mib[] = {CTL_HW, HW_SENSORS, 0, 0, 0};
    struct sensor s;
    size_t slen = sizeof(struct sensor);
-
    struct sensordev snsrdev;
    size_t sdlen = sizeof(struct sensordev);
-
 
    for (devn = 0;; devn++) { 
       mib[2] = devn;
@@ -50,11 +48,9 @@ void Battery_getData(double* level, ACPresence* isOnAC) {
       charge = (double) s.value;
    } else *level = -1;
 
-
    *level = 100*(charge / last_full_capacity);
    if (charge >= last_full_capacity )
       *level  = 100;
-
 
    for (devn = 0;; devn++) { 
       mib[2] = devn;
