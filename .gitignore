@@ -36,6 +36,7 @@ htop.1
 install-sh
 libtool
 ltmain.sh
-m4/
+m4/*
+!m4/pkg.m4
 missing
 stamp-h1
