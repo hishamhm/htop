@@ -434,8 +434,6 @@ void ProcessList_goThroughEntries(ProcessList* this) {
       fclose(fp);
       sproc->is_lwp = FALSE;
 
-      double kb_per_page = ((double)PAGE_SIZE / (double)1024.0);
-
       if(!preExisting) {
          // Fake PID values used for sorting, since Solaris LWPs lack unique PIDs
          proc->pid             = (_psinfo.pr_pid * 1024);
@@ -462,8 +460,8 @@ void ProcessList_goThroughEntries(ProcessList* this) {
          sproc->zname          = SolarisProcessList_readZoneName(spl->kd,sproc);
          proc->majflt          = _prusage.pr_majf;
          proc->minflt          = _prusage.pr_minf; 
-         proc->m_resident      = (long)(((double)_psinfo.pr_rssize)/kb_per_page);
-         proc->m_size          = (long)(((double)_psinfo.pr_size)/kb_per_page);
+         proc->m_resident      = _psinfo.pr_rssize/PAGE_SIZE_KB;
+         proc->m_size          = _psinfo.pr_size/PAGE_SIZE_KB;
          proc->priority        = _psinfo.pr_lwp.pr_pri;
          proc->nice            = _psinfo.pr_lwp.pr_nice;
          proc->processor       = _psinfo.pr_lwp.pr_onpro;
@@ -500,8 +498,8 @@ void ProcessList_goThroughEntries(ProcessList* this) {
          sproc->zname          = SolarisProcessList_readZoneName(spl->kd,sproc);
          proc->majflt          = _prusage.pr_majf;
          proc->minflt          = _prusage.pr_minf;
-         proc->m_resident      = (long)(((double)_psinfo.pr_rssize)/kb_per_page); 
-         proc->m_size          = (long)(((double)_psinfo.pr_size)/kb_per_page); 
+         proc->m_resident      = _psinfo.pr_rssize/PAGE_SIZE_KB; 
+         proc->m_size          = _psinfo.pr_size/PAGE_SIZE_KB; 
          proc->priority        = _psinfo.pr_lwp.pr_pri;
          proc->nice            = _psinfo.pr_lwp.pr_nice;
          proc->processor       = _psinfo.pr_lwp.pr_onpro;
