@@ -253,7 +253,7 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
    char lwpdir[MAX_NAME+1];
    DIR* dir = NULL;
    FILE* fp = NULL;
-   int lwpid;
+   pid_t lwpid;
    bool preExisting = false;   
    char filename[MAX_NAME+1];
    lwpsinfo_t _lwpsinfo;
@@ -268,7 +268,7 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
    if (!dir) return;
    while ((entry = readdir(dir)) != NULL) {
       lwpname = entry->d_name;
-      lwpid   = (proc->pid << 10) + atoi(lwpname);
+      lwpid   = proc->pid + atoi(lwpname);
       lwp     = ProcessList_getProcess(pl, lwpid, &preExisting, (Process_New) SolarisProcess_new);
       slwp    = (SolarisProcess*) lwp;
       xSnprintf(filename, MAX_NAME, "%s/%s/lwp/%s/lwpsinfo", PROCDIR, name, lwpname);
@@ -438,9 +438,9 @@ void ProcessList_goThroughEntries(ProcessList* this) {
 
       if(!preExisting) {
          // Fake PID values used for sorting, since Solaris LWPs lack unique PIDs
-         proc->pid             = (_psinfo.pr_pid << 10);
-         proc->ppid            = (_psinfo.pr_ppid << 10);
-         proc->tgid            = (_psinfo.pr_ppid << 10);
+         proc->pid             = (_psinfo.pr_pid * 1024);
+         proc->ppid            = (_psinfo.pr_ppid * 1024); 
+         proc->tgid            = (_psinfo.pr_ppid * 1024);
          // Corresponding real values used for display
          sproc->realpid        = _psinfo.pr_pid;
          sproc->realppid       = _psinfo.pr_ppid;
@@ -483,8 +483,8 @@ void ProcessList_goThroughEntries(ProcessList* this) {
          strftime(proc->starttime_show, 7, ((proc->starttime_ctime > tv.tv_sec - 86400) ? "%R " : "%b%d "), &date); 
          ProcessList_add(this, proc);
       } else {
-         proc->ppid            = (_psinfo.pr_ppid << 10);
-         proc->tgid            = (_psinfo.pr_ppid << 10);
+         proc->ppid            = (_psinfo.pr_ppid * 1024);
+         proc->tgid            = (_psinfo.pr_ppid * 1024);
          sproc->realppid       = _psinfo.pr_ppid;
          sproc->lwpid          = 0; 
          sproc->zoneid         = _psinfo.pr_zoneid;

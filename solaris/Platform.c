@@ -38,7 +38,7 @@ in the source distribution for its full text.
 #include <signal.h>
 #include <sys/mkdev.h>
 
-#define  kill(pid, signal) kill(pid >> 10, signal)
+#define  kill(pid, signal) kill(pid / 1024, signal)
 
 extern ProcessFieldData Process_fields[];
 typedef struct var kvar_t;
