@@ -243,6 +243,155 @@ void ProcessList_delete(ProcessList* this) {
    free(this);
 }
 
+void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struct timeval tv) {
+   Process *lwp;
+   SolarisProcess *slwp;
+   SolarisProcess *sproc = (SolarisProcess*) proc;
+   Settings* settings = pl->settings;
+   bool hideKernelThreads = settings->hideKernelThreads;
+   bool hideUserlandThreads = settings->hideUserlandThreads;
+   char lwpdir[MAX_NAME+1];
+   DIR* dir = NULL;
+   FILE* fp = NULL;
+   int lwpid;
+   bool preExisting = false;   
+   char filename[MAX_NAME+1];
+   lwpsinfo_t _lwpsinfo;
+   lwpstatus_t _lwpstatus;
+   prusage_t _lwprusage;
+   struct tm date;
+   xSnprintf(lwpdir, MAX_NAME, "%s/%s/lwp", PROCDIR, name);
+   struct dirent* entry;
+   char* lwpname;
+   bool haveStatus = false;
+   bool haveUsage = false;
+
+   dir = opendir(lwpdir);
+   if (!dir) return;
+   while ((entry = readdir(dir)) != NULL) {
+      lwpname = entry->d_name;
+      lwpid   = (proc->pid << 10) + atoi(lwpname);
+      lwp     = ProcessList_getProcess(pl, lwpid, &preExisting, (Process_New) SolarisProcess_new);
+      slwp    = (SolarisProcess*) lwp;
+      xSnprintf(filename, MAX_NAME, "%s/%s/lwp/%s/lwpsinfo", PROCDIR, name, lwpname);
+      fp   = fopen(filename, "r");
+      if ( fp == NULL ) continue;
+      fread(&_lwpsinfo,sizeof(lwpsinfo_t),1,fp);
+      fclose(fp);
+      xSnprintf(filename, MAX_NAME, "%s/%s/lwp/%s/lwpstatus", PROCDIR, name, lwpname);
+      fp   = fopen(filename, "r");
+      if ( fp != NULL ) {
+         haveStatus = true;
+         fread(&_lwpstatus,sizeof(lwpstatus_t),1,fp);
+         fclose(fp);
+      }
+      xSnprintf(filename, MAX_NAME, "%s/%s/lwp/%s/lwpusage", PROCDIR, name, lwpname);
+      fp   = fopen(filename, "r");
+      if ( fp != NULL ) {
+         haveUsage = true;
+         fread(&_lwprusage,sizeof(prusage_t),1,fp);
+         fclose(fp);
+      }
+      slwp->is_lwp = TRUE;
+
+      if (!preExisting) {
+         lwp->basenameOffset  = -1;
+         if (haveStatus) {
+            slwp->kernel      = _lwpstatus.pr_flags & PR_ISSYS;
+         } else {
+            slwp->kernel      = false;
+         }
+         // Fake values used for sorting
+         lwp->pid             = lwpid;
+         lwp->ppid            = proc->pid;
+         lwp->tgid            = proc->pid;
+         // Corresponding real values used for display
+         slwp->realpid        = sproc->realpid;
+         slwp->realppid       = sproc->realpid;
+         slwp->lwpid          = atoi(lwpname);
+         slwp->zoneid         = sproc->zoneid;
+         lwp->tty_nr          = proc->tty_nr;
+         lwp->pgrp            = proc->pgrp;
+         lwp->percent_cpu     = ((uint16_t)_lwpsinfo.pr_pctcpu/(double)32768)*(double)100.0;
+         // Not tracked per thread
+         lwp->percent_mem     = (double)0.0;
+         lwp->st_uid          = proc->st_uid;
+         lwp->user            = UsersTable_getRef(pl->usersTable, lwp->st_uid);
+         lwp->nlwp            = 0;
+         lwp->session         = proc->session;
+         lwp->comm            = xStrdup(proc->comm);
+         lwp->commLen         = strnlen(proc->comm,PRFNSZ);
+         slwp->zname          = sproc->zname;
+         if (haveUsage) {
+            lwp->majflt       = _lwprusage.pr_majf;
+            lwp->minflt       = _lwprusage.pr_minf;
+         } else {
+            lwp->majflt       = 0;
+            lwp->minflt       = 0;
+         }
+         lwp->m_resident      = 0;
+         lwp->m_size          = 0;
+         lwp->priority        = _lwpsinfo.pr_pri;
+         lwp->nice            = _lwpsinfo.pr_nice;
+         lwp->processor       = _lwpsinfo.pr_onpro;
+         lwp->state           = _lwpsinfo.pr_sname;
+         lwp->time            = _lwpsinfo.pr_time.tv_sec;
+         slwp->taskid         = sproc->taskid;
+         slwp->projid         = sproc->projid;
+         slwp->poolid         = sproc->poolid;
+         slwp->contid         = sproc->contid;
+         lwp->starttime_ctime = _lwpsinfo.pr_start.tv_sec;
+         (void) localtime_r((time_t*) &lwp->starttime_ctime, &date);
+         strftime(lwp->starttime_show, 7, ((lwp->starttime_ctime > tv.tv_sec - 86400) ? "%R " : "%b%d "), &date);
+         ProcessList_add(pl, lwp);
+      } else {
+         slwp->zoneid         = sproc->zoneid;
+         lwp->pgrp            = proc->pgrp;
+         lwp->percent_cpu     = ((uint16_t)_lwpsinfo.pr_pctcpu/(double)32768)*(double)100.0;
+         // Not tracked per thread
+         lwp->percent_mem     = (double)0.0;
+         lwp->st_uid          = proc->st_uid;
+         lwp->user            = UsersTable_getRef(pl->usersTable, lwp->st_uid);
+         lwp->nlwp            = 0;
+         lwp->session         = proc->session;
+         lwp->comm            = xStrdup(proc->comm);
+         lwp->commLen         = strnlen(proc->comm,PRFNSZ);
+         slwp->zname          = sproc->zname;
+         if (haveUsage) {
+            lwp->majflt       = _lwprusage.pr_majf;
+            lwp->minflt       = _lwprusage.pr_minf;
+         }
+         lwp->m_resident      = 0;
+         lwp->m_size          = 0;
+         lwp->priority        = _lwpsinfo.pr_pri;
+         lwp->nice            = _lwpsinfo.pr_nice;
+         lwp->processor       = _lwpsinfo.pr_onpro;
+         lwp->state           = _lwpsinfo.pr_sname;
+         lwp->time            = _lwpsinfo.pr_time.tv_sec;
+         slwp->taskid         = sproc->taskid;
+         slwp->projid         = sproc->projid;
+         slwp->poolid         = sproc->poolid;
+         slwp->contid         = sproc->contid;
+      }
+      if (slwp->kernel) {
+         if(!hideKernelThreads) {
+            lwp->show = true;
+         } else {
+            lwp->show = false;
+         }
+      } else {
+         if(!hideUserlandThreads) {
+            lwp->show = true;
+         } else {
+            lwp->show = false;
+         }
+      }
+      lwp->updated = true;
+   }
+   closedir(dir);
+}
+
+
 void ProcessList_goThroughEntries(ProcessList* this) {
    SolarisProcessList* spl = (SolarisProcessList*) this;
    Settings* settings = this->settings;
@@ -298,14 +447,20 @@ void ProcessList_goThroughEntries(ProcessList* this) {
       if ( fp == NULL ) continue;
       fread(&_prusage,sizeof(prusage_t),1,fp);
       fclose(fp);
+      sproc->is_lwp = FALSE;
 
       double kb_per_page = ((double)PAGE_SIZE / (double)1024.0);
 
       if(!preExisting) {
          sproc->kernel         = false;
-         proc->pid             = _psinfo.pr_pid;
-         proc->ppid            = _psinfo.pr_ppid;
-         proc->tgid            = _psinfo.pr_pid;
+         // Fake PID values used for sorting, since Solaris LWPs lack unique PIDs
+         proc->pid             = (_psinfo.pr_pid << 10);
+         proc->ppid            = (_psinfo.pr_ppid << 10);
+         proc->tgid            = (_psinfo.pr_ppid << 10);
+         // Corresponding real values used for display
+         sproc->realpid        = _psinfo.pr_pid;
+         sproc->realppid       = _psinfo.pr_ppid;
+         sproc->lwpid          = 0; 
          sproc->zoneid         = _psinfo.pr_zoneid;
          proc->tty_nr          = _psinfo.pr_ttydev;
          proc->pgrp            = _psinfo.pr_pgid;
@@ -339,7 +494,10 @@ void ProcessList_goThroughEntries(ProcessList* this) {
          strftime(proc->starttime_show, 7, ((proc->starttime_ctime > tv.tv_sec - 86400) ? "%R " : "%b%d "), &date); 
          ProcessList_add(this, proc);
       } else {
-         proc->ppid            = _psinfo.pr_ppid;
+         proc->ppid            = (_psinfo.pr_ppid << 10);
+         proc->tgid            = (_psinfo.pr_ppid << 10);
+         sproc->realppid       = _psinfo.pr_ppid;
+         sproc->lwpid          = 0; 
          sproc->zoneid         = _psinfo.pr_zoneid;
          // See note above about these percentages
          proc->percent_cpu     = ((uint16_t)_psinfo.pr_pctcpu/(double)32768)*(double)100.0;
@@ -364,6 +522,9 @@ void ProcessList_goThroughEntries(ProcessList* this) {
          sproc->projid         = _psinfo.pr_projid;
          sproc->poolid         = _psinfo.pr_poolid;
          sproc->contid         = _psinfo.pr_contract;
+      }
+      if (proc->nlwp > 1) {
+         ProcessList_enumerateLWPs(proc, name, this, tv);
       }
       proc->show = !(hideKernelThreads && (_pstatus.pr_flags & PR_ISSYS));
       if (_pstatus.pr_flags & PR_ISSYS) {
