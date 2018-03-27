@@ -390,7 +390,6 @@ void ProcessList_goThroughEntries(ProcessList* this) {
    int    pid;
    bool   preExisting = false;
    Process* proc = NULL;
-   Process* parent = NULL;
    SolarisProcess* sproc = NULL;
    psinfo_t _psinfo;
    pstatus_t _pstatus;
@@ -416,7 +415,6 @@ void ProcessList_goThroughEntries(ProcessList* this) {
       name = entry->d_name;
       pid = atoi(name);
       proc = ProcessList_getProcess(this, pid, &preExisting, (Process_New) SolarisProcess_new);
-      proc->tgid = parent ? parent->pid : pid;
       sproc = (SolarisProcess *) proc;
       xSnprintf(filename, MAX_NAME, "%s/%s/psinfo", PROCDIR, name);
       fp = fopen(filename, "r");
