@@ -268,6 +268,8 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
    if (!dir) return;
    while ((entry = readdir(dir)) != NULL) {
       lwpname = entry->d_name;
+      // With 10 bits to spare, we can only list up to 1023 unique LWPs per process
+      if (atoi(lwpname) > 1023) break;
       lwpid   = proc->pid + atoi(lwpname);
       lwp     = ProcessList_getProcess(pl, lwpid, &preExisting, (Process_New) SolarisProcess_new);
       slwp    = (SolarisProcess*) lwp;
