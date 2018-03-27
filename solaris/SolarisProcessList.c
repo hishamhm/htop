@@ -257,13 +257,11 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
    bool preExisting = false;   
    char filename[MAX_NAME+1];
    lwpsinfo_t _lwpsinfo;
-   lwpstatus_t _lwpstatus;
    prusage_t _lwprusage;
    struct tm date;
    xSnprintf(lwpdir, MAX_NAME, "%s/%s/lwp", PROCDIR, name);
    struct dirent* entry;
    char* lwpname;
-   bool haveStatus = false;
    bool haveUsage = false;
 
    dir = opendir(lwpdir);
@@ -278,13 +276,6 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
       if ( fp == NULL ) continue;
       fread(&_lwpsinfo,sizeof(lwpsinfo_t),1,fp);
       fclose(fp);
-      xSnprintf(filename, MAX_NAME, "%s/%s/lwp/%s/lwpstatus", PROCDIR, name, lwpname);
-      fp   = fopen(filename, "r");
-      if ( fp != NULL ) {
-         haveStatus = true;
-         fread(&_lwpstatus,sizeof(lwpstatus_t),1,fp);
-         fclose(fp);
-      }
       xSnprintf(filename, MAX_NAME, "%s/%s/lwp/%s/lwpusage", PROCDIR, name, lwpname);
       fp   = fopen(filename, "r");
       if ( fp != NULL ) {
