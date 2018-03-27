@@ -296,11 +296,7 @@ void ProcessList_enumerateLWPs(Process* proc, char* name, ProcessList* pl, struc
 
       if (!preExisting) {
          lwp->basenameOffset  = -1;
-         if (haveStatus) {
-            slwp->kernel      = _lwpstatus.pr_flags & PR_ISSYS;
-         } else {
-            slwp->kernel      = false;
-         }
+         slwp->kernel         = sproc->kernel;
          // Fake values used for sorting
          lwp->pid             = lwpid;
          lwp->ppid            = proc->pid;
@@ -452,7 +448,6 @@ void ProcessList_goThroughEntries(ProcessList* this) {
       double kb_per_page = ((double)PAGE_SIZE / (double)1024.0);
 
       if(!preExisting) {
-         sproc->kernel         = false;
          // Fake PID values used for sorting, since Solaris LWPs lack unique PIDs
          proc->pid             = (_psinfo.pr_pid << 10);
          proc->ppid            = (_psinfo.pr_ppid << 10);
@@ -490,6 +485,11 @@ void ProcessList_goThroughEntries(ProcessList* this) {
          sproc->poolid         = _psinfo.pr_poolid;
          sproc->contid         = _psinfo.pr_contract;
          proc->starttime_ctime = _psinfo.pr_start.tv_sec;
+         if ((sproc->realppid <= 0) && !(sproc->realpid <= 1)) {
+            sproc->kernel = true;
+         } else {
+            sproc->kernel = false;
+         }
          (void) localtime_r((time_t*) &proc->starttime_ctime, &date);
          strftime(proc->starttime_show, 7, ((proc->starttime_ctime > tv.tv_sec - 86400) ? "%R " : "%b%d "), &date); 
          ProcessList_add(this, proc);
@@ -526,8 +526,8 @@ void ProcessList_goThroughEntries(ProcessList* this) {
       if (proc->nlwp > 1) {
          ProcessList_enumerateLWPs(proc, name, this, tv);
       }
-      proc->show = !(hideKernelThreads && (_pstatus.pr_flags & PR_ISSYS));
-      if (_pstatus.pr_flags & PR_ISSYS) {
+      proc->show = !(hideKernelThreads && sproc->kernel);
+      if (_pstatus.pr_flags & sproc->kernel) {
          if (hideKernelThreads) {
             addRunning = 0;
             addTotal   = 0;
