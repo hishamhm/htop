@@ -284,6 +284,7 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
    gettimeofday(&tv, NULL);
 
    // Common code pass 1
+   cproc->show              = false;
    csproc->zoneid           = _psinfo->pr_zoneid;
    csproc->zname            = SolarisProcessList_readZoneName(spl->kd,sproc);
    csproc->taskid           = _psinfo->pr_taskid;
