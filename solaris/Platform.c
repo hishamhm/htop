@@ -252,6 +252,6 @@ char* Platform_getProcessEnv(pid_t pid) {
 
    Prelease(Phandle, 0);
 
-   strncpy( envBuilder.env + envBuilder.size + 1, "\0", 1);
+   strncpy( envBuilder.env + envBuilder.size, "\0", 1);
    return envBuilder.env;
 }
