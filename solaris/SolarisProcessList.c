@@ -178,6 +178,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    uint64_t            totalfree = 0;
    int                 nswap = 0;
    char                *spath = NULL; 
+   char                *spathbase = NULL;
 
    // Part 1 - physical memory
    if (spl->kd != NULL) { meminfo    = kstat_lookup(spl->kd,"unix",0,"system_pages"); }
@@ -194,7 +195,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
       // Not really "buffers" but the best Solaris analogue that I can find to
       // "memory in use but not by programs or the kernel itself"
       pl->buffersMem = (totalmem_pgs->value.ui64 - pages->value.ui64) * PAGE_SIZE_KB;
-   } else {
+    } else {
       // Fall back to basic sysconf if kstat isn't working
       pl->totalMem = sysconf(_SC_PHYS_PAGES) * PAGE_SIZE;
       pl->buffersMem = 0;
@@ -204,9 +205,10 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    
    // Part 2 - swap
    nswap = swapctl(SC_GETNSWP, NULL);
-   if (nswap >     0) { sl  = xMalloc(nswap * sizeof(swapent_t) + sizeof(int)); }
-   if (sl    != NULL) { spath = xMalloc( nswap * MAXPATHLEN ); }
-   if (spath != NULL) { 
+   if (nswap >     0) { sl  = xMalloc((nswap * sizeof(swapent_t)) + sizeof(int)); }
+   if (sl    != NULL) { spathbase = xMalloc( nswap * MAXPATHLEN ); }
+   if (spathbase != NULL) { 
+      spath = spathbase;
       swapdev = sl->swt_ent;
       for (int i = 0; i < nswap; i++, swapdev++) {
          swapdev->ste_path = spath;
@@ -220,10 +222,11 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
       for (int i = 0; i < nswap; i++, swapdev++) {
          totalswap += swapdev->ste_pages;
          totalfree += swapdev->ste_free;
-         free(swapdev->ste_path);
-         free(sl);
+         free(swapdev);
       }
    }
+   free(spathbase);
+   free(sl);
    pl->totalSwap = totalswap * PAGE_SIZE_KB;
    pl->usedSwap  = pl->totalSwap - (totalfree * PAGE_SIZE_KB); 
 }
@@ -285,8 +288,6 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
 
    // Common code pass 1
    cproc->show              = false;
-   csproc->zoneid           = _psinfo->pr_zoneid;
-   csproc->zname            = SolarisProcessList_readZoneName(spl->kd,sproc);
    csproc->taskid           = _psinfo->pr_taskid;
    csproc->projid           = _psinfo->pr_projid;
    csproc->poolid           = _psinfo->pr_poolid;
@@ -303,18 +304,20 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
    // (accessed on 18 November 2017)
    cproc->percent_mem       = ((uint16_t)_psinfo->pr_pctmem/(double)32768)*(double)100.0;
    cproc->st_uid            = _psinfo->pr_euid;
-   cproc->user              = UsersTable_getRef(pl->usersTable, proc->st_uid);
    cproc->pgrp              = _psinfo->pr_pgid;
    cproc->nlwp              = _psinfo->pr_nlwp;
-   cproc->comm              = xStrdup(_psinfo->pr_fname);
-   cproc->commLen           = strnlen(_psinfo->pr_fname,PRFNSZ);
    cproc->tty_nr            = _psinfo->pr_ttydev;
    cproc->m_resident        = _psinfo->pr_rssize/PAGE_SIZE_KB;
    cproc->m_size            = _psinfo->pr_size/PAGE_SIZE_KB;
 
    if (!preExisting) {
-      csproc->realpid          = _psinfo->pr_pid;
-      csproc->lwpid            = lwpid_real;
+      csproc->realpid       = _psinfo->pr_pid;
+      csproc->lwpid         = lwpid_real;
+      csproc->zoneid        = _psinfo->pr_zoneid;
+      csproc->zname         = SolarisProcessList_readZoneName(spl->kd,sproc); 
+      cproc->user           = UsersTable_getRef(pl->usersTable, proc->st_uid);
+      cproc->comm           = xStrdup(_psinfo->pr_fname);
+      cproc->commLen        = strnlen(_psinfo->pr_fname,PRFNSZ);
    }
 
    // End common code pass 1
