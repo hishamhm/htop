@@ -204,8 +204,8 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    
    // Part 2 - swap
    nswap = swapctl(SC_GETNSWP, NULL);
-   if (nswap >     0) { sl  = malloc(nswap * sizeof(swapent_t) + sizeof(int)); }
-   if (sl    != NULL) { spath = malloc( nswap * MAXPATHLEN ); }
+   if (nswap >     0) { sl  = xMalloc(nswap * sizeof(swapent_t) + sizeof(int)); }
+   if (sl    != NULL) { spath = xMalloc( nswap * MAXPATHLEN ); }
    if (spath != NULL) { 
       swapdev = sl->swt_ent;
       for (int i = 0; i < nswap; i++, swapdev++) {
@@ -221,19 +221,19 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
          totalswap += swapdev->ste_pages;
          totalfree += swapdev->ste_free;
          free(swapdev->ste_path);
+         free(sl);
       }
-      free(sl);
    }
    pl->totalSwap = totalswap * PAGE_SIZE_KB;
    pl->usedSwap  = pl->totalSwap - (totalfree * PAGE_SIZE_KB); 
 }
 
-void ProcessList_delete(ProcessList* this) {
-   const SolarisProcessList* spl = (SolarisProcessList*) this;
-   if (spl->kd) kstat_close(spl->kd);
+void ProcessList_delete(ProcessList* pl) {
+   SolarisProcessList* spl = (SolarisProcessList*) pl;
+   ProcessList_done(pl);
    free(spl->cpus);
-   ProcessList_done(this);
-   free(this);
+   if (spl->kd) kstat_close(spl->kd);
+   free(spl);
 }
 
 /* NOTE: the following is a callback function of type proc_walk_f
