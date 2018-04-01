@@ -85,7 +85,7 @@ static CommandLineSettings parseArguments(int argc, char** argv) {
       {"user",     required_argument,   0, 'u'},
       {"no-color", no_argument,         0, 'C'},
       {"no-colour",no_argument,         0, 'C'},
-      {"tree-view",no_argument,         0, 't'},
+      {"tree",no_argument,              0, 't'},
       {"pid",      required_argument,   0, 'p'},
       {"io",       no_argument,         0, 'i'},
       {0,0,0,0}
@@ -93,7 +93,7 @@ static CommandLineSettings parseArguments(int argc, char** argv) {
 
    int opt, opti=0;
    /* Parse arguments */
-   while ((opt = getopt_long(argc, argv, "hvCs:t:d:u:p:i", long_opts, &opti))) {
+   while ((opt = getopt_long(argc, argv, "hvCst::d:u:p:i", long_opts, &opti))) {
       if (opt == EOF) break;
       switch (opt) {
          case 'h':
@@ -204,7 +204,7 @@ int main(int argc, char** argv) {
       settings->delay = flags.delay;
    if (!flags.useColors) 
       settings->colorScheme = COLORSCHEME_MONOCHROME;
-   if (flags.treeView) 
+   if (flags.treeView)
       settings->treeView = true;
 
    CRT_init(settings->delay, settings->colorScheme);
