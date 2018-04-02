@@ -85,7 +85,7 @@ static CommandLineSettings parseArguments(int argc, char** argv) {
       {"user",     required_argument,   0, 'u'},
       {"no-color", no_argument,         0, 'C'},
       {"no-colour",no_argument,         0, 'C'},
-      {"tree",no_argument,              0, 't'},
+      {"tree",     no_argument,         0, 't'},
       {"pid",      required_argument,   0, 'p'},
       {"io",       no_argument,         0, 'i'},
       {0,0,0,0}
