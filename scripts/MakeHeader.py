@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-import os, sys, string
+import os, sys, string, io
 try:
    from cStringIO import StringIO
 except ImportError:
@@ -16,7 +16,7 @@ SKIPONE=4
 state = ANY
 static = 0
 
-file = open(sys.argv[1])
+file = io.open(sys.argv[1], "r", errors="ignore")
 name = sys.argv[1][:-2]
 
 out = StringIO()
@@ -94,7 +94,7 @@ out.write( "#endif\n" )
 # This prevents a lot of recompilation during development
 out.seek(0)
 try:
-   with open(name + ".h", "r") as orig:
+   with io.open(name + ".h", "r", errors="ignore") as orig:
       origcontents = orig.readlines()
 except:
    origcontents = ""
