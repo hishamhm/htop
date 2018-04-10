@@ -595,7 +595,7 @@ void CRT_restorePrivileges() {
 
 // TODO: pass an instance of Settings instead.
 
-void CRT_init(int delay, int colorScheme) {
+void CRT_init(int delay, int colorScheme, bool allowUnicode) {
    initscr();
    noecho();
    CRT_delay = delay;
@@ -661,10 +661,13 @@ void CRT_init(int delay, int colorScheme) {
    setlocale(LC_CTYPE, "");
 
 #ifdef HAVE_LIBNCURSESW
-   if(strcmp(nl_langinfo(CODESET), "UTF-8") == 0)
+   if (allowUnicode == true &&
+       strcmp(nl_langinfo(CODESET), "UTF-8") == 0)
       CRT_utf8 = true;
    else
       CRT_utf8 = false;
+#else
+   (void) allowUnicode;
 #endif
 
    CRT_treeStr =
