@@ -13,6 +13,7 @@ in the source distribution for its full text.
 #include "StringUtils.h"
 #include "ListItem.h"
 #include "Settings.h"
+#include "ProcessList.h"
 
 #include <math.h>
 #include <string.h>
@@ -119,6 +120,7 @@ typedef struct GraphData_ {
    double* stack2;
    int* colors;
    unsigned int colorRowSize;
+   int drawOffset;
 } GraphData;
 
 }*/
@@ -505,6 +507,9 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       struct timeval delay = { .tv_sec = (int)(CRT_delay/10), .tv_usec = (CRT_delay-((int)(CRT_delay/10)*10)) * 100000 };
       timeradd(&now, &delay, &(data->time));
 
+      data->drawOffset = (this->pl->settings->alignGraphMeter) ?
+                         (data->drawOffset + 1) % 2 : 0;
+
       for (int i = 0; i < GRAPH_NUM_RECORDS - 1; i++) {
          data->values[i] = data->values[i + 1];
          memcpy(&(data->colors[i * data->colorRowSize]),
@@ -561,6 +566,8 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
 
             double maxArea = 0.0;
             int color = BAR_SHADOW;
+            double maxArea2 = 0.0;
+            int color2 = BAR_SHADOW;
             for (int i = MIN(stack1Start, stack2Start); ; i++) {
                if (stack1[i] < high)
                   stack1Start = i;
@@ -586,9 +593,20 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
                   maxArea = area;
                   color = Meter_attributes(this)[i];
                }
+               if (data->drawOffset > 0) {
+                  area = CLAMP(stack2[i + 1], low, high);
+                  area -= CLAMP(stack2[i], low, high);
+                  if (area > maxArea2) {
+                     maxArea2 = area;
+                     color2 = Meter_attributes(this)[i];
+                  }
+               }
             }
             data->colors[(GRAPH_NUM_RECORDS - 2) * data->colorRowSize +
                          offset] = color;
+            if (data->drawOffset > 0) {
+               data->colors[(GRAPH_NUM_RECORDS - 1) * data->colorRowSize + offset] = color2;
+            }
          }
          if (data->colorRowSize <= GRAPH_HEIGHT) {
             break;
@@ -606,6 +624,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       col = -index / 2;
       index = 0;
    }
+   index += data->drawOffset;
 
    // If it's not percent graph, determine the scale.
    int exp = 0;

@@ -58,6 +58,7 @@ typedef struct Settings_ {
    bool updateProcessNames;
    bool accountGuestInCPUMeter;
    bool headerMargin;
+   bool alignGraphMeter;
 
    bool changed;
 } Settings;
@@ -227,6 +228,8 @@ static bool Settings_read(Settings* this, const char* fileName) {
          this->updateProcessNames = atoi(option[1]);
       } else if (String_eq(option[0], "account_guest_in_cpu_meter")) {
          this->accountGuestInCPUMeter = atoi(option[1]);
+      } else if (String_eq(option[0], "align_graph_meter")) {
+         this->alignGraphMeter = atoi(option[1]);
       } else if (String_eq(option[0], "delay")) {
          this->delay = atoi(option[1]);
       } else if (String_eq(option[0], "color_scheme")) {
@@ -314,6 +317,7 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "cpu_count_from_zero=%d\n", (int) this->countCPUsFromZero);
    fprintf(fd, "update_process_names=%d\n", (int) this->updateProcessNames);
    fprintf(fd, "account_guest_in_cpu_meter=%d\n", (int) this->accountGuestInCPUMeter);
+   fprintf(fd, "align_graph_meter=%d\n", (int) this->alignGraphMeter);
    fprintf(fd, "color_scheme=%d\n", (int) this->colorScheme);
    fprintf(fd, "delay=%d\n", (int) this->delay);
    fprintf(fd, "left_meters="); writeMeters(this, fd, 0);
@@ -344,6 +348,7 @@ Settings* Settings_new(int cpuCount) {
    this->cpuCount = cpuCount;
    this->showProgramPath = true;
    this->highlightThreads = true;
+   this->alignGraphMeter = true;
    
    this->fields = xCalloc(Platform_numberOfFields+1, sizeof(ProcessField));
    // TODO: turn 'fields' into a Vector,
