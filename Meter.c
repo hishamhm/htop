@@ -26,6 +26,7 @@ in the source distribution for its full text.
 #define GRAPH_DELAY (DEFAULT_DELAY/2)
 
 #define GRAPH_HEIGHT 4 /* Unit: rows (lines) */
+#define GRAPH_NUM_RECORDS 256
 
 /*{
 #include "ListItem.h"
@@ -106,7 +107,7 @@ typedef enum {
 
 typedef struct GraphData_ {
    struct timeval time;
-   double values[METER_BUFFER_LEN];
+   double values[GRAPH_NUM_RECORDS];
 } GraphData;
 
 }*/
@@ -370,7 +371,6 @@ static const char* const* GraphMeterMode_dots;
 static int GraphMeterMode_pixPerRow;
 
 static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
-   const int nValues = METER_BUFFER_LEN;
    if (!this->drawData) {
       this->drawData = (void*) GraphData_new();
    }
@@ -399,26 +399,26 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       struct timeval delay = { .tv_sec = (int)(CRT_delay/10), .tv_usec = (CRT_delay-((int)(CRT_delay/10)*10)) * 100000 };
       timeradd(&now, &delay, &(data->time));
 
-      for (int i = 0; i < nValues - 1; i++)
+      for (int i = 0; i < GRAPH_NUM_RECORDS - 1; i++)
          data->values[i] = data->values[i+1];
    
-      char buffer[nValues];
-      Meter_updateValues(this, buffer, nValues - 1);
+      char buffer[METER_BUFFER_LEN];
+      Meter_updateValues(this, buffer, METER_BUFFER_LEN - 1);
    
       double value = 0.0;
       int items = Meter_getItems(this);
       for (int i = 0; i < items; i++)
          value += this->values[i];
       value /= this->total;
-      data->values[nValues - 1] = value;
+      data->values[GRAPH_NUM_RECORDS - 1] = value;
    }
    
-   int i = nValues - (w*2) + 2, k = 0;
+   int i = GRAPH_NUM_RECORDS - (w*2) + 2, k = 0;
    if (i < 0) {
       k = -i/2;
       i = 0;
    }
-   for (; i < nValues - 1; i+=2, k++) {
+   for (; i < GRAPH_NUM_RECORDS - 1; i+=2, k++) {
       int pix = GraphMeterMode_pixPerRow * GRAPH_HEIGHT;
       int v1 = CLAMP((int) lround(data->values[i] * pix), 1, pix);
       int v2 = CLAMP((int) lround(data->values[i+1] * pix), 1, pix);

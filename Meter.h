@@ -14,6 +14,7 @@ in the source distribution for its full text.
 #define GRAPH_DELAY (DEFAULT_DELAY/2)
 
 #define GRAPH_HEIGHT 4 /* Unit: rows (lines) */
+#define GRAPH_NUM_RECORDS 256
 
 #include "ListItem.h"
 
@@ -93,7 +94,7 @@ typedef enum {
 
 typedef struct GraphData_ {
    struct timeval time;
-   double values[METER_BUFFER_LEN];
+   double values[GRAPH_NUM_RECORDS];
 } GraphData;
 
 
