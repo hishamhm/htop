@@ -144,8 +144,10 @@ Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type) {
    return this;
 }
 
+static const char* Meter_prefixes = "KMGTPEZY";
+
 int Meter_humanUnit(char* buffer, unsigned long int value, int size) {
-   const char * prefix = "KMGTPEZY";
+   const char* prefix = Meter_prefixes;
    unsigned long int powi = 1;
    unsigned int written, powj = 1, precision = 2;
 
