@@ -240,6 +240,19 @@ ListItem* Meter_toListItem(Meter* this, bool moving) {
    return li;
 }
 
+/* ---------- GraphData ---------- */
+
+static GraphData* GraphData_new(void) {
+   GraphData* data = xCalloc(1, sizeof(GraphData));
+   return data;
+}
+
+static inline void GraphData_delete(GraphData* this) {
+   // GraphData is designed to be deleted by a simple free() call,
+   // hence you shouldn't call this.
+   free(this);
+}
+
 /* ---------- TextMeterMode ---------- */
 
 static void TextMeterMode_draw(Meter* this, int x, int y, int w) {
@@ -357,10 +370,11 @@ static const char* const* GraphMeterMode_dots;
 static int GraphMeterMode_pixPerRow;
 
 static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
-
-   if (!this->drawData) this->drawData = xCalloc(1, sizeof(GraphData));
-   GraphData* data = (GraphData*) this->drawData;
    const int nValues = METER_BUFFER_LEN;
+   if (!this->drawData) {
+      this->drawData = (void*) GraphData_new();
+   }
+   GraphData* data = (GraphData*) this->drawData;
 
 #ifdef HAVE_LIBNCURSESW
    if (CRT_utf8) {

@@ -121,6 +121,8 @@ void Meter_setMode(Meter* this, int modeIndex);
 
 ListItem* Meter_toListItem(Meter* this, bool moving);
 
+/* ---------- GraphData ---------- */
+
 /* ---------- TextMeterMode ---------- */
 
 /* ---------- BarMeterMode ---------- */
