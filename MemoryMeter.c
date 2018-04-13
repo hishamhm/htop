@@ -33,7 +33,7 @@ static void MemoryMeter_updateValues(Meter* this, char* buffer, int size) {
    if ((size -= written) > 0) {
       *buffer++ = '/';
       size--;
-      Meter_humanUnit(buffer, this->total, size);
+      Meter_humanUnit(buffer, this->full, size);
    }
 }
 
@@ -41,7 +41,7 @@ static void MemoryMeter_display(Object* cast, RichString* out) {
    char buffer[50];
    Meter* this = (Meter*)cast;
    RichString_write(out, CRT_colors[METER_TEXT], ":");
-   Meter_humanUnit(buffer, this->total, 50);
+   Meter_humanUnit(buffer, this->full, 50);
    RichString_append(out, CRT_colors[METER_VALUE], buffer);
    Meter_humanUnit(buffer, this->values[0], 50);
    RichString_append(out, CRT_colors[METER_TEXT], " used:");
@@ -63,7 +63,7 @@ MeterClass MemoryMeter_class = {
    .updateValues = MemoryMeter_updateValues, 
    .defaultMode = BAR_METERMODE,
    .maxItems = 3,
-   .total = 100.0,
+   .full = 100.0, // Will be obtained from Platform_setMemoryValues()
    .attributes = MemoryMeter_attributes,
    .name = "Memory",
    .uiName = "Memory",

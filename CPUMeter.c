@@ -218,7 +218,7 @@ MeterClass CPUMeter_class = {
    .updateValues = CPUMeter_updateValues,
    .defaultMode = BAR_METERMODE,
    .maxItems = CPU_METER_ITEMCOUNT,
-   .total = 100.0,
+   .full = 100.0,
    .attributes = CPUMeter_attributes, 
    .name = "CPU",
    .uiName = "CPU",
@@ -233,7 +233,7 @@ MeterClass AllCPUsMeter_class = {
       .display = CPUMeter_display
    },
    .defaultMode = CUSTOM_METERMODE,
-   .total = 100.0,
+   .full = 100.0,
    .attributes = CPUMeter_attributes, 
    .name = "AllCPUs",
    .uiName = "CPUs (1/1)",
@@ -252,7 +252,7 @@ MeterClass AllCPUs2Meter_class = {
       .display = CPUMeter_display
    },
    .defaultMode = CUSTOM_METERMODE,
-   .total = 100.0,
+   .full = 100.0,
    .attributes = CPUMeter_attributes, 
    .name = "AllCPUs2",
    .uiName = "CPUs (1&2/2)",
@@ -271,7 +271,7 @@ MeterClass LeftCPUsMeter_class = {
       .display = CPUMeter_display
    },
    .defaultMode = CUSTOM_METERMODE,
-   .total = 100.0,
+   .full = 100.0,
    .attributes = CPUMeter_attributes, 
    .name = "LeftCPUs",
    .uiName = "CPUs (1/2)",
@@ -290,7 +290,7 @@ MeterClass RightCPUsMeter_class = {
       .display = CPUMeter_display
    },
    .defaultMode = CUSTOM_METERMODE,
-   .total = 100.0,
+   .full = 100.0,
    .attributes = CPUMeter_attributes, 
    .name = "RightCPUs",
    .uiName = "CPUs (2/2)",
@@ -309,7 +309,7 @@ MeterClass LeftCPUs2Meter_class = {
       .display = CPUMeter_display
    },
    .defaultMode = CUSTOM_METERMODE,
-   .total = 100.0,
+   .full = 100.0,
    .attributes = CPUMeter_attributes, 
    .name = "LeftCPUs2",
    .uiName = "CPUs (1&2/4)",
@@ -328,7 +328,7 @@ MeterClass RightCPUs2Meter_class = {
       .display = CPUMeter_display
    },
    .defaultMode = CUSTOM_METERMODE,
-   .total = 100.0,
+   .full = 100.0,
    .attributes = CPUMeter_attributes, 
    .name = "RightCPUs2",
    .uiName = "CPUs (3&4/4)",

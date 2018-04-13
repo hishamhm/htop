@@ -36,7 +36,7 @@ typedef struct MeterClass_ {
    const Meter_Draw draw;
    const Meter_UpdateValues updateValues;
    const int defaultMode;
-   const double total;
+   const double full;
    const int* attributes;
    const char* name;
    const char* uiName;
@@ -74,7 +74,7 @@ struct Meter_ {
    int h;
    struct ProcessList_* pl;
    double* values;
-   double total;
+   double full;
 };
 
 typedef struct MeterMode_ {

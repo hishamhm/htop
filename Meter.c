@@ -49,7 +49,7 @@ typedef struct MeterClass_ {
    const Meter_Draw draw;
    const Meter_UpdateValues updateValues;
    const int defaultMode;
-   const double total;
+   const double full;
    const int* attributes;
    const char* name;
    const char* uiName;
@@ -87,7 +87,7 @@ struct Meter_ {
    int h;
    struct ProcessList_* pl;
    double* values;
-   double total;
+   double full;
 };
 
 typedef struct MeterMode_ {
@@ -136,7 +136,7 @@ Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type) {
    this->pl = pl;
    type->curItems = type->maxItems;
    this->values = xCalloc(type->maxItems, sizeof(double));
-   this->total = type->total;
+   this->full = type->full;
    this->caption = xStrdup(type->caption);
    if (Meter_initFn(this))
       Meter_init(this);
@@ -308,9 +308,9 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
    int items = Meter_getItems(this);
    for (int i = 0; i < items; i++) {
       double value = this->values[i];
-      value = CLAMP(value, 0.0, this->total);
+      value = CLAMP(value, 0.0, this->full);
       if (value > 0) {
-         blockSizes[i] = ceil((value/this->total) * w);
+         blockSizes[i] = ceil((value/this->full) * w);
       } else {
          blockSizes[i] = 0;
       }
@@ -409,7 +409,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       int items = Meter_getItems(this);
       for (int i = 0; i < items; i++)
          value += this->values[i];
-      value /= this->total;
+      value /= this->full;
       data->values[GRAPH_NUM_RECORDS - 1] = value;
    }
    
@@ -557,7 +557,7 @@ MeterClass BlankMeter_class = {
    .updateValues = BlankMeter_updateValues,
    .defaultMode = TEXT_METERMODE,
    .maxItems = 0,
-   .total = 100.0,
+   .full = 100.0,
    .attributes = BlankMeter_attributes,
    .name = "Blank",
    .uiName = "Blank",

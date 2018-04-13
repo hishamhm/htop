@@ -39,8 +39,8 @@ static void LoadAverageMeter_display(Object* cast, RichString* out) {
 static void LoadMeter_updateValues(Meter* this, char* buffer, int size) {
    double five, fifteen;
    Platform_getLoadAverage(&this->values[0], &five, &fifteen);
-   if (this->values[0] > this->total) {
-      this->total = this->values[0];
+   if (this->values[0] > this->full) {
+      this->full = this->values[0];
    }
    xSnprintf(buffer, size, "%.2f", this->values[0]);
 }
@@ -61,7 +61,7 @@ MeterClass LoadAverageMeter_class = {
    .updateValues = LoadAverageMeter_updateValues,
    .defaultMode = TEXT_METERMODE,
    .maxItems = 3,
-   .total = 100.0,
+   .full = 100.0,
    .attributes = LoadAverageMeter_attributes,
    .name = "LoadAverage",
    .uiName = "Load average",
@@ -78,7 +78,7 @@ MeterClass LoadMeter_class = {
    .updateValues = LoadMeter_updateValues,
    .defaultMode = TEXT_METERMODE,
    .maxItems = 1,
-   .total = 100.0,
+   .full = 100.0,
    .attributes = LoadMeter_attributes,
    .name = "Load",
    .uiName = "Load",

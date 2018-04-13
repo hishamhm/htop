@@ -28,8 +28,8 @@ static void UptimeMeter_updateValues(Meter* this, char* buffer, int len) {
    int hours = (totalseconds/3600) % 24;
    int days = (totalseconds/86400);
    this->values[0] = days;
-   if (days > this->total) {
-      this->total = days;
+   if (days > this->full) {
+      this->full = days;
    }
    char daysbuf[32];
    if (days > 100) {
@@ -52,7 +52,7 @@ MeterClass UptimeMeter_class = {
    .updateValues = UptimeMeter_updateValues,
    .defaultMode = TEXT_METERMODE,
    .maxItems = 1,
-   .total = 100.0,
+   .full = 100.0,
    .attributes = UptimeMeter_attributes,
    .name = "Uptime",
    .uiName = "Uptime",
