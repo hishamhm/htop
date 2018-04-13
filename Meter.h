@@ -119,6 +119,27 @@ typedef struct GraphData_ {
 #define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
 #endif
 
+#define IS_POWER_OF_2(x) ((x) > 0 && !((x) & ((x) - 1)))
+
+#ifndef __has_builtin
+# define __has_builtin(x) 0
+#endif
+#if (__has_builtin(__builtin_clz) || \
+    ((__GNUC__ > 3) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)))
+# define HAS_BUILTIN_CLZ 1
+# define HAS_ILOG2 1
+/*
+ * ilog2(x): base-2 logarithm of an unsigned integer x, rounded down, but
+ *           ilog2(0U) yields undefined behavior.
+ * (You may use ilog2(x | 1) to define the (x == 0) behavior.)
+ */
+# define ilog2(x) ((sizeof(x) <= sizeof(unsigned int)) ? \
+     (CHAR_BIT*sizeof(unsigned int)-1-__builtin_clz(x)) : \
+     (sizeof(x) <= sizeof(unsigned long)) ? \
+     (CHAR_BIT*sizeof(unsigned long)-1-__builtin_clzl(x)) : \
+     (CHAR_BIT*sizeof(unsigned long long)-1-__builtin_clzll(x)))
+#endif // __has_builtin(__builtin_clz) || GNU C 3.4 or later
+
 extern MeterClass Meter_class;
 
 Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type);

@@ -20,6 +20,7 @@ in the source distribution for its full text.
 #include <stdlib.h>
 #include <stdarg.h>
 #include <float.h>
+#include <limits.h>
 #include <assert.h>
 #include <sys/time.h>
 
@@ -134,6 +135,27 @@ typedef struct GraphData_ {
 #ifndef CLAMP
 #define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
 #endif
+
+#define IS_POWER_OF_2(x) ((x) > 0 && !((x) & ((x) - 1)))
+
+#ifndef __has_builtin
+# define __has_builtin(x) 0
+#endif
+#if (__has_builtin(__builtin_clz) || \
+    ((__GNUC__ > 3) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)))
+# define HAS_BUILTIN_CLZ 1
+# define HAS_ILOG2 1
+/*
+ * ilog2(x): base-2 logarithm of an unsigned integer x, rounded down, but
+ *           ilog2(0U) yields undefined behavior.
+ * (You may use ilog2(x | 1) to define the (x == 0) behavior.)
+ */
+# define ilog2(x) ((sizeof(x) <= sizeof(unsigned int)) ? \
+     (CHAR_BIT*sizeof(unsigned int)-1-__builtin_clz(x)) : \
+     (sizeof(x) <= sizeof(unsigned long)) ? \
+     (CHAR_BIT*sizeof(unsigned long)-1-__builtin_clzl(x)) : \
+     (CHAR_BIT*sizeof(unsigned long long)-1-__builtin_clzll(x)))
+#endif // __has_builtin(__builtin_clz) || GNU C 3.4 or later
 
 MeterClass Meter_class = {
    .super = {
@@ -316,16 +338,30 @@ static int GraphData_getColor(GraphData* this, int vIndex, int h, int scaleExp) 
       (void) frexp(MAX(this->values[vIndex], this->values[vIndex + 1]), &exp);
       int level = MIN((scaleExp - exp), maxLevel);
       assert(level >= 0);
-      if ((h << (level + 1)) + 1 >= this->colorRowSize) {
+      if (((unsigned int) h << (level + 1)) + 1 >= this->colorRowSize) {
          return BAR_SHADOW;
       }
-      for (int j = 1 << level; ; j >>= 1) {
+      unsigned int j, offset;
+   #if IS_POWER_OF_2(GRAPH_HEIGHT)
+      j = 1 << level;
+      offset = (h << (level + 1)) + j;
+      assert(offset < this->colorRowSize);
+      return this->colors[vIndex * this->colorRowSize + offset];
+   #elif HAS_ILOG2
+      // (1 << ilog2(x)) == (greatest power of two that is <= x)
+      j = 1 << MIN(level, ilog2(this->colorRowSize - 1 - (h << (level + 1))));
+      offset = (h << (level + 1)) + j;
+      assert(offset < this->colorRowSize);
+      return this->colors[vIndex * this->colorRowSize + offset];
+   #else
+      for (j = 1 << level; ; j >>= 1) {
          assert(j > 0);
-         size_t offset = (h << (level + 1)) + j;
+         offset = (h << (level + 1)) + j;
          if (offset < this->colorRowSize) {
             return this->colors[vIndex * this->colorRowSize + offset];
          }
       }
+   #endif // !(IS_POWER_OF_2(GRAPH_HEIGHT) || HAS_ILOG2)
    } else if (this->colorRowSize == GRAPH_HEIGHT) {
       return this->colors[vIndex * this->colorRowSize + h];
    } else {
