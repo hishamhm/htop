@@ -235,6 +235,7 @@ ProcessFieldData Process_fields[] = {
    [PERCENT_IO_DELAY] = { .name = "PERCENT_IO_DELAY", .title = "IOD% ", .description = "Block I/O delay %", .flags = 0, },
    [PERCENT_SWAP_DELAY] = { .name = "PERCENT_SWAP_DELAY", .title = "SWAPD% ", .description = "Swapin delay %", .flags = 0, },
 #endif
+   [CUM_PCT_CPU] = { .name = "CUM_PCT_CPU", .title = "CCPU% ", .description = "Cumulative percentage of the CPU time the process and its whole descendency tree used in the last sampling", .flags = 0, },
    [LAST_PROCESSFIELD] = { .name = "*** report bug! ***", .title = NULL, .description = NULL, .flags = 0, },
 };
 

@@ -274,6 +274,8 @@ void DarwinProcess_setFromLibprocPidinfo(DarwinProcess *proc, DarwinProcessList 
 //       fprintf(stderr, "%f %llu %llu %llu %llu %llu\n", proc->super.percent_cpu,
 //               proc->stime, proc->utime, pti.pti_total_system, pti.pti_total_user, dpl->global_diff);
 //       exit(7);
+
+         proc->super.cum_percent_cpu = proc->super.percent_cpu;
       }
 
       proc->super.time = (pti.pti_total_system + pti.pti_total_user) / 10000000;

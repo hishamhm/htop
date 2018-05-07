@@ -104,6 +104,7 @@ ProcessFieldData Process_fields[] = {
    [POOLID] = { .name = "POOLID", .title = " POLID ", .description = "Pool ID", .flags = 0, },
    [CONTID] = { .name = "CONTID", .title = " CNTID ", .description = "Contract ID", .flags = 0, },
    [LWPID] = { .name = "LWPID", .title = " LWPID ", .description = "LWP ID", .flags = 0, },
+   [CUM_PCT_CPU] = { .name = "CUM_PCT_CPU", .title = "CCPU% ", .description = "Cumulative percentage of the CPU time the process and its whole descendency tree used in the last sampling", .flags = 0, },
    [LAST_PROCESSFIELD] = { .name = "*** report bug! ***", .title = NULL, .description = NULL, .flags = 0, },
 };
 

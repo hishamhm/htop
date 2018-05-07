@@ -382,6 +382,9 @@ The percentage of time spent waiting for the completion of synchronous block I/O
 .B PERCENT_SWAP_DELAY (SWAPD%)
 The percentage of time spent swapping in pages. Requires CAP_NET_ADMIN.
 .TP
+.B CUM_PCT_CPU (CCPU%)
+The percentage of the CPU time that the process and its whole descendency tree are currently using.
+.TP
 .B All other flags
 Currently unsupported (always displays '-').
 

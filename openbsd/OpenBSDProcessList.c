@@ -265,6 +265,7 @@ void ProcessList_goThroughEntries(ProcessList* this) {
       proc->m_resident = kproc->p_vm_rssize;
       proc->percent_mem = (proc->m_resident * PAGE_SIZE_KB) / (double)(this->totalMem) * 100.0;
       proc->percent_cpu = CLAMP(getpcpu(kproc), 0.0, this->cpuCount*100.0);
+      proc->cum_percent_cpu = proc->percent_cpu;
       //proc->nlwp = kproc->p_numthreads;
       //proc->time = kproc->p_rtime_sec + ((kproc->p_rtime_usec + 500000) / 10);
       proc->nice = kproc->p_nice - 20;

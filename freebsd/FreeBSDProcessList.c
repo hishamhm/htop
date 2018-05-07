@@ -496,6 +496,8 @@ void ProcessList_goThroughEntries(ProcessList* this) {
          }
       }
 
+      proc->cum_percent_cpu = proc->percent_cpu;
+
       proc->priority = kproc->ki_pri.pri_level - PZERO;
 
       if (strcmp("intr", kproc->ki_comm) == 0 && kproc->ki_flag & P_SYSTEM) {

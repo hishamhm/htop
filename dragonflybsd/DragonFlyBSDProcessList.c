@@ -494,6 +494,8 @@ void ProcessList_goThroughEntries(ProcessList* this) {
          }
       }
 
+      proc->cum_percent_cpu = proc->percent_cpu;
+
       if (kproc->kp_lwp.kl_pid != -1)
          proc->priority = kproc->kp_lwp.kl_prio;
       else

@@ -82,6 +82,7 @@ ProcessFieldData Process_fields[] = {
    [TGID] = { .name = "TGID", .title = "   TGID ", .description = "Thread group ID (i.e. process ID)", .flags = 0, },
    [JID] = { .name = "JID", .title = "    JID ", .description = "Jail prison ID", .flags = 0, },
    [JAIL] = { .name = "JAIL", .title = "JAIL        ", .description = "Jail prison name", .flags = 0, },
+   [CUM_PCT_CPU] = { .name = "CUM_PCT_CPU", .title = "CCPU% ", .description = "Cumulative percentage of the CPU time the process and its whole descendency tree used in the last sampling", .flags = 0, },
    [LAST_PROCESSFIELD] = { .name = "*** report bug! ***", .title = NULL, .description = NULL, .flags = 0, },
 };
 

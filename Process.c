@@ -79,6 +79,7 @@ typedef enum ProcessFields {
    TIME = 50,
    NLWP = 51,
    TGID = 52,
+   CUM_PCT_CPU = 53,
 } ProcessField;
 
 typedef struct ProcessPidColumn_ {
@@ -150,6 +151,31 @@ typedef struct Process_ {
    unsigned long int cnswap;
    #endif
 
+   ///   Cumulative CPU percent by the process and their whole
+   /// descendency tree.
+   ///
+   float cum_percent_cpu;
+
+   ///   How many _descendant generations_ this process has. E.g.:
+   ///
+   ///                        descendant_generations_ct
+   ///                        -------------------------
+   ///           o       |    This node has 3 _descendant generations_.
+   ///          / \      |
+   ///         o   \     |    This node has 2 _descendant generations_.
+   ///        / \   \    |
+   ///       o   o   \   |    These nodes have 1 _descendant generations_.
+   ///      / \   \   \  |
+   ///     o   o   o   o |    Leaf nodes: no _descendant generations_.
+   ///
+   ///   So this is actually typed `unsigned int`, but `-1` is used as a
+   /// NULL value, so needs type `int`.
+   ///
+   int descendant_generations_ct;
+
+   ///   Yet unused.
+   ///
+   pid_t direct_children_ct;
 } Process;
 
 typedef struct ProcessFieldData_ {
@@ -482,6 +508,18 @@ void Process_writeField(Process* this, RichString* str, ProcessField field) {
       if (buffer[9] != '\0') {
          buffer[9] = ' ';
          buffer[10] = '\0';
+      }
+      break;
+   }
+   case CUM_PCT_CPU: {
+      if (this->cum_percent_cpu > 9999.99) {
+         xSnprintf(buffer, n, "%5d ", (unsigned int) this->cum_percent_cpu);
+      } else if (this->cum_percent_cpu > 999.99) {
+         xSnprintf(buffer, n, "%4d. ", (unsigned int) this->cum_percent_cpu);
+      } else if (this->cum_percent_cpu > 99.99) {
+         xSnprintf(buffer, n, "%5.1f ", this->cum_percent_cpu);
+      } else {
+         xSnprintf(buffer, n, "%5.1f ", this->cum_percent_cpu);
       }
       break;
    }

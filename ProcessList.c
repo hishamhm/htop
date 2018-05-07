@@ -168,6 +168,104 @@ int ProcessList_size(ProcessList* this) {
    return (Vector_size(this->processes));
 }
 
+static void blank_out_descendant_generations_ct(ProcessList * this) {
+
+    for (int i = 0; i < Vector_size(this->processes); i++) {
+        Process * process = (Process *) (Vector_get(this->processes, i));
+        process->descendant_generations_ct = -1;
+    }
+}
+
+static void fill_descendant_generations_ct_in_leaf_nodes(ProcessList * this) {
+
+    unsigned int leaf_nodes = 0;
+    unsigned int non_leaf_nodes = 0;
+    for (int i = 0; i < Vector_size(this->processes); i++) {
+        Process * p0 = (Process *) (Vector_get(this->processes, i));
+        unsigned int p0_children = 0;
+        for (int j = 0; j < Vector_size(this->processes); j++) {
+            if (i != j) {
+                Process * p1 = (Process *) (Vector_get(this->processes, j));
+                if (p0->pid == p1->ppid) {
+                    p0_children++;
+                }
+            }
+        }
+        p0->direct_children_ct = p0_children;
+        if (p0_children == 0) {
+            p0->descendant_generations_ct = 0;
+            leaf_nodes++;
+        } else {
+            non_leaf_nodes++;
+        }
+    }
+}
+
+static unsigned int still_some_empty_descendant_generations_ct(
+        ProcessList * this) {
+
+    unsigned int returning = 0;
+    for (int i = 0; i < Vector_size(this->processes); i++) {
+        Process * process = (Process *) (Vector_get(this->processes, i));
+        if (process->descendant_generations_ct == -1) {
+            returning += 1;
+        }
+    }
+    return returning;
+}
+
+//   XXX Missing tree-ish algorithm and likely so an appropriate
+// supporting data structure for a tree-ish algorithm.
+static void fill_descendant_generations_ct(ProcessList * this) {
+
+    int last_filled_descendant_generations_ct;
+    fill_descendant_generations_ct_in_leaf_nodes(this);
+    last_filled_descendant_generations_ct = 0;
+    unsigned int keep_iterating = true;
+    do {
+        //   Find a process with a final value of `cum_percent_cpu`.
+        for (int i = 0; i < Vector_size(this->processes); i++) {
+            Process * p0 = (Process *) (Vector_get(this->processes, i));
+            if (p0->descendant_generations_ct ==
+                    last_filled_descendant_generations_ct) {
+                //   Find the parent process and add the cumulative
+                // percent cpu of the child.
+                for (int j = 0; j < Vector_size(this->processes); j++) {
+                    if (i != j) {
+                        Process * p1 = (Process *)
+                                       (Vector_get(this->processes, j));
+                        if (p0->ppid == p1->pid) {
+                            p1->cum_percent_cpu += p0->cum_percent_cpu;
+                            p1->descendant_generations_ct =
+                                    p0->descendant_generations_ct + 1;
+                        }
+                    }
+                }
+            }
+        }
+        last_filled_descendant_generations_ct++;
+        keep_iterating = still_some_empty_descendant_generations_ct(this);
+    } while (keep_iterating > 0);
+}
+
+static void copy_results_to_second_list(ProcessList * this) {
+    for (int i = 0; i < Vector_size(this->processes); i++) {
+        Process * p0 = (Process *) (Vector_get(this->processes, i));
+        for (int j = 0; j < Vector_size(this->processes2); j++) {
+            Process * p1 = (Process *) (Vector_get(this->processes2, j));
+            if (p0->pid == p1->pid) {
+                p1->cum_percent_cpu = p0->cum_percent_cpu;
+            }
+        }
+    }
+}
+
+static void compute_cumulatives(ProcessList * this) {
+    blank_out_descendant_generations_ct(this);
+    fill_descendant_generations_ct(this);
+    copy_results_to_second_list(this);  //   XXX
+}
+
 static void ProcessList_buildTree(ProcessList* this, pid_t pid, int level, int indent, int direction, bool show) {
    Vector* children = Vector_new(Class(Process), false, DEFAULT_SIZE);
 
@@ -225,6 +323,7 @@ void ProcessList_sort(ProcessList* this) {
                process = (Process*)(Vector_take(this->processes, i));
                process->indent = 0;
                Vector_add(this->processes2, process);
+               compute_cumulatives(this);  //   XXX
                ProcessList_buildTree(this, process->pid, 0, 0, direction, false);
                break;
             }
@@ -252,6 +351,7 @@ void ProcessList_sort(ProcessList* this) {
                process = (Process*)(Vector_take(this->processes, i));
                process->indent = 0;
                Vector_add(this->processes2, process);
+               compute_cumulatives(this);  //   XXX
                ProcessList_buildTree(this, process->pid, 0, 0, direction, process->showChildren);
                break;
             }

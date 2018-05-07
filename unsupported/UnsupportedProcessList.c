@@ -54,6 +54,9 @@ void ProcessList_goThroughEntries(ProcessList* super) {
 
     proc->percent_cpu = 2.5;
     proc->percent_mem = 2.5;
+
+    proc->cum_percent_cpu = proc->percent_cpu;
+
     proc->user = "nobody";
 
     proc->priority = 0;
