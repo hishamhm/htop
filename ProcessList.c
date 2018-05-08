@@ -169,7 +169,6 @@ int ProcessList_size(ProcessList* this) {
 }
 
 static void blank_out_descendant_generations_ct(ProcessList * this) {
-
     for (int i = 0; i < Vector_size(this->processes); i++) {
         Process * process = (Process *) (Vector_get(this->processes, i));
         process->descendant_generations_ct = -1;
@@ -177,7 +176,6 @@ static void blank_out_descendant_generations_ct(ProcessList * this) {
 }
 
 static void fill_descendant_generations_ct_in_leaf_nodes(ProcessList * this) {
-
     unsigned int leaf_nodes = 0;
     unsigned int non_leaf_nodes = 0;
     for (int i = 0; i < Vector_size(this->processes); i++) {
@@ -201,8 +199,9 @@ static void fill_descendant_generations_ct_in_leaf_nodes(ProcessList * this) {
     }
 }
 
-static unsigned int still_some_empty_descendant_generations_ct(
-        ProcessList * this) {
+static unsigned int some_empty_descendant_generations_ct(ProcessList * this) {
+    //   Member field `descendant_generations_ct` is NULL for yet some
+    // processes.
 
     unsigned int returning = 0;
     for (int i = 0; i < Vector_size(this->processes); i++) {
@@ -214,9 +213,9 @@ static unsigned int still_some_empty_descendant_generations_ct(
     return returning;
 }
 
-//   XXX Missing tree-ish algorithm and likely so an appropriate
-// supporting data structure for a tree-ish algorithm.
 static void fill_descendant_generations_ct(ProcessList * this) {
+    //   XXX Missing tree-ish algorithm and likely so an appropriate
+    // supporting data structure for a tree-ish algorithm.
 
     int last_filled_descendant_generations_ct;
     fill_descendant_generations_ct_in_leaf_nodes(this);
@@ -244,7 +243,7 @@ static void fill_descendant_generations_ct(ProcessList * this) {
             }
         }
         last_filled_descendant_generations_ct++;
-        keep_iterating = still_some_empty_descendant_generations_ct(this);
+        keep_iterating = some_empty_descendant_generations_ct(this);
     } while (keep_iterating > 0);
 }
 
