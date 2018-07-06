@@ -170,10 +170,12 @@ extern char Process_pidFormat[20];
 
 typedef Process*(*Process_New)(struct Settings_*);
 typedef void (*Process_WriteField)(Process*, RichString*, ProcessField);
+typedef const char* (*Process_GetCommandStr)(const Process*);
 
 typedef struct ProcessClass_ {
    const ObjectClass super;
    const Process_WriteField writeField;
+   const Process_GetCommandStr getCommandStr;
 } ProcessClass;
 
 #define As_Process(this_)              ((ProcessClass*)((this_)->super.klass))
@@ -514,9 +516,10 @@ ProcessClass Process_class = {
       .extends = Class(Object),
       .display = Process_display,
       .delete = Process_delete,
-      .compare = Process_compare
+      .compare = Process_compare,
    },
    .writeField = Process_writeField,
+   .getCommandStr = Process_getCommandStr,
 };
 
 void Process_init(Process* this, struct Settings_* settings) {
@@ -558,6 +561,10 @@ long Process_pidCompare(const void* v1, const void* v2) {
    Process* p1 = (Process*)v1;
    Process* p2 = (Process*)v2;
    return (p1->pid - p2->pid);
+}
+
+const char* Process_getCommandStr(const Process* p) {
+   return p->comm ? p->comm : "";
 }
 
 long Process_compare(const void* v1, const void* v2) {

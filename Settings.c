@@ -55,6 +55,7 @@ typedef struct Settings_ {
    bool highlightBaseName;
    bool highlightMegabytes;
    bool highlightThreads;
+   bool findCommInCmdline;
    bool updateProcessNames;
    bool accountGuestInCPUMeter;
    bool headerMargin;
@@ -214,6 +215,8 @@ static bool Settings_read(Settings* this, const char* fileName) {
          this->highlightMegabytes = atoi(option[1]);
       } else if (String_eq(option[0], "highlight_threads")) {
          this->highlightThreads = atoi(option[1]);
+      } else if (String_eq(option[0], "find_comm_in_cmdline")) {
+         this->findCommInCmdline = atoi(option[1]);
       } else if (String_eq(option[0], "header_margin")) {
          this->headerMargin = atoi(option[1]);
       } else if (String_eq(option[0], "expand_system_time")) {
@@ -308,6 +311,7 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "highlight_base_name=%d\n", (int) this->highlightBaseName);
    fprintf(fd, "highlight_megabytes=%d\n", (int) this->highlightMegabytes);
    fprintf(fd, "highlight_threads=%d\n", (int) this->highlightThreads);
+   fprintf(fd, "find_comm_in_cmdline=%d\n", (int) this->findCommInCmdline);
    fprintf(fd, "tree_view=%d\n", (int) this->treeView);
    fprintf(fd, "header_margin=%d\n", (int) this->headerMargin);
    fprintf(fd, "detailed_cpu_time=%d\n", (int) this->detailedCPUTime);
@@ -344,6 +348,7 @@ Settings* Settings_new(int cpuCount) {
    this->cpuCount = cpuCount;
    this->showProgramPath = true;
    this->highlightThreads = true;
+   this->findCommInCmdline = false;
    
    this->fields = xCalloc(Platform_numberOfFields+1, sizeof(ProcessField));
    // TODO: turn 'fields' into a Vector,
@@ -417,6 +422,7 @@ Settings* Settings_new(int cpuCount) {
       this->hideKernelThreads = true;
       this->highlightMegabytes = true;
       this->highlightThreads = true;
+      this->findCommInCmdline = false;
       this->headerMargin = true;
    }
    return this;

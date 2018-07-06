@@ -101,7 +101,10 @@ static inline void RichString_writeFrom(RichString* this, int attrs, const char*
    int newLen = from + len;
    RichString_setLen(this, newLen);
    for (int i = from, j = 0; i < newLen; i++, j++) {
-      this->chptr[i] = (CharType) { .attr = attrs & 0xffffff, .chars = { (iswprint(data[j]) ? data[j] : '?') } };
+      /* When printing '?' for non-printable characters, exception is made for
+       * '\n' (used as a delimiter for tokens in cmdline) which is translated
+       * into space */
+      this->chptr[i] = (CharType) { .attr = attrs & 0xffffff, .chars = { (iswprint(data[j]) ? data[j] : (data[j] == '\n' ? ' ' : '?')) } };
    }
 }
 
@@ -131,7 +134,10 @@ static inline void RichString_writeFrom(RichString* this, int attrs, const char*
    int newLen = from + len;
    RichString_setLen(this, newLen);
    for (int i = from, j = 0; i < newLen; i++, j++)
-      this->chptr[i] = (data_c[j] >= 32 ? data_c[j] : '?') | attrs;
+      /* When printing '?' for non-printable characters, exception is made for
+       * '\n' (used as a delimiter for tokens in cmdline) which is translated
+       * into space */ 
+      this->chptr[i] = (data_c[j] >= 32 ? data_c[j] : (data[j] == '\n' ? ' ' : '?')) | attrs;
    this->chptr[newLen] = 0;
 }
 

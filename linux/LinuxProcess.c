@@ -93,6 +93,10 @@ typedef enum LinuxProcessFields {
 
 typedef struct LinuxProcess_ {
    Process super;
+   char *procComm;
+   char *procExe;
+   int procExeBasenameOffset;
+   int procCmdlineBasenameOffset;
    bool isKernelThread;
    IOPriority ioPriority;
    unsigned long int cminflt;
@@ -260,6 +264,7 @@ ProcessClass LinuxProcess_class = {
       .compare = LinuxProcess_compare
    },
    .writeField = (Process_WriteField) LinuxProcess_writeField,
+   .getCommandStr = (Process_GetCommandStr) LinuxProcess_getCommandStr
 };
 
 LinuxProcess* LinuxProcess_new(Settings* settings) {
@@ -276,6 +281,8 @@ void Process_delete(Object* cast) {
    free(this->cgroup);
 #endif
    free(this->ttyDevice);
+   free(this->procComm);
+   free(this->procExe);
    free(this);
 }
 
@@ -316,6 +323,121 @@ void LinuxProcess_printDelay(float delay_percent, char* buffer, int n) {
   }
 }
 #endif
+
+/* TASK_COMM_LEN is defined to be 16 for /proc/[pid]/comm in man proc(5), but
+ * it is not available in an userspace header - so define it */
+#define TASK_COMM_LEN 16
+
+static inline void LinuxProcess_writeCommand(Process* this, int attr, int baseattr, RichString* str) {
+   LinuxProcess *lp = (LinuxProcess *)this;
+   char *procExe = lp->procExe, *procComm = lp->procComm, *cmdline = this->comm;
+   int  baseStart = RichString_size(str), baseEnd, baseLen, commStart, commEnd = 0,
+        procExeLen, basenameOffset = lp->procExeBasenameOffset;
+   bool commInCmdline = false, findCommInCmdline = this->settings->findCommInCmdline,
+        highlightBaseName = this->settings->highlightBaseName,
+        showProgramPath = this->settings->showProgramPath;
+
+   /* Display procExe */
+   RichString_append(str, attr, (showProgramPath ? procExe : (procExe + basenameOffset)));
+   baseLen = strlen(procExe + basenameOffset);
+   if (showProgramPath)
+      baseStart += basenameOffset;
+   baseEnd = baseStart + baseLen - 1;
+   procExeLen = basenameOffset + baseLen;
+
+   /* When colorizing a basename with the comm prefix, the entire basename (not
+    * just the comm prefix) is colorized for better readability, and it is
+    * implicit that only (TASK_COMM_LEN - 1) could be comm */ 
+   if (procComm) {
+      /* Try to match procComm with procExe's basename: This is reliable
+       * (predictable) */
+      if (strncmp(procExe + basenameOffset, procComm, TASK_COMM_LEN - 1) == 0) {
+         commStart = baseStart;
+         commEnd = baseEnd;
+      } else if (findCommInCmdline) {
+         /* Try to find procComm in tokenized cmdline - this might in rare
+          * cases mis-identify a string or fail, if comm or cmdline had been
+          * unsuitably modified by the process */
+         char *commCopy = xStrdup(cmdline), *delim = "\n", *token, *tokenBase, *saveptr;
+         for (token = strtok_r(commCopy, delim, &saveptr); token;
+              token = strtok_r(NULL, delim, &saveptr)) {
+            for (tokenBase = token; *token; ++token) {
+               if (*token == '/')
+                  tokenBase = token + 1;
+            }
+            if (strncmp(tokenBase, procComm, TASK_COMM_LEN - 1) == 0) {
+               /* commStart/commEnd will be adjusted later along with cmdline */
+               commStart = RichString_size(str) + tokenBase - commCopy;
+               commEnd = commStart + strlen(tokenBase) - 1;
+               commInCmdline = true;
+               break;
+            }
+         }
+         free(commCopy);
+      }
+   }
+
+   /* If procComm isn't present, or if procComm was found in procExe or cmdline,
+    * try to merge procExe and cmdline */
+   if (!procComm || commEnd) {
+      char nextChar;
+      /* If procExe or its basename is a prefix of cmdline, strip it. Otherwise
+       * display cmdline fully as a separate field. Note that cmdline could have
+       * been modified to have spaces following the command name, so we
+       * accomodate that as well after checking the delimiter */
+      if (strncmp(cmdline, procExe, procExeLen) == 0 &&
+          ((nextChar = cmdline[procExeLen]) == 0 || nextChar == '\n' || nextChar == ' ')) {
+         cmdline += procExeLen;
+         if (commInCmdline) {
+            commStart -= procExeLen;
+            commEnd -= procExeLen;
+         }
+      } else if (strncmp(cmdline, procExe + basenameOffset,  baseLen) == 0 &&
+                 ((nextChar = cmdline[baseLen]) == 0 || nextChar == '\n' || nextChar == ' ')) {
+         cmdline += baseLen;
+         if (commInCmdline) {
+            commStart -= baseLen;
+            commEnd -= baseLen;
+         }
+      } else {
+         /* cmdline will be a separate field */
+         RichString_append(str, attr, "│");
+         if (commInCmdline) {
+            commStart += 1;
+            commEnd += 1;
+         }
+      }
+   } else { /* procComm && !commEnd */
+      /* procComm was found neither in procExe nor cmdline, so display it as
+       * a separate field */
+      RichString_append(str, attr, "│");
+      RichString_append(str, CRT_colors[PROCESS_COMM], procComm);
+      RichString_append(str, attr, "│");
+   }
+
+   /* Display cmdline if it hasn't been consumed by procExe */
+   if (*cmdline)
+      RichString_append(str, attr, cmdline);
+
+   /* Colorize procComm, basename */
+   if (commEnd) {
+      /* If it was matched with procExe's basename, make it bold if needed */
+      if (commStart == baseStart && highlightBaseName) {
+         if (commEnd > baseEnd) {
+            RichString_setAttrn(str, A_BOLD | CRT_colors[PROCESS_COMM], commStart, baseEnd);
+            baseStart = baseEnd + 1;
+            RichString_setAttrn(str, CRT_colors[PROCESS_COMM], baseStart, commEnd);
+         } else {
+            RichString_setAttrn(str, A_BOLD | CRT_colors[PROCESS_COMM], commStart, commEnd);
+            baseStart = commEnd + 1;
+         }
+      } else {
+         RichString_setAttrn(str, CRT_colors[PROCESS_COMM], commStart, commEnd);
+      }
+   }
+   if (baseStart <= baseEnd && highlightBaseName)
+      RichString_setAttrn(str, baseattr, baseStart, baseEnd);
+}
 
 void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field) {
    LinuxProcess* lp = (LinuxProcess*) this;
@@ -395,12 +517,67 @@ void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field)
    case PERCENT_IO_DELAY: LinuxProcess_printDelay(lp->blkio_delay_percent, buffer, n); break;
    case PERCENT_SWAP_DELAY: LinuxProcess_printDelay(lp->swapin_delay_percent, buffer, n); break;
    #endif
+   case COMM: {
+      if (!lp->procExe || (Process_isUserlandThread(this) && this->settings->showThreadNames)) {
+         Process_writeField(this, str, field);
+         return;
+      }
+      /* This code is from Process_writeField for COMM, but we invoke
+       * LinuxProcess_writeCommand to display
+       * /proc/pid/exe (or its basename)│/proc/pid/comm│/proc/pid/cmdline */
+      int baseattr = CRT_colors[PROCESS_BASENAME];                                                    
+      if (this->settings->highlightThreads && Process_isThread(this)) {
+         attr = CRT_colors[PROCESS_THREAD];
+         baseattr = CRT_colors[PROCESS_THREAD_BASENAME];
+      }
+      if (!this->settings->treeView || this->indent == 0) {
+         LinuxProcess_writeCommand(this, attr, baseattr, str);
+         return;
+      } else {
+         char* buf = buffer;
+         int maxIndent = 0;
+         bool lastItem = (this->indent < 0);
+         int indent = (this->indent < 0 ? -this->indent : this->indent);
+
+         for (int i = 0; i < 32; i++)
+            if (indent & (1U << i))
+               maxIndent = i+1;
+          for (int i = 0; i < maxIndent - 1; i++) {
+            int written;
+            if (indent & (1 << i))
+               written = snprintf(buf, n, "%s  ", CRT_treeStr[TREE_STR_VERT]);
+            else
+               written = snprintf(buf, n, "   ");
+            buf += written;
+            n -= written;
+         }
+         const char* draw = CRT_treeStr[lastItem ? (this->settings->direction == 1 ? TREE_STR_BEND : TREE_STR_TEND) : TREE_STR_RTEE];
+         xSnprintf(buf, n, "%s%s ", draw, this->showChildren ? CRT_treeStr[TREE_STR_SHUT] : CRT_treeStr[TREE_STR_OPEN] );
+         RichString_append(str, CRT_colors[PROCESS_TREE], buffer);
+         LinuxProcess_writeCommand(this, attr, baseattr, str);
+         return;
+      }
+   }
    default:
       Process_writeField((Process*)this, str, field);
       return;
    }
    RichString_append(str, attr, buffer);
 }
+
+/* This function returns the string displayed in Command column, so that sorting
+ * happens on what is displayed - whether comm, full path, basename, etc.. So
+ * this follows LinuxProcess_writeField(COMM) and LinuxProcess_writeCommand */
+const char* LinuxProcess_getCommandStr(const Process *this) {
+   LinuxProcess *lp = (LinuxProcess *)this;
+   bool showProgramPath = this->settings->showProgramPath;
+   if (Process_isUserlandThread(this) && this->settings->showThreadNames)
+      return this->comm;
+   if (lp->procExe)
+      return showProgramPath ? lp->procExe : (lp->procExe + lp->procExeBasenameOffset);
+   return showProgramPath ? this->comm : (this->comm + lp->procCmdlineBasenameOffset);
+}
+
 
 long LinuxProcess_compare(const void* v1, const void* v2) {
    LinuxProcess *p1, *p2;
@@ -466,6 +643,8 @@ long LinuxProcess_compare(const void* v1, const void* v2) {
    #endif
    case IO_PRIORITY:
       return LinuxProcess_effectiveIOPriority(p1) - LinuxProcess_effectiveIOPriority(p2);
+   case COMM:
+      return strcmp(LinuxProcess_getCommandStr((Process *)p1), LinuxProcess_getCommandStr((Process *)p2));
    default:
       return Process_compare(v1, v2);
    }
