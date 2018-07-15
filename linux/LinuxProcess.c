@@ -324,17 +324,53 @@ void LinuxProcess_printDelay(float delay_percent, char* buffer, int n) {
 }
 #endif
 
-/* TASK_COMM_LEN is defined to be 16 for /proc/[pid]/comm in man proc(5), but
- * it is not available in an userspace header - so define it */
+/* TASK_COMM_LEN is defined to be 16 for /proc/[pid]/comm in man proc(5), but it
+ * is not available in an userspace header - so define it. Note that when
+ * colorizing a basename with the comm prefix, the entire basename (not just the
+ * comm prefix) is colorized for better readability, and it is implicit that
+ * only (TASK_COMM_LEN - 1) could be comm */
 #define TASK_COMM_LEN 16
+
+static inline bool findCommInCmdline(char *comm, char *cmdline, int cmdlineBasenameOffset, int cmdStart, int *pCommStart, int *pCommEnd) {
+   /* Try to find procComm in tokenized cmdline - this might in rare cases
+    * mis-identify a string or fail, if comm or cmdline had been unsuitably
+    * modified by the process */
+   bool lastToken = false;
+   char *token, *tokenBase;
+
+   for (token = cmdline + cmdlineBasenameOffset; *token; ) {
+      for (tokenBase = token; *token && *token != '\n'; ++token) {
+         if (*token == '/')
+            tokenBase = token + 1;
+      }
+      if (*token)    /* NUL terminate at delimiter for strncmp */
+         *token = 0;
+      else
+         lastToken = true;
+
+      if (strncmp(tokenBase, comm, TASK_COMM_LEN - 1) == 0) {
+         if (!lastToken)   /* restore the delimiter */
+            *token = '\n';
+         *pCommStart = cmdStart + tokenBase - cmdline;
+         *pCommEnd = cmdStart + token - cmdline - 1;
+         return true;
+      }
+      if (!lastToken) {
+         /* restore the delimiter and skip repeats */
+         *token = '\n';
+         while (*++token == '\n')
+            ;
+      }
+   }
+   return false;
+}
 
 static inline void LinuxProcess_writeCommand(Process* this, int attr, int baseattr, RichString* str) {
    LinuxProcess *lp = (LinuxProcess *)this;
    char *procExe = lp->procExe, *procComm = lp->procComm, *cmdline = this->comm;
    int  baseStart = RichString_size(str), baseEnd, baseLen, commStart, commEnd = 0,
         procExeLen, basenameOffset = lp->procExeBasenameOffset;
-   bool commInCmdline = false, findCommInCmdline = this->settings->findCommInCmdline,
-        highlightBaseName = this->settings->highlightBaseName,
+   bool commInCmdline = false, highlightBaseName = this->settings->highlightBaseName,
         showProgramPath = this->settings->showProgramPath;
 
    /* Display procExe */
@@ -354,30 +390,10 @@ static inline void LinuxProcess_writeCommand(Process* this, int attr, int baseat
       if (strncmp(procExe + basenameOffset, procComm, TASK_COMM_LEN - 1) == 0) {
          commStart = baseStart;
          commEnd = baseEnd;
-      } else if (findCommInCmdline) {
-         /* Try to find procComm in tokenized cmdline, starting from the
-          * basename of first token which is already known. This might in rare
-          * cases mis-identify a string or fail, if comm or cmdline had been
-          * unsuitably modified by the process */
-         int cmdBasenameOffset = lp->procCmdlineBasenameOffset;
-         char *cmdCopy = xStrdup(cmdline + cmdBasenameOffset), *delim = "\n",
-              *token, *tokenBase, *saveptr;
-         for (token = strtok_r(cmdCopy, delim, &saveptr);
-              token;
-              token = strtok_r(NULL, delim, &saveptr)) {
-            for (tokenBase = token; *token; ++token) {
-               if (*token == '/')
-                  tokenBase = token + 1;
-            }
-            if (strncmp(tokenBase, procComm, TASK_COMM_LEN - 1) == 0) {
-               /* commStart/commEnd will be adjusted later along with cmdline */
-               commStart = RichString_size(str) + cmdBasenameOffset + tokenBase - cmdCopy;
-               commEnd = commStart + strlen(tokenBase) - 1;
-               commInCmdline = true;
-               break;
-            }
-         }
-         free(cmdCopy);
+      } else if (this->settings->findCommInCmdline) {
+         /* commStart/commEnd will be adjusted later along with cmdline */
+         commInCmdline = findCommInCmdline(procComm, cmdline, lp->procCmdlineBasenameOffset,
+                                           RichString_size(str), &commStart, &commEnd);
       }
    }
 
