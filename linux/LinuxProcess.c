@@ -356,11 +356,12 @@ static inline void LinuxProcess_writeCommand(Process* this, int attr, int baseat
          commEnd = baseEnd;
       } else if (findCommInCmdline) {
          /* Try to find procComm in tokenized cmdline, starting from the
-	  * basename of first token which is already known. This might in rare
+          * basename of first token which is already known. This might in rare
           * cases mis-identify a string or fail, if comm or cmdline had been
           * unsuitably modified by the process */
          int cmdBasenameOffset = lp->procCmdlineBasenameOffset;
-         char *cmdCopy = xStrdup(cmdline + cmdBasenameOffset), *delim = "\n", *token, *tokenBase, *saveptr;
+         char *cmdCopy = xStrdup(cmdline + cmdBasenameOffset), *delim = "\n",
+              *token, *tokenBase, *saveptr;
          for (token = strtok_r(cmdCopy, delim, &saveptr);
               token;
               token = strtok_r(NULL, delim, &saveptr)) {
