@@ -355,11 +355,14 @@ static inline void LinuxProcess_writeCommand(Process* this, int attr, int baseat
          commStart = baseStart;
          commEnd = baseEnd;
       } else if (findCommInCmdline) {
-         /* Try to find procComm in tokenized cmdline - this might in rare
+         /* Try to find procComm in tokenized cmdline, starting from the
+	  * basename of first token which is already known. This might in rare
           * cases mis-identify a string or fail, if comm or cmdline had been
           * unsuitably modified by the process */
-         char *commCopy = xStrdup(cmdline), *delim = "\n", *token, *tokenBase, *saveptr;
-         for (token = strtok_r(commCopy, delim, &saveptr); token;
+         int cmdBasenameOffset = lp->procCmdlineBasenameOffset;
+         char *cmdCopy = xStrdup(cmdline + cmdBasenameOffset), *delim = "\n", *token, *tokenBase, *saveptr;
+         for (token = strtok_r(cmdCopy, delim, &saveptr);
+              token;
               token = strtok_r(NULL, delim, &saveptr)) {
             for (tokenBase = token; *token; ++token) {
                if (*token == '/')
@@ -367,13 +370,13 @@ static inline void LinuxProcess_writeCommand(Process* this, int attr, int baseat
             }
             if (strncmp(tokenBase, procComm, TASK_COMM_LEN - 1) == 0) {
                /* commStart/commEnd will be adjusted later along with cmdline */
-               commStart = RichString_size(str) + tokenBase - commCopy;
+               commStart = RichString_size(str) + cmdBasenameOffset + tokenBase - cmdCopy;
                commEnd = commStart + strlen(tokenBase) - 1;
                commInCmdline = true;
                break;
             }
          }
-         free(commCopy);
+         free(cmdCopy);
       }
    }
 
