@@ -225,7 +225,7 @@ void ProcessList_sort(ProcessList* this) {
                process = (Process*)(Vector_take(this->processes, i));
                process->indent = 0;
                Vector_add(this->processes2, process);
-               ProcessList_buildTree(this, process->pid, 0, 0, direction, false);
+               ProcessList_buildTree(this, process->pid, 0, 0, direction, process->showChildren);
                break;
             }
             pid_t ppid = Process_getParentPid(process);
