@@ -26,7 +26,14 @@ in the source distribution for its full text.
 #include "BatteryMeter.h"
 #include "SignalsPanel.h"
 #include "AixProcess.h"
+
+// Used for the load average.
+#include <sys/kinfo.h>
+// AIX doesn't define this function for userland headers, but it's in libc
+extern int getkerninfo(int, char*, int*, int32long64_t);
 }*/
+
+unsigned long long avenrun [3];
 
 const SignalItem Platform_signals[] = {
    { .name = " 0 Cancel",    .number =  0 },
@@ -89,9 +96,20 @@ int Platform_getUptime() {
 }
 
 void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
+#ifndef __PASE__
+   int size = sizeof (avenrun);
+   if (getkerninfo(KINFO_GET_AVENRUN, avenrun, &size, 0) != -1) {
+      // apply float scaling factor
+      *one = (double)avenrun [0] / 65536;
+      *five = (double)avenrun [1] / 65536;
+      *fifteen = (double)avenrun [2] / 65536;
+   }
+#else
+   // IBM i doesn't generate load averages
    *one = 0;
    *five = 0;
    *fifteen = 0;
+#endif
 }
 
 int Platform_getMaxPid() {

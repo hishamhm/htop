@@ -15,6 +15,13 @@ in the source distribution for its full text.
 #include "SignalsPanel.h"
 #include "AixProcess.h"
 
+// Used for the load average.
+#include <sys/kinfo.h>
+// AIX doesn't define this function for userland headers, but it's in libc
+extern int getkerninfo(int, char*, int*, int32long64_t);
+
+unsigned long long avenrun [3];
+
 extern const SignalItem Platform_signals[];
 
 extern const unsigned int Platform_numberOfSignals;
