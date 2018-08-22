@@ -24,8 +24,18 @@ typedef enum AixProcessFields {
 
 typedef struct AixProcess_ {
    Process super;
+   int kernel;
    cid_t cid; // WPAR ID
 } AixProcess;
+
+#ifndef Process_isKernelThread
+#define Process_isKernelThread(_process) (_process->kernel == 1)
+#endif
+
+#ifndef Process_isUserlandThread
+/* XXX */
+#define Process_isUserlandThread(_process) (false)
+#endif
 
 }*/
 
@@ -185,7 +195,7 @@ ProcessPidColumn Process_pidColumns[] = {
 AixProcess* AixProcess_new(Settings* settings) {
    AixProcess* this = xCalloc(1, sizeof(AixProcess));
    Object_setClass(this, Class(AixProcess));
-   Process_init(this, settings);
+   Process_init(&this->super, settings);
    return this;
 }
 

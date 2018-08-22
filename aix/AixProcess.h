@@ -22,8 +22,17 @@ typedef enum AixProcessFields {
 
 typedef struct AixProcess_ {
    Process super;
+   int kernel;
    cid_t cid; // WPAR ID
 } AixProcess;
+
+#ifndef Process_isKernelThread
+#define Process_isKernelThread(_process) (_process->kernel == 1)
+#endif
+
+#ifndef Process_isUserlandThread
+#define Process_isUserlandThread(_process) (false)
+#endif
 
 
 extern ProcessClass AixProcess_class;

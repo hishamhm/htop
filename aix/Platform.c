@@ -60,7 +60,7 @@ void Platform_setBindings(Htop_Action* keys) {
    (void) keys;
 }
 
-int Platform_numberOfFields = 100;
+int Platform_numberOfFields = 101;
 
 extern char Process_pidFormat[20];
 

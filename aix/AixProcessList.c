@@ -1,6 +1,7 @@
 /*
 htop - AixProcessList.c
 (C) 2014 Hisham H. Muhammad
+(C) 2018 Calvin Buckley
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
@@ -27,11 +28,12 @@ typedef struct AixProcessList_ {
 } AixProcessList;
 
 #ifndef Process_isKernelThread
-#define Process_isKernelThread(_process) (_process->pgrp == 0)
+#define Process_isKernelThread(_process) (_process->kernel == 1)
 #endif
 
 #ifndef Process_isUserlandThread
-#define Process_isUserlandThread(_process) (_process->pid != _process->tgid)
+/* XXX */
+#define Process_isUserlandThread(_process) (false)
 #endif
 
 }*/
@@ -49,8 +51,8 @@ void ProcessList_delete(ProcessList* this) {
 }
 
 static char *AixProcessList_readProcessName (struct procentry64 *pe) {
-	char argvbuf [256]; // completely arbitrary
-	if (getargs (pe, sizeof (struct procentry64), argvbuf, 256) == 0) {
+	char argvbuf [1024]; // completely arbitrary
+	if (getargs (pe, sizeof (struct procentry64), argvbuf, 1024) == 8) {
 		// returns argv entries seperated by NULs, so we can just use the first NUL
 		return xStrdup (argvbuf);
 	} else {
@@ -95,11 +97,12 @@ void ProcessList_goThroughEntries(ProcessList* super) {
         pe = pes + i;
         ap = (AixProcess*) proc;
 
-	proc->show = ! ((hideKernelThreads && Process_isKernelThread(proc))
-                    || (hideUserlandThreads && Process_isUserlandThread(proc)));
+	proc->show = ! ((hideKernelThreads && Process_isKernelThread(ap))
+                    || (hideUserlandThreads && Process_isUserlandThread(ap)));
 
         if (!preExisting) {
-            proc->ppid = pe->pi_ppid;
+            ap->kernel = pe->pi_flags & SKPROC ? 1 : 0;
+            proc->ppid = 1;//pe->pi_ppid;
             /* XXX: tpgid? */
             proc->tgid = pe->pi_pid;
             proc->session = pe->pi_sid;
@@ -142,7 +145,7 @@ void ProcessList_goThroughEntries(ProcessList* super) {
            default:      proc->state = '?';
        }
 
-       if (Process_isKernelThread(proc)) {
+       if (Process_isKernelThread(ap)) {
           super->kernelThreads++;
        }
 
@@ -155,6 +158,5 @@ void ProcessList_goThroughEntries(ProcessList* super) {
 	proc->updated = true;
     }
 
-    proc = ProcessList_getProcess(super, 1, &preExisting, AixProcess_new);
     free (pes);
 }

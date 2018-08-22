@@ -5,6 +5,7 @@
 /*
 htop - AixProcessList.h
 (C) 2014 Hisham H. Muhammad
+(C) 2018 Calvin Buckley
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
@@ -16,11 +17,11 @@ typedef struct AixProcessList_ {
 } AixProcessList;
 
 #ifndef Process_isKernelThread
-#define Process_isKernelThread(_process) (_process->pgrp == 0)
+#define Process_isKernelThread(_process) (_process->kernel == 1)
 #endif
 
 #ifndef Process_isUserlandThread
-#define Process_isUserlandThread(_process) (_process->pid != _process->tgid)
+#define Process_isUserlandThread(_process) (false)
 #endif
 
 
