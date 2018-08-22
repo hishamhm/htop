@@ -158,6 +158,26 @@ solaris/SolarisCRT.c solaris/Battery.c
 myhtopplatheaders = $(solaris_platform_headers)
 endif
 
+# AIX
+# -------
+
+aix_platform_headers = \
+	aix/Platform.h \
+	aix/AixProcess.h \
+	aix/AixProcessList.h \
+	aix/AixCRT.h \
+	aix/Battery.h
+
+all_platform_headers += $(aix_platform_headers)
+
+if HTOP_AIX
+myhtopplatsources = aix/Platform.c \
+aix/AixProcess.c aix/AixProcessList.c \
+aix/AixCRT.c aix/Battery.c
+
+myhtopplatheaders = $(aix_platform_headers)
+endif
+
 # Unsupported
 # -----------
 
