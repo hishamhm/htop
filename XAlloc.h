@@ -7,7 +7,19 @@
 #define _GNU_SOURCE
 #endif
 
+#ifdef HAVE_ERR_H
 #include <err.h>
+#else
+#include <unistd.h>
+#include <stdio.h>
+
+static inline void
+err (int eval, const char *fmt, ...)
+{
+	fprintf (stderr, fmt);
+	_exit (eval);
+}
+#endif
 #include <assert.h>
 #include <stdlib.h>
 

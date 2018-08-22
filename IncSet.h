@@ -14,6 +14,11 @@ in the source distribution for its full text.
 #include "Panel.h"
 #include <stdbool.h>
 
+#ifdef _AIX
+/* undefine lines, term.h defines it and it breaks this struct */
+#undef lines
+#endif
+
 #define INCMODE_MAX 40
 
 typedef enum {

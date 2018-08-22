@@ -62,7 +62,7 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([stdlib.h string.h strings.h sys/param.h sys/time.h unistd.h],[:],[
   missing_headers="$missing_headers $ac_header"
 ])
-AC_CHECK_HEADERS([execinfo.h],[:],[:])
+AC_CHECK_HEADERS([execinfo.h err.h getopt.h],[:],[:])
 
 AC_HEADER_MAJOR
 dnl glibc 2.25 deprecates 'major' and 'minor' in <sys/types.h> and requires to
@@ -227,10 +227,10 @@ else
       missing_libraries="$missing_libraries libncurses"
    ))))
    
-   AC_CHECK_HEADERS([curses.h],[:],
-      [AC_CHECK_HEADERS([ncurses/curses.h],[:],
-         [AC_CHECK_HEADERS([ncurses/ncurses.h],[:],
-            [AC_CHECK_HEADERS([ncurses.h],[:],[missing_headers="$missing_headers $ac_header"])])])])
+   AC_CHECK_HEADERS([ncurses.h],[:],
+      [AC_CHECK_HEADERS([ncurses/ncurses.h],[:],
+         [AC_CHECK_HEADERS([ncurses/curses.h],[:],
+            [AC_CHECK_HEADERS([curses.h],[:],[missing_headers="$missing_headers $ac_header"])])])])
 fi
 
 if test "$my_htop_platform" = "freebsd"; then

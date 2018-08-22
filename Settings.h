@@ -14,6 +14,11 @@ in the source distribution for its full text.
 #include "Process.h"
 #include <stdbool.h>
 
+#ifdef _AIX
+/* undefine columns, term.h defines it and it breaks this struct */
+#undef columns
+#endif
+
 typedef struct {
    int len;
    char** names;
