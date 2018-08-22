@@ -37,6 +37,54 @@ unsigned long long avenrun [3];
 
 const SignalItem Platform_signals[] = {
    { .name = " 0 Cancel",    .number =  0 },
+   { .name = " 1 SIGHUP",      .number =  1 },
+   { .name = " 2 SIGINT",      .number =  2 },
+   { .name = " 3 SIGQUIT",     .number =  3 },
+   { .name = " 4 SIGILL",      .number =  4 },
+   { .name = " 5 SIGTRAP",     .number =  5 },
+   { .name = " 6 SIGABRT/IOT", .number =  6 },
+   { .name = " 7 SIGEMT",      .number =  7 },
+   { .name = " 8 SIGFPE",      .number =  8 },
+   { .name = " 9 SIGKILL",     .number =  9 },
+   { .name = "10 SIGBUS",      .number = 10 },
+   { .name = "11 SIGSEGV",     .number = 11 },
+   { .name = "12 SIGSYS",      .number = 12 },
+   { .name = "13 SIGPIPE",     .number = 13 },
+   { .name = "14 SIGALRM",     .number = 14 },
+   { .name = "15 SIGTERM",     .number = 15 },
+   { .name = "16 SIGURG" ,     .number = 16 },
+   { .name = "17 SIGSTOP",     .number = 17 },
+   { .name = "18 SIGSTP",      .number = 18 },
+   { .name = "19 SIGCONT",     .number = 19 },
+   { .name = "20 SIGCHLD",     .number = 20 },
+   { .name = "21 SIGTTIN",     .number = 21 },
+   { .name = "22 SIGTTOU",     .number = 22 },
+   { .name = "23 SIGIO",       .number = 23 },
+   { .name = "24 SIGXCPU",     .number = 24 },
+   { .name = "25 SIGXFSZ",     .number = 25 },
+   // no 26
+   { .name = "27 SIGMSG",      .number = 27 },
+   { .name = "28 SIGWINCH",    .number = 28 },
+   { .name = "30 SIGUSR1",     .number = 30 },
+   { .name = "31 SIGUSR2",     .number = 31 },
+   { .name = "32 SIGPROF",     .number = 32 },
+   { .name = "33 SIGDANGER",   .number = 33 },
+   { .name = "34 SIGVTALRM",   .number = 34 },
+   { .name = "35 SIGMIGRATE",  .number = 35 },
+   { .name = "36 SIGPRE",      .number = 36 },
+   { .name = "37 SIGVIRT",     .number = 37 },
+   { .name = "38 SIGTALRM",    .number = 38 },
+   // AIX requests not use SIGWAITING/39
+   // don't know about the hole here
+   { .name = "48 SIGSYSERROR", .number = 48 },
+   { .name = "49 SIGRECOVERY", .number = 49 },
+   // Real-time signals 50-57
+   //{ .name = "58 SIGRECONFIG", .number = 58 },
+   // AIX also requests us to not use SIGCPUFAIL/59
+   //{ .name = "60 SIGKAP",      .number = 60 },
+   //{ .name = "61 SIGRETRACT",  .number = 61 },
+   //{ .name = "62 SIGSOUND",    .number = 62 },
+   //{ .name = "63 SIGSAK",      .number = 63 },
 };
 
 const unsigned int Platform_numberOfSignals = sizeof(Platform_signals)/sizeof(SignalItem);
