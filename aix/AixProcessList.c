@@ -52,12 +52,11 @@ void ProcessList_delete(ProcessList* this) {
 
 static char *AixProcessList_readProcessName (struct procentry64 *pe) {
 	char argvbuf [1024]; // completely arbitrary
-	if (getargs (pe, sizeof (struct procentry64), argvbuf, 1024) == 8) {
-		// returns argv entries seperated by NULs, so we can just use the first NUL
+	// returns argv entries seperated by NULs, so we can just use the first NUL
+	// if empty fall back
+	if (getargs (pe, sizeof (struct procentry64), argvbuf, 1024) == 0 && *argvbuf)
 		return xStrdup (argvbuf);
-	} else {
-		return xStrdup (pe->pi_comm);
-	}
+	return xStrdup (pe->pi_comm);
 }
 
 void ProcessList_goThroughEntries(ProcessList* super) {
