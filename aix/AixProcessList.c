@@ -32,7 +32,7 @@ typedef struct AixProcessList_ {
 #endif
 
 #ifndef Process_isUserlandThread
-/* XXX */
+// XXX
 #define Process_isUserlandThread(_process) (false)
 #endif
 
@@ -102,7 +102,8 @@ void ProcessList_goThroughEntries(ProcessList* super) {
 
         if (!preExisting) {
             ap->kernel = pe->pi_flags & SKPROC ? 1 : 0;
-            proc->ppid = 1;//pe->pi_ppid;
+            proc->pid = pe->pi_pid;
+            proc->ppid = pe->pi_ppid;
             /* XXX: tpgid? */
             proc->tgid = pe->pi_pid;
             proc->session = pe->pi_sid;

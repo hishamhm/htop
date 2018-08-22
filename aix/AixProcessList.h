@@ -21,6 +21,7 @@ typedef struct AixProcessList_ {
 #endif
 
 #ifndef Process_isUserlandThread
+// XXX
 #define Process_isUserlandThread(_process) (false)
 #endif
 

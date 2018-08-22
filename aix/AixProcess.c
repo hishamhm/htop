@@ -33,7 +33,7 @@ typedef struct AixProcess_ {
 #endif
 
 #ifndef Process_isUserlandThread
-/* XXX */
+// XXX
 #define Process_isUserlandThread(_process) (false)
 #endif
 
