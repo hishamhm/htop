@@ -17,6 +17,9 @@ in the source distribution for its full text.
 #include "UptimeMeter.h"
 
 #include <sys/proc.h>
+#include <utmpx.h>
+#include <string.h>
+#include <time.h>
 
 /*{
 #include "Action.h"
@@ -68,8 +71,21 @@ extern char Process_pidFormat[20];
 //   { .id = 0, .label = NULL },
 //};
 
+// identical to Solaris, thanks System V
 int Platform_getUptime() {
-   return 0;
+   int boot_time = 0;
+   int curr_time = time(NULL);
+   struct utmpx * ent;
+
+   while (( ent = getutxent() )) {
+      if ( !strcmp("system boot", ent->ut_line )) {
+         boot_time = ent->ut_tv.tv_sec;
+      }
+   }
+
+   endutxent();
+
+   return (curr_time-boot_time);
 }
 
 void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
