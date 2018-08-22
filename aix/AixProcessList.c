@@ -91,9 +91,10 @@ void ProcessList_goThroughEntries(ProcessList* super) {
 	_exit (1);
     }
 
+    gettimeofday(&tv, NULL);
     for (i = 0; i < count; i++) {
-        proc = ProcessList_getProcess(super, pe->pi_pid, &preExisting, (Process_New) AixProcess_new);
         pe = pes + i;
+        proc = ProcessList_getProcess(super, pe->pi_pid, &preExisting, (Process_New) AixProcess_new);
         ap = (AixProcess*) proc;
 
 	proc->show = ! ((hideKernelThreads && Process_isKernelThread(ap))
