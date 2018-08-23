@@ -142,10 +142,9 @@ void ProcessList_goThroughEntries(ProcessList* super) {
        //proc->percent_mem = (proc->m_resident * PAGE_SIZE_KB) / (double)(this->totalMem) * 100.0;
        //proc->percent_cpu = CLAMP(getpcpu(kproc), 0.0, this->cpuCount*100.0);
        proc->nlwp = pe->pi_thcount;
-       //proc->time = kproc->p_rtime_sec + ((kproc->p_rtime_usec + 500000) / 10);
        proc->nice = pe->pi_nice;
-       //proc->time = kproc->p_rtime_sec + ((kproc->p_rtime_usec + 500000) / 1000000);
-       //proc->time *= 100;
+       // TODO: add and round usecs to secs
+       proc->time = pe->pi_ru.ru_utime.tv_sec + pe->pi_ru.ru_stime.tv_sec;
        proc->priority = pe->pi_ppri;
 
        switch (pe->pi_state) {
