@@ -39,10 +39,14 @@ typedef struct AixProcessList_ {
 }*/
 
 ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId) {
-   ProcessList* this = xCalloc(1, sizeof(ProcessList));
-   ProcessList_init(this, Class(Process), usersTable, pidWhiteList, userId);
-   
-   return this;
+   AixProcessList* apl = xCalloc(1, sizeof(AixProcessList));
+   ProcessList* this = (ProcessList*) apl;
+   ProcessList_init(this, Class(AixProcess), usersTable, pidWhiteList, userId);
+
+   this->cpuCount = sysconf (_SC_NPROCESSORS_CONF);
+   this->totalMem = sysconf (_SC_AIX_REALMEM);
+
+   return apl;
 }
 
 void ProcessList_delete(ProcessList* this) {
@@ -130,8 +134,9 @@ void ProcessList_goThroughEntries(ProcessList* super) {
         }
 
        ap->cid = pe->pi_cid;
-       //proc->m_size = pi->pi_drss;
-       //proc->m_resident = kproc->p_vm_rssize;
+       // XXX: are the numbers here right? I think these are based on pages or 1K?
+       proc->m_size = pe->pi_drss;
+       proc->m_resident = pe->pi_ru.ru_maxrss;
        //proc->percent_mem = (proc->m_resident * PAGE_SIZE_KB) / (double)(this->totalMem) * 100.0;
        //proc->percent_cpu = CLAMP(getpcpu(kproc), 0.0, this->cpuCount*100.0);
        proc->nlwp = pe->pi_thcount;
