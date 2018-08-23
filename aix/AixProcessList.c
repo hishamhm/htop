@@ -83,7 +83,7 @@ void ProcessList_goThroughEntries(ProcessList* super) {
     pid_t pid;
     int count, i;
     struct tm date;
-    struct timeval tv;
+    time_t t, pt;
 
     // 1000000 is what IBM ps uses; instead of rerunning getprocs with
     // a PID cookie, get one big clump
@@ -101,7 +101,7 @@ void ProcessList_goThroughEntries(ProcessList* super) {
 	_exit (1);
     }
 
-    gettimeofday(&tv, NULL);
+    t = time (NULL);
     for (i = 0; i < count; i++) {
         pe = pes + i;
         proc = ProcessList_getProcess(super, pe->pi_pid, &preExisting, (Process_New) AixProcess_new);
@@ -124,8 +124,10 @@ void ProcessList_goThroughEntries(ProcessList* super) {
             proc->user = UsersTable_getRef(super->usersTable, proc->st_uid);
             ProcessList_add((ProcessList*)super, proc);
             proc->comm = AixProcessList_readProcessName (pe);
-            (void) localtime_r((time_t*) &pe->pi_start, &date);
-            strftime(proc->starttime_show, 7, ((proc->starttime_ctime > tv.tv_sec - 86400) ? "%R " : "%b%d "), &date);
+            // copy so localtime_r works properly
+            pt = pe->pi_start;
+            (void) localtime_r((time_t*) &pt, &date);
+            strftime(proc->starttime_show, 7, ((proc->starttime_ctime > t - 86400) || 0 ? "%R " : "%b%d "), &date);
 	} else {
             if (settings->updateProcessNames) {
                 free(proc->comm);
