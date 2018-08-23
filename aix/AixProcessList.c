@@ -65,6 +65,7 @@ static void AixProcessList_scanMemoryInfo (ProcessList *pl) {
     pl->freeMem = vi.memavailable / 0x1000;
     // XXX: cached memory? nmon can do it...
     pl->cachedMem = 0;
+    pl->buffersMem = 0;
     pl->usedMem = pl->totalMem - pl->freeMem;
 }
 
@@ -157,12 +158,12 @@ void ProcessList_goThroughEntries(ProcessList* super) {
        proc->m_resident = pe->pi_ru.ru_maxrss;
        proc->percent_mem = (pe->pi_drss * PAGE_SIZE_KB) / (double)(super->totalMem) * 100.0;
        //proc->percent_mem = pe->pi_prm; // don't use prm, it's not fractional
-       //proc->percent_mem = (proc->m_resident * PAGE_SIZE_KB) / (double)(this->totalMem) * 100.0;
        //proc->percent_cpu = CLAMP(getpcpu(kproc), 0.0, this->cpuCount*100.0);
        proc->nlwp = pe->pi_thcount;
        proc->nice = pe->pi_nice;
-       // TODO: add and round usecs to secs
-       proc->time = pe->pi_ru.ru_utime.tv_sec + pe->pi_ru.ru_stime.tv_sec;
+       ap->utime = pe->pi_ru.ru_utime.tv_sec;
+       ap->stime = pe->pi_ru.ru_stime.tv_sec;
+       proc->time = ap->utime + ap->stime;
        proc->priority = pe->pi_ppri;
 
        switch (pe->pi_state) {

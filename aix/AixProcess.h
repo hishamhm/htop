@@ -24,6 +24,7 @@ typedef struct AixProcess_ {
    Process super;
    int kernel;
    cid_t cid; // WPAR ID
+   unsigned long long int stime, utime; // System/User time (stored sep for calculations)
 } AixProcess;
 
 #ifndef Process_isKernelThread
