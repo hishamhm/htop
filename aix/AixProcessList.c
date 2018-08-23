@@ -19,6 +19,7 @@ in the source distribution for its full text.
 #include <sys/types.h>
 #include <sys/proc.h>
 #include <procinfo.h>
+#include <sys/vminfo.h>
 
 /*{
 
@@ -54,6 +55,19 @@ void ProcessList_delete(ProcessList* this) {
    free(this);
 }
 
+static void AixProcessList_scanMemoryInfo (ProcessList *pl) {
+    struct vminfo64 vi;
+    if (vmgetinfo (&vi, VMINFO64, sizeof (struct vminfo64)) == -1) {
+        fprintf (stderr, "htop: AixProcessList_scanMemoryInfo failed: vmgetinfo error\n");
+        _exit (1);
+    }
+
+    pl->freeMem = vi.memavailable / 0x1000;
+    // XXX: cached memory? nmon can do it...
+    pl->cachedMem = 0;
+    pl->usedMem = pl->totalMem - pl->freeMem;
+}
+
 static char *AixProcessList_readProcessName (struct procentry64 *pe) {
 	char argvbuf [0x100000]; // completely arbitrary
 	int i;
@@ -84,6 +98,8 @@ void ProcessList_goThroughEntries(ProcessList* super) {
     int count, i;
     struct tm date;
     time_t t, pt;
+
+    AixProcessList_scanMemoryInfo (super);
 
     // 1000000 is what IBM ps uses; instead of rerunning getprocs with
     // a PID cookie, get one big clump
