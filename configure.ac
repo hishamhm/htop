@@ -46,7 +46,7 @@ darwin*)
 solaris*)
    my_htop_platform=solaris
    ;;
-aix*)
+aix*|os400*)
    my_htop_platform=aix
    ;;
 *)
@@ -248,6 +248,11 @@ if test "$my_htop_platform" = "solaris"; then
    AC_CHECK_LIB([kstat], [kstat_open], [], [missing_libraries="$missing_libraries libkstat"])
    AC_CHECK_LIB([proc], [Pgrab_error], [], [missing_libraries="$missing_libraries libproc"])
    AC_CHECK_LIB([malloc], [free], [], [missing_libraries="$missing_libraries libmalloc"])
+fi
+
+dnl PASE doesn't have libperfstat, it's not fatal as a result
+if test "$my_htop_platform" = "aix" && test "$target_os" != "os400"; then
+   AC_CHECK_LIB([perfstat], [perfstat_memory_total])
 fi
 
 AC_ARG_ENABLE(linux_affinity, [AS_HELP_STRING([--enable-linux-affinity], [enable Linux sched_setaffinity and sched_getaffinity for affinity support, disables hwloc])], ,enable_linux_affinity="yes")

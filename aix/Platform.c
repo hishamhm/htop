@@ -128,6 +128,7 @@ extern char Process_pidFormat[20];
 
 // identical to Solaris, thanks System V
 int Platform_getUptime() {
+#ifndef __PASE__
    int boot_time = 0;
    int curr_time = time(NULL);
    struct utmpx * ent;
@@ -141,6 +142,10 @@ int Platform_getUptime() {
    endutxent();
 
    return (curr_time-boot_time);
+#else
+   // IBM i doesn't expose uptime to PASE, AFAIK
+   return 0;
+#endif
 }
 
 void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
@@ -183,7 +188,10 @@ void Platform_setMemoryValues(Meter* this) {
 }
 
 void Platform_setSwapValues(Meter* this) {
-   (void) this;
+   // the mem scan code in AixProcessList does the work
+   ProcessList* pl = (ProcessList*) this->pl;
+   this->total = pl->totalSwap;
+   this->values[0] = pl->usedSwap;
 }
 
 bool Process_isThread(Process* this) {

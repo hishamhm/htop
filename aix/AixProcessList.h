@@ -10,6 +10,10 @@ Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
+#ifndef __PASE__
+#else
+#endif
+
 
 typedef struct AixProcessList_ {
    ProcessList super;

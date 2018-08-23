@@ -19,7 +19,11 @@ in the source distribution for its full text.
 #include <sys/types.h>
 #include <sys/proc.h>
 #include <procinfo.h>
+#ifndef __PASE__
+#include <libperfstat.h>
+#else
 #include <sys/vminfo.h>
+#endif
 
 /*{
 
@@ -45,9 +49,15 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    ProcessList_init(this, Class(AixProcess), usersTable, pidWhiteList, userId);
 
    this->cpuCount = sysconf (_SC_NPROCESSORS_CONF);
-   // under IBM i, this  will return some obscenely high 4 TB number due to the
-   // way the single level store works, IIRC
+#ifndef __PASE__
+   perfstat_memory_total_t mt;
+   perfstat_memory_total(NULL, &mt, sizeof(mt), 1);
+   // most of these are in 4KB sized pages
+   this->totalMem = mt.real_total * 4;
+   this->totalSwap = mt.pgsp_total * 4;
+#else
    this->totalMem = sysconf (_SC_AIX_REALMEM);
+#endif
 
    return apl;
 }
@@ -58,6 +68,18 @@ void ProcessList_delete(ProcessList* this) {
 }
 
 static void AixProcessList_scanMemoryInfo (ProcessList *pl) {
+#ifndef __PASE__
+    perfstat_memory_total_t mt;
+    perfstat_memory_total(NULL, &mt, sizeof(mt), 1);
+    pl->freeMem = mt.real_free * 4;
+    pl->cachedMem = mt.numperm * 4;
+    pl->buffersMem = 0;
+    pl->sharedMem = 0;
+    pl->usedMem = mt.real_inuse * 4;
+    pl->totalSwap = mt.pgsp_total * 4;
+    pl->freeSwap = mt.pgsp_free * 4;
+    pl->usedSwap = pl->totalSwap - pl->freeSwap;
+#else
     struct vminfo64 vi;
     if (vmgetinfo (&vi, VMINFO64, sizeof (struct vminfo64)) == -1) {
         fprintf (stderr, "htop: AixProcessList_scanMemoryInfo failed: vmgetinfo error\n");
@@ -68,7 +90,9 @@ static void AixProcessList_scanMemoryInfo (ProcessList *pl) {
     // XXX: cached memory? nmon can do it...
     pl->cachedMem = 0;
     pl->buffersMem = 0;
+    pl->sharedMem = 0;
     pl->usedMem = pl->totalMem - pl->freeMem;
+#endif
 }
 
 static char *AixProcessList_readProcessName (struct procentry64 *pe) {
