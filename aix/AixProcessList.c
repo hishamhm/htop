@@ -155,6 +155,8 @@ void ProcessList_goThroughEntries(ProcessList* super) {
        // XXX: are the numbers here right? I think these are based on pages or 1K?
        proc->m_size = pe->pi_drss;
        proc->m_resident = pe->pi_ru.ru_maxrss;
+       proc->percent_mem = (pe->pi_drss * PAGE_SIZE_KB) / (double)(super->totalMem) * 100.0;
+       //proc->percent_mem = pe->pi_prm; // don't use prm, it's not fractional
        //proc->percent_mem = (proc->m_resident * PAGE_SIZE_KB) / (double)(this->totalMem) * 100.0;
        //proc->percent_cpu = CLAMP(getpcpu(kproc), 0.0, this->cpuCount*100.0);
        proc->nlwp = pe->pi_thcount;
