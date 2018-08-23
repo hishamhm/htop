@@ -45,6 +45,8 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    ProcessList_init(this, Class(AixProcess), usersTable, pidWhiteList, userId);
 
    this->cpuCount = sysconf (_SC_NPROCESSORS_CONF);
+   // under IBM i, this  will return some obscenely high 4 TB number due to the
+   // way the single level store works, IIRC
    this->totalMem = sysconf (_SC_AIX_REALMEM);
 
    return apl;
@@ -103,13 +105,18 @@ void ProcessList_goThroughEntries(ProcessList* super) {
     AixProcessList_scanMemoryInfo (super);
 
     // 1000000 is what IBM ps uses; instead of rerunning getprocs with
-    // a PID cookie, get one big clump
+    // a PID cookie, get one big clump. also, pid 0 is a strange proc,
+    // seems to maybe represent the kernel? it has no name/argv, and
+    // marked with SKPROC, so if you have the tree view and kernel
+    // threads hidden, everything is hidden. oops? kernel threads seem
+    // to be children of it as well, but having it in the list is odd
     pid = 1;
     count = getprocs64 (NULL, 0, NULL, 0, &pid, 1000000);
     if (count < 1) {
         fprintf (stderr, "htop: ProcessList_goThroughEntries failed; during count: %s\n", strerror (errno));
 	_exit (1);
     }
+    count += 25; // it's not atomic, new processes could spawn in next call
     pes = xCalloc (count, sizeof (struct procentry64));
     pid = 1;
     count = getprocs64 (pes, sizeof (struct procentry64), NULL, 0, &pid, count);
