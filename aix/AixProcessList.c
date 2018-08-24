@@ -16,6 +16,7 @@ in the source distribution for its full text.
 #include <unistd.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 #include <sys/types.h>
 #include <sys/proc.h>
 #include <procinfo.h>
@@ -267,17 +268,18 @@ void ProcessList_goThroughEntries(ProcessList* super) {
 
        ap->cid = pe->pi_cid;
        // XXX: are the numbers here right? I think these are based on pages or 1K?
-       proc->m_size = pe->pi_drss;
-       proc->m_resident = pe->pi_ru.ru_maxrss;
-       proc->percent_mem = (pe->pi_drss * PAGE_SIZE_KB) / (double)(super->totalMem) * 100.0;
-       //proc->percent_mem = pe->pi_prm; // don't use prm, it's not fractional
-       //proc->percent_cpu = CLAMP(getpcpu(kproc), 0.0, this->cpuCount*100.0);
+       proc->m_resident = pe->pi_drss + pe->pi_trss;
+       proc->m_size = pe->pi_ru.ru_maxrss;//pe->pi_drss + pe->pi_trss;
+       proc->percent_mem = (pe->pi_drss + pe->pi_trss * PAGE_SIZE_KB) / (double)(super->totalMem) * 100.0;
        proc->nlwp = pe->pi_thcount;
        proc->nice = pe->pi_nice;
        ap->utime = pe->pi_ru.ru_utime.tv_sec;
        ap->stime = pe->pi_ru.ru_stime.tv_sec;
        proc->time = ap->utime + ap->stime;
        proc->percent_cpu = (((double)proc->time / (t - proc->starttime_ctime)) * 100.0) / super->cpuCount;
+       // sometimes this happens with freshly spawned in procs
+       if (isnan(proc->percent_cpu))
+           proc->percent_cpu = 0.0;
        proc->priority = pe->pi_ppri;
 
        switch (pe->pi_state) {
