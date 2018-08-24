@@ -21,6 +21,7 @@ in the source distribution for its full text.
 #include <utmpx.h>
 #include <string.h>
 #include <time.h>
+#include <math.h>
 
 /*{
 #include "Action.h"

@@ -45,6 +45,7 @@ typedef struct AixProcessList_ {
    CPUData* cpus;
 #ifndef __PASE__
    perfstat_cpu_t* ps_cpus;
+   perfstat_cpu_total_t ps_ct;
 #endif
 } AixProcessList;
 
@@ -66,21 +67,21 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
 
 #ifndef __PASE__
    perfstat_memory_total_t mt;
-   perfstat_cpu_total_t ct;
    perfstat_memory_total(NULL, &mt, sizeof(mt), 1);
-   perfstat_cpu_total(NULL, &ct, sizeof(ct), 1);
+   perfstat_cpu_total(NULL, &apl->ps_ct, sizeof(perfstat_cpu_total_t), 1);
    // most of these are in 4KB sized pages
    this->totalMem = mt.real_total * 4;
    this->totalSwap = mt.pgsp_total * 4;
 
-   this->cpuCount = ct.ncpus;
+   this->cpuCount = apl->ps_ct.ncpus;
    apl->ps_cpus = xCalloc (this->cpuCount, sizeof (perfstat_cpu_t));
 #else
    this->cpuCount = sysconf (_SC_NPROCESSORS_CONF);
    this->totalMem = sysconf (_SC_AIX_REALMEM);
 #endif
 
-   apl->cpus = xCalloc (this->cpuCount, sizeof (CPUData));
+   // smp requires avg + cpus as the 0th entry is avg
+   apl->cpus = xCalloc (this->cpuCount + (this->cpuCount > 1), sizeof (CPUData));
 
    return this;
 }
@@ -101,26 +102,48 @@ static void AixProcessList_scanCpuInfo (AixProcessList *apl) {
 #ifndef __PASE__
     ProcessList *super;
     // delay is in tenths of a second
-    double delay;
+    // XXX: may not be precise enough
+    double delay, nproc;
     perfstat_id_t id;
     int i;
+    // old values
+    unsigned long long oct_utime, oct_stime, oct_itime, oct_wtime;
 
     super = (ProcessList*) apl;
+    nproc = super->cpuCount;
     delay = (double)super->settings->delay / 10;
     strcpy (id.name, FIRST_CPU);
-    
+
+    // acquire deltas to get a percentage;
+    // 1s captures = you get 100%, 2s -> 200%, and so on
+    // so divide by the delay we're given in settings
+    // for the average/total, we'll have to divide by nproc for avg
+    oct_utime = apl->ps_ct.user;
+    oct_stime = apl->ps_ct.sys;
+    oct_itime = apl->ps_ct.idle;
+    oct_wtime = apl->ps_ct.wait;
+    perfstat_cpu_total (NULL, &apl->ps_ct, sizeof (perfstat_cpu_total_t), 1);
+    apl->cpus [0].utime_p = ((double)(apl->ps_ct.user - oct_utime) / delay) / nproc;
+    apl->cpus [0].stime_p = ((double)(apl->ps_ct.sys  - oct_stime) / delay) / nproc;
+    apl->cpus [0].itime_p = ((double)(apl->ps_ct.idle - oct_itime) / delay) / nproc;
+    apl->cpus [0].wtime_p = ((double)(apl->ps_ct.wait - oct_wtime) / delay) / nproc;
+
+    // untested on a uniproc system; i assume avg is good enough for that
+    if (nproc < 2)
+        return;
+
     perfstat_cpu (&id, apl->ps_cpus, sizeof (perfstat_cpu_t), super->cpuCount);
     for (i = 0; i < super->cpuCount; i++) {
         // use old times for delta to calc percentage
-        apl->cpus [i].utime_p = (double)(apl->ps_cpus [i].user - apl->cpus [i].utime) / delay;
-        apl->cpus [i].stime_p = (double)(apl->ps_cpus [i].sys  - apl->cpus [i].stime) / delay;
-        apl->cpus [i].itime_p = (double)(apl->ps_cpus [i].idle - apl->cpus [i].itime) / delay;
-        apl->cpus [i].wtime_p = (double)(apl->ps_cpus [i].wait - apl->cpus [i].wtime) / delay;
+        apl->cpus [i+1].utime_p = (double)(apl->ps_cpus [i].user - apl->cpus [i+1].utime) / delay;
+        apl->cpus [i+1].stime_p = (double)(apl->ps_cpus [i].sys  - apl->cpus [i+1].stime) / delay;
+        apl->cpus [i+1].itime_p = (double)(apl->ps_cpus [i].idle - apl->cpus [i+1].itime) / delay;
+        apl->cpus [i+1].wtime_p = (double)(apl->ps_cpus [i].wait - apl->cpus [i+1].wtime) / delay;
         // uptime new times
-        apl->cpus [i].utime = apl->ps_cpus [i].user;
-        apl->cpus [i].stime = apl->ps_cpus [i].sys;
-        apl->cpus [i].itime = apl->ps_cpus [i].idle;
-        apl->cpus [i].wtime = apl->ps_cpus [i].wait;
+        apl->cpus [i+1].utime = apl->ps_cpus [i].user;
+        apl->cpus [i+1].stime = apl->ps_cpus [i].sys;
+        apl->cpus [i+1].itime = apl->ps_cpus [i].idle;
+        apl->cpus [i+1].wtime = apl->ps_cpus [i].wait;
     }
 #endif
 }

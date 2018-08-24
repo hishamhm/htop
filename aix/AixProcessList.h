@@ -33,6 +33,7 @@ typedef struct AixProcessList_ {
    CPUData* cpus;
 #ifndef __PASE__
    perfstat_cpu_t* ps_cpus;
+   perfstat_cpu_total_t ps_ct;
 #endif
 } AixProcessList;
 
