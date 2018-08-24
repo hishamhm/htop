@@ -212,7 +212,7 @@ void AixProcess_writeField(Process* this, RichString* str, ProcessField field) {
    char buffer[256]; buffer[255] = '\0';
    int attr = CRT_colors[DEFAULT_COLOR];
    int n = sizeof(buffer) - 1;
-   switch (field) {
+   switch ((int) field) {
    // add Aix-specific fields here
    case WPAR_ID: xSnprintf(buffer, n, Process_pidFormat, fp->cid); break;
    default:
@@ -232,7 +232,7 @@ long AixProcess_compare(const void* v1, const void* v2) {
       p2 = (AixProcess*)v1;
       p1 = (AixProcess*)v2;
    }
-   switch (settings->sortKey) {
+   switch ((int) settings->sortKey) {
    // add Aix-specific fields here
    case WPAR_ID:
       return (p1->cid - p2->cid);

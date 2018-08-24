@@ -157,7 +157,7 @@ int Platform_getUptime() {
 void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
 #ifndef __PASE__
    int size = sizeof (avenrun);
-   if (getkerninfo(KINFO_GET_AVENRUN, avenrun, &size, 0) != -1) {
+   if (getkerninfo(KINFO_GET_AVENRUN, (char*)avenrun, &size, 0) != -1) {
       // apply float scaling factor
       *one = (double)avenrun [0] / 65536;
       *five = (double)avenrun [1] / 65536;
