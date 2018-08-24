@@ -277,6 +277,7 @@ void ProcessList_goThroughEntries(ProcessList* super) {
        ap->utime = pe->pi_ru.ru_utime.tv_sec;
        ap->stime = pe->pi_ru.ru_stime.tv_sec;
        proc->time = ap->utime + ap->stime;
+       proc->percent_cpu = (((double)proc->time / (t - proc->starttime_ctime)) * 100.0) / super->cpuCount;
        proc->priority = pe->pi_ppri;
 
        switch (pe->pi_state) {

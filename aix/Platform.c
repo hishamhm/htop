@@ -196,7 +196,7 @@ double Platform_setCPUValues(Meter* this, int cpu) {
       percent = v[0]+v[1]+v[2];
    }
 
-   percent = percent;//CLAMP(percent, 0.0, 100.0);
+   percent = CLAMP(percent, 0.0, 100.0);
    if (isnan(percent)) percent = 0.0;
    return percent;
 }
