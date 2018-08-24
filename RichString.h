@@ -14,12 +14,6 @@ in the source distribution for its full text.
 #include "config.h"
 #include <ctype.h>
 
-#ifdef _AIX
-/* HACK: curses.h on AIX tries to redefine bool; GCC's stdbool isn't exactly right */
-#include <stdbool.h>
-#define _BOOL
-#endif
-
 #include <assert.h>
 #ifdef HAVE_NCURSESW_CURSES_H
 #include <ncursesw/curses.h>
