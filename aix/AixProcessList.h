@@ -15,9 +15,25 @@ in the source distribution for its full text.
 #endif
 
 
+#ifndef __PASE__
+#include <libperfstat.h>
+#endif
+
+// publically consumed
+typedef struct CPUData_ {
+   // per libperfstat.h, ticks
+   unsigned long long utime;
+   unsigned long long stime;
+   unsigned long long itime;
+   unsigned long long wtime;
+} CPUData;
+
 typedef struct AixProcessList_ {
    ProcessList super;
-
+   CPUData* cpus;
+#ifndef __PASE__a
+   perfstat_cpu_t* ps_cpus;
+#endif
 } AixProcessList;
 
 #ifndef Process_isKernelThread

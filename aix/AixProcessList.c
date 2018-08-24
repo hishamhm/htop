@@ -27,9 +27,25 @@ in the source distribution for its full text.
 
 /*{
 
+#ifndef __PASE__
+#include <libperfstat.h>
+#endif
+
+// publically consumed
+typedef struct CPUData_ {
+   // per libperfstat.h, ticks
+   unsigned long long utime;
+   unsigned long long stime;
+   unsigned long long itime;
+   unsigned long long wtime;
+} CPUData;
+
 typedef struct AixProcessList_ {
    ProcessList super;
-
+   CPUData* cpus;
+#ifndef __PASE__a
+   perfstat_cpu_t* ps_cpus;
+#endif
 } AixProcessList;
 
 #ifndef Process_isKernelThread
@@ -48,23 +64,56 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    ProcessList* this = (ProcessList*) apl;
    ProcessList_init(this, Class(AixProcess), usersTable, pidWhiteList, userId);
 
-   this->cpuCount = sysconf (_SC_NPROCESSORS_CONF);
 #ifndef __PASE__
    perfstat_memory_total_t mt;
+   perfstat_cpu_total_t ct;
    perfstat_memory_total(NULL, &mt, sizeof(mt), 1);
+   perfstat_cpu_total(NULL, &ct, sizeof(ct), 1);
    // most of these are in 4KB sized pages
    this->totalMem = mt.real_total * 4;
    this->totalSwap = mt.pgsp_total * 4;
+
+   this->cpuCount = ct.ncpus;
+   apl->ps_cpus = xCalloc (this->cpuCount, sizeof (perfstat_cpu_t));
 #else
+   this->cpuCount = sysconf (_SC_NPROCESSORS_CONF);
    this->totalMem = sysconf (_SC_AIX_REALMEM);
 #endif
 
-   return apl;
+   apl->cpus = xCalloc (this->cpuCount, sizeof (CPUData));
+
+   return this;
 }
 
 void ProcessList_delete(ProcessList* this) {
+   AixProcessList* apl = (AixProcessList*)this;
+
+   free (apl->cpus);
+#ifndef __PASE__
+   free (apl->ps_cpus);
+#endif
    ProcessList_done(this);
+   
    free(this);
+}
+
+static void AixProcessList_scanCpuInfo (AixProcessList *apl) {
+#ifndef __PASE__
+    ProcessList *super;
+    perfstat_id_t id;
+    int i;
+
+    super = (ProcessList*) apl;
+    strcpy (id.name, FIRST_CPU);
+    
+    perfstat_cpu (&id, apl->ps_cpus, sizeof (perfstat_cpu_t), super->cpuCount);
+    for (i = 0; i < super->cpuCount; i++) {
+        apl->cpus [i].utime = apl->ps_cpus [i].user;
+        apl->cpus [i].stime = apl->ps_cpus [i].sys;
+        apl->cpus [i].itime = apl->ps_cpus [i].idle;
+        apl->cpus [i].wtime = apl->ps_cpus [i].wait;
+    }
+#endif
 }
 
 static void AixProcessList_scanMemoryInfo (ProcessList *pl) {
@@ -127,6 +176,7 @@ void ProcessList_goThroughEntries(ProcessList* super) {
     time_t t, pt;
 
     AixProcessList_scanMemoryInfo (super);
+    AixProcessList_scanCpuInfo (apl);
 
     // 1000000 is what IBM ps uses; instead of rerunning getprocs with
     // a PID cookie, get one big clump. also, pid 0 is a strange proc,
