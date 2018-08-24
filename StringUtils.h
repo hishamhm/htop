@@ -12,7 +12,7 @@ in the source distribution for its full text.
 #include <stdio.h>
 #include <string.h>
 
-#ifdef _AIX
+#ifndef HAVE_STRCASESTR
 #include <ctype.h>
 /* OpenBSD strcasestr */
 static inline char *
