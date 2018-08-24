@@ -383,7 +383,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
    gettimeofday(&now, NULL);
    if (!timercmp(&now, &(data->time), <)) {
       struct timeval delay = { .tv_sec = (int)(CRT_delay/10), .tv_usec = (CRT_delay-((int)(CRT_delay/10)*10)) * 100000 };
-#ifdef _AIX
+#ifndef timeradd
       data->time.tv_sec = now.tv_sec + delay.tv_sec;
       data->time.tv_usec = now.tv_usec + delay.tv_usec;
       if (data->time.tv_usec >= 1000000) {
