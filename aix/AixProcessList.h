@@ -21,17 +21,17 @@ in the source distribution for its full text.
 
 // publically consumed
 typedef struct CPUData_ {
-   // per libperfstat.h, ticks
-   unsigned long long utime;
-   unsigned long long stime;
-   unsigned long long itime;
-   unsigned long long wtime;
+   // per libperfstat.h, clock ticks
+   unsigned long long utime, stime, itime, wtime;
+   // warning: doubles are 4 bytes in structs on AIX
+   // ...not like we need precision here anyways
+   double utime_p, stime_p, itime_p, wtime_p;
 } CPUData;
 
 typedef struct AixProcessList_ {
    ProcessList super;
    CPUData* cpus;
-#ifndef __PASE__a
+#ifndef __PASE__
    perfstat_cpu_t* ps_cpus;
 #endif
 } AixProcessList;

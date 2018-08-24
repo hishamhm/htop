@@ -33,17 +33,17 @@ in the source distribution for its full text.
 
 // publically consumed
 typedef struct CPUData_ {
-   // per libperfstat.h, ticks
-   unsigned long long utime;
-   unsigned long long stime;
-   unsigned long long itime;
-   unsigned long long wtime;
+   // per libperfstat.h, clock ticks
+   unsigned long long utime, stime, itime, wtime;
+   // warning: doubles are 4 bytes in structs on AIX
+   // ...not like we need precision here anyways
+   double utime_p, stime_p, itime_p, wtime_p;
 } CPUData;
 
 typedef struct AixProcessList_ {
    ProcessList super;
    CPUData* cpus;
-#ifndef __PASE__a
+#ifndef __PASE__
    perfstat_cpu_t* ps_cpus;
 #endif
 } AixProcessList;
@@ -100,14 +100,23 @@ void ProcessList_delete(ProcessList* this) {
 static void AixProcessList_scanCpuInfo (AixProcessList *apl) {
 #ifndef __PASE__
     ProcessList *super;
+    // delay is in tenths of a second
+    double delay;
     perfstat_id_t id;
     int i;
 
     super = (ProcessList*) apl;
+    delay = (double)super->settings->delay / 10;
     strcpy (id.name, FIRST_CPU);
     
     perfstat_cpu (&id, apl->ps_cpus, sizeof (perfstat_cpu_t), super->cpuCount);
     for (i = 0; i < super->cpuCount; i++) {
+        // use old times for delta to calc percentage
+        apl->cpus [i].utime_p = (double)(apl->ps_cpus [i].user - apl->cpus [i].utime) / delay;
+        apl->cpus [i].stime_p = (double)(apl->ps_cpus [i].sys  - apl->cpus [i].stime) / delay;
+        apl->cpus [i].itime_p = (double)(apl->ps_cpus [i].idle - apl->cpus [i].itime) / delay;
+        apl->cpus [i].wtime_p = (double)(apl->ps_cpus [i].wait - apl->cpus [i].wtime) / delay;
+        // uptime new times
         apl->cpus [i].utime = apl->ps_cpus [i].user;
         apl->cpus [i].stime = apl->ps_cpus [i].sys;
         apl->cpus [i].itime = apl->ps_cpus [i].idle;

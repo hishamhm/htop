@@ -15,6 +15,7 @@ in the source distribution for its full text.
 #include "ClockMeter.h"
 #include "HostnameMeter.h"
 #include "UptimeMeter.h"
+#include "AixProcessList.h"
 
 #include <sys/proc.h>
 #include <utmpx.h>
@@ -32,6 +33,10 @@ in the source distribution for its full text.
 // AIX doesn't define this function for userland headers, but it's in libc
 extern int getkerninfo(int, char*, int*, int32long64_t);
 }*/
+
+#ifndef CLAMP
+#define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
+#endif
 
 unsigned long long avenrun [3];
 
@@ -170,9 +175,29 @@ int Platform_getMaxPid() {
 }
 
 double Platform_setCPUValues(Meter* this, int cpu) {
-   (void) this;
-   (void) cpu;
-   return 0.0;
+   AixProcessList* apl = (AixProcessList*) this->pl;
+   CPUData* cpuData;
+   cpuData = &(apl->cpus [cpu]);
+
+   double  percent;
+   double* v = this->values;
+
+   v[CPU_METER_NICE]   = 0.0;
+   v[CPU_METER_NORMAL] = cpuData->utime_p;
+   if (this->pl->settings->detailedCPUTime) {
+      v[CPU_METER_KERNEL]  = cpuData->stime_p;
+      v[CPU_METER_IRQ]     = cpuData->wtime_p;
+      Meter_setItems(this, 4);
+      percent = v[0]+v[1]+v[2]+v[3];
+   } else {
+      v[2] = cpuData->stime_p + cpuData->wtime_p;
+      Meter_setItems(this, 3);
+      percent = v[0]+v[1]+v[2];
+   }
+
+   percent = percent;//CLAMP(percent, 0.0, 100.0);
+   if (isnan(percent)) percent = 0.0;
+   return percent;
 }
 
 void Platform_setMemoryValues(Meter* this) {

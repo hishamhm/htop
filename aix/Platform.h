@@ -20,6 +20,10 @@ in the source distribution for its full text.
 // AIX doesn't define this function for userland headers, but it's in libc
 extern int getkerninfo(int, char*, int*, int32long64_t);
 
+#ifndef CLAMP
+#define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
+#endif
+
 unsigned long long avenrun [3];
 
 extern const SignalItem Platform_signals[];
