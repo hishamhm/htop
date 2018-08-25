@@ -296,8 +296,7 @@ void ProcessList_goThroughEntries(ProcessList* super) {
        }
 
        super->totalTasks++;
-       // SRUN ('R') means runnable, not running
-       if (proc->state == 'P') {
+       if (proc->state == 'R') {
           super->runningTasks++;
        }
 
