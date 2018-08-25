@@ -3,8 +3,9 @@
 #ifndef HEADER_AixCRT
 #define HEADER_AixCRT
 /*
-htop - UnsupportedCRT.h
+htop - AixCRT.h
 (C) 2014 Hisham H. Muhammad
+(C) 2018 Calvin Buckley
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */

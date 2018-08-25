@@ -6,6 +6,7 @@
 htop - aix/Platform.h
 (C) 2014 Hisham H. Muhammad
 (C) 2015 David C. Hunt
+(C) 2018 Calvin Buckley
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
