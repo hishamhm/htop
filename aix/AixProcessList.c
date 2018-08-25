@@ -284,11 +284,9 @@ void ProcessList_goThroughEntries(ProcessList* super) {
 
        switch (pe->pi_state) {
            case SIDL:    proc->state = 'I'; break;
-           case SRUN:    proc->state = 'R'; break;
-           case SSLEEP:  proc->state = 'S'; break;
            case SSTOP:   proc->state = 'T'; break;
            case SZOMB:   proc->state = 'Z'; break;
-           case SACTIVE: proc->state = 'P'; break;
+           case SACTIVE: proc->state = 'R'; break;
            case SSWAP:   proc->state = 'W'; break;
            default:      proc->state = '?';
        }
