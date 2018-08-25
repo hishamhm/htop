@@ -23,6 +23,7 @@ in the source distribution for its full text.
 #include <string.h>
 #include <time.h>
 #include <math.h>
+#include <procinfo.h>
 
 /*{
 #include "Action.h"
@@ -227,6 +228,14 @@ bool Process_isThread(Process* this) {
 }
 
 char* Platform_getProcessEnv(pid_t pid) {
-   (void) pid;
-   return NULL;
+   char* buf;
+   struct procentry64 pe;
+   /* we only need to fill in the pid, it seems */
+   pe.pi_pid = pid;
+   buf = (char*)xMalloc(0x10000);
+   if (getevars (&pe, sizeof (pe), buf, 0x10000) == -1) {
+      free (buf);
+      return NULL;
+   }
+   return buf;
 }
