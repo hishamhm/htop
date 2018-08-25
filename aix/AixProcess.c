@@ -1,6 +1,7 @@
 /*
 htop - AixProcess.c
 (C) 2015 Hisham H. Muhammad
+(C) 2018 Calvin Buckley
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
