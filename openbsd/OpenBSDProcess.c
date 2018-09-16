@@ -209,7 +209,7 @@ void OpenBSDProcess_writeField(Process* this, RichString* str, ProcessField fiel
       Process_writeField(this, str, field);
       return;
    }
-   RichString_append(str, attr, buffer);
+   // RichString_append(str, attr, buffer); // <!-- unreachable
 }
 
 long OpenBSDProcess_compare(const void* v1, const void* v2) {
