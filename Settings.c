@@ -339,7 +339,7 @@ Settings* Settings_new(int cpuCount) {
    this->highlightBaseName = false;
    this->highlightMegabytes = false;
    this->detailedCPUTime = false;
-   this->countCPUsFromZero = false;
+   this->countCPUsFromZero = true;
    this->updateProcessNames = false;
    this->cpuCount = cpuCount;
    this->showProgramPath = true;
