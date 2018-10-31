@@ -365,14 +365,17 @@ void DarwinProcess_scanThreads(DarwinProcess *dp,DarwinProcessList *dpl) {
       if (ret == KERN_SUCCESS) {
          uint64_t tid = 0 - thread_list[i];
          thread_extended_info_t eti = (thread_extended_info_t) thinfo;
-         if(strlen(eti->pth_name)==0 || dpl->super.settings->hideThreads)
+         if(dpl->super.settings->hideThreads)
              continue;
          bool preExisting;
          Process *process = ProcessList_getProcess((ProcessList*)dpl, tid, &preExisting, (Process_New)DarwinProcess_new);
          process->updated=true;
              
          DarwinProcess* proc = (DarwinProcess*)process;
-         setCommand((Process*)proc,eti->pth_name,strlen(eti->pth_name));
+         if(strlen(eti->pth_name)==0)
+          setCommand((Process*)proc,dp->super.comm,dp->super.commLen);
+         else 
+          setCommand((Process*)proc,eti->pth_name,strlen(eti->pth_name));
          proc->super.pid = tid;
          proc->super.ppid = dp->super.pid;
          proc->super.tgid = tid;
