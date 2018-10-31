@@ -304,6 +304,18 @@ static void setCommand(Process* process, const char* command, int len) {
    process->commLen = len;
 }
 
+char stateToChar(int run_state) {
+  char state = '?';
+   switch (run_state) {
+      case TH_STATE_RUNNING: state = 'R'; break;
+      case TH_STATE_STOPPED: state = 'S'; break;
+      case TH_STATE_WAITING: state = 'W'; break;
+      case TH_STATE_UNINTERRUPTIBLE: state = 'U'; break;
+      case TH_STATE_HALTED: state = 'H'; break;
+   }
+   return state;
+}
+
 /*
  * Scan threads for process state information.
  * Based on: http://stackoverflow.com/questions/6788274/ios-mac-cpu-usage-for-thread
@@ -358,35 +370,37 @@ void DarwinProcess_scanThreads(DarwinProcess *dp,DarwinProcessList *dpl) {
          bool preExisting;
          Process *process = ProcessList_getProcess((ProcessList*)dpl, tid, &preExisting, (Process_New)DarwinProcess_new);
          process->updated=true;
-         if(preExisting)
-             continue;
-         DarwinProcess* tp = (DarwinProcess*)process;
-         setCommand((Process*)tp,eti->pth_name,strlen(eti->pth_name));
-         tp->super.pid = tid;
-         tp->super.ppid = dp->super.pid;
-         tp->super.tgid = tid;
-         tp->isThread = true;
-         tp->super.state = '?';
+             
+         DarwinProcess* proc = (DarwinProcess*)process;
+         setCommand((Process*)proc,eti->pth_name,strlen(eti->pth_name));
+         proc->super.pid = tid;
+         proc->super.ppid = dp->super.pid;
+         proc->super.tgid = tid;
+         proc->isThread = true;
+         proc->super.state = stateToChar(eti->pth_run_state);
+         proc->super.st_uid = dp->super.st_uid;
+         proc->super.user = dp->super.user;
 
-         tp->super.percent_cpu = eti->pth_cpu_usage/(double)10.0;
-         tp->stime = eti->pth_system_time;
-         tp->utime = eti->pth_user_time;
-         tp->super.time = (eti->pth_system_time + eti->pth_user_time)/10000000;
+         proc->super.percent_cpu = eti->pth_cpu_usage/(double)10.0;
+         proc->stime = eti->pth_system_time;
+         proc->utime = eti->pth_user_time;
+         proc->super.time = (eti->pth_system_time + eti->pth_user_time)/10000000;
+         proc->super.priority = eti->pth_curpri;
 
-         ProcessList_add((ProcessList*)dpl,(Process*)tp);
+         if(eti->pth_run_state<run_state) {
+           run_state=eti->pth_run_state;
+         }
+
+         if(!preExisting) {
+           ProcessList_add((ProcessList*)dpl,(Process*)proc);
+         }
+
          mach_port_deallocate(mach_task_self(), thread_list[i]);
       }
    }
    vm_deallocate(mach_task_self(), (vm_address_t) thread_list, sizeof(thread_port_array_t) * thread_count);
    mach_port_deallocate(mach_task_self(), port);
 
-   char state = '?';
-   switch (run_state) {
-      case TH_STATE_RUNNING: state = 'R'; break;
-      case TH_STATE_STOPPED: state = 'S'; break;
-      case TH_STATE_WAITING: state = 'W'; break;
-      case TH_STATE_UNINTERRUPTIBLE: state = 'U'; break;
-      case TH_STATE_HALTED: state = 'H'; break;
-   }
-   proc->state = state;
+   proc->state = stateToChar(run_state);
 }
+
