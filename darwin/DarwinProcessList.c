@@ -208,7 +208,7 @@ void ProcessList_goThroughEntries(ProcessList* super) {
        bool isScanThreadSupported  = ! ( CompareKernelVersion(17, 0, 0) >= 0 && CompareKernelVersion(17, 5, 0) < 0);
 
        if (isScanThreadSupported){
-           DarwinProcess_scanThreads(proc);
+           DarwinProcess_scanThreads(proc,dpl);
        }
 
        super->totalTasks += 1;

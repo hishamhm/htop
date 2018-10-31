@@ -9,6 +9,17 @@ Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
+struct kern;
+
+void GetKernelVersion(struct kern *k);
+
+/* compare the given os version with the one installed returns:
+0 if equals the installed version
+positive value if less than the installed version
+negative value if more than the installed version
+*/
+int CompareKernelVersion(short int major, short int minor, short int component);
+
 #include "ProcessList.h"
 #include <mach/mach_host.h>
 #include <sys/sysctl.h>

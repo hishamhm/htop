@@ -157,7 +157,7 @@ void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
 
 int Platform_getMaxPid() {
    /* http://opensource.apple.com/source/xnu/xnu-2782.1.97/bsd/sys/proc_internal.hh */
-   return 99999;
+   return 99999999;
 }
 
 ProcessPidColumn Process_pidColumns[] = {

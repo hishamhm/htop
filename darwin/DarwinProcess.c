@@ -27,6 +27,7 @@ typedef struct DarwinProcess_ {
    uint64_t utime;
    uint64_t stime;
    bool taskAccess;
+   bool isThread;
 } DarwinProcess;
 
 }*/
@@ -61,8 +62,7 @@ void Process_delete(Object* cast) {
 }
 
 bool Process_isThread(Process* this) {
-   (void) this;
-   return false;
+   return ((DarwinProcess*)this)->isThread;
 }
 
 void DarwinProcess_setStartTime(Process *proc, struct extern_proc *ep, time_t now) {
@@ -294,12 +294,22 @@ void DarwinProcess_setFromLibprocPidinfo(DarwinProcess *proc, DarwinProcessList 
    }
 }
 
+static void setCommand(Process* process, const char* command, int len) {
+   if (process->comm && process->commLen >= len) {
+      strncpy(process->comm, command, len + 1);
+   } else {
+      free(process->comm);
+      process->comm = xStrdup(command);
+   }
+   process->commLen = len;
+}
+
 /*
  * Scan threads for process state information.
  * Based on: http://stackoverflow.com/questions/6788274/ios-mac-cpu-usage-for-thread
  * and       https://github.com/max-horvath/htop-osx/blob/e86692e869e30b0bc7264b3675d2a4014866ef46/ProcessList.c
  */
-void DarwinProcess_scanThreads(DarwinProcess *dp) {
+void DarwinProcess_scanThreads(DarwinProcess *dp,DarwinProcessList *dpl) {
    Process* proc = (Process*) dp;
    kern_return_t ret;
    
@@ -314,7 +324,7 @@ void DarwinProcess_scanThreads(DarwinProcess *dp) {
    task_t port;
    ret = task_for_pid(mach_task_self(), proc->pid, &port);
    if (ret != KERN_SUCCESS) {
-      dp->taskAccess = false;
+//      dp->taskAccess = false;
       return;
    }
    
@@ -322,7 +332,7 @@ void DarwinProcess_scanThreads(DarwinProcess *dp) {
    mach_msg_type_number_t task_info_count = TASK_INFO_MAX;
    ret = task_info(port, TASK_BASIC_INFO, (task_info_t) tinfo, &task_info_count);
    if (ret != KERN_SUCCESS) {
-      dp->taskAccess = false;
+//      dp->taskAccess = false;
       return;
    }
    
@@ -330,7 +340,7 @@ void DarwinProcess_scanThreads(DarwinProcess *dp) {
    mach_msg_type_number_t thread_count;
    ret = task_threads(port, &thread_list, &thread_count);
    if (ret != KERN_SUCCESS) {
-      dp->taskAccess = false;
+//      dp->taskAccess = false;
       mach_port_deallocate(mach_task_self(), port);
       return;
    }
@@ -338,13 +348,36 @@ void DarwinProcess_scanThreads(DarwinProcess *dp) {
    integer_t run_state = 999;
    for (unsigned int i = 0; i < thread_count; i++) {
       thread_info_data_t thinfo;
-      mach_msg_type_number_t thread_info_count = THREAD_BASIC_INFO_COUNT;
-      ret = thread_info(thread_list[i], THREAD_BASIC_INFO, (thread_info_t)thinfo, &thread_info_count);
+      mach_msg_type_number_t thread_info_count = THREAD_EXTENDED_INFO_COUNT;
+      ret = thread_info(thread_list[i], THREAD_EXTENDED_INFO, (thread_info_t)thinfo, &thread_info_count);
       if (ret == KERN_SUCCESS) {
-         thread_basic_info_t basic_info_th = (thread_basic_info_t) thinfo;
-         if (basic_info_th->run_state < run_state) {
-            run_state = basic_info_th->run_state;
-         }
+         uint64_t tid = 0 - thread_list[i];
+         thread_extended_info_t eti = (thread_extended_info_t) thinfo;
+         if(strlen(eti->pth_name)==0 || dpl->super.settings->hideThreads)
+             continue;
+         bool preExisting;
+         Process *process = ProcessList_getProcess((ProcessList*)dpl, tid, &preExisting, (Process_New)DarwinProcess_new);
+         process->updated=true;
+         if(preExisting)
+             continue;
+         DarwinProcess* tp = (DarwinProcess*)process;
+         setCommand((Process*)tp,eti->pth_name,strlen(eti->pth_name));
+         tp->super.pid = tid;
+         tp->super.ppid = dp->super.pid;
+         tp->super.tgid = tid;
+         tp->isThread = true;
+         tp->super.state = '?';
+
+        //  if(0 != eti->pth_user_time || 0 != eti->pth_system_time) {
+        //     uint64_t diff = (eti->pth_system_time - tp->stime) + (eti->pth_user_time - tp->utime);
+        //     tp->super.percent_cpu = (double)diff * (double)dpl->super.cpuCount / ((double)dpl->global_diff * 100000.0);
+        //  }
+         tp->super.percent_cpu = eti->pth_cpu_usage/(double)10.0;
+         tp->stime = eti->pth_system_time;
+         tp->utime = eti->pth_user_time;
+         tp->super.time = (eti->pth_system_time + eti->pth_user_time)/10000000;
+
+         ProcessList_add((ProcessList*)dpl,(Process*)tp);
          mach_port_deallocate(mach_task_self(), thread_list[i]);
       }
    }
