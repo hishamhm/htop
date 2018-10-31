@@ -324,7 +324,7 @@ void DarwinProcess_scanThreads(DarwinProcess *dp,DarwinProcessList *dpl) {
    task_t port;
    ret = task_for_pid(mach_task_self(), proc->pid, &port);
    if (ret != KERN_SUCCESS) {
-//      dp->taskAccess = false;
+     dp->taskAccess = false;
       return;
    }
    
@@ -332,7 +332,7 @@ void DarwinProcess_scanThreads(DarwinProcess *dp,DarwinProcessList *dpl) {
    mach_msg_type_number_t task_info_count = TASK_INFO_MAX;
    ret = task_info(port, TASK_BASIC_INFO, (task_info_t) tinfo, &task_info_count);
    if (ret != KERN_SUCCESS) {
-//      dp->taskAccess = false;
+     dp->taskAccess = false;
       return;
    }
    
@@ -340,7 +340,7 @@ void DarwinProcess_scanThreads(DarwinProcess *dp,DarwinProcessList *dpl) {
    mach_msg_type_number_t thread_count;
    ret = task_threads(port, &thread_list, &thread_count);
    if (ret != KERN_SUCCESS) {
-//      dp->taskAccess = false;
+     dp->taskAccess = false;
       mach_port_deallocate(mach_task_self(), port);
       return;
    }
@@ -368,10 +368,6 @@ void DarwinProcess_scanThreads(DarwinProcess *dp,DarwinProcessList *dpl) {
          tp->isThread = true;
          tp->super.state = '?';
 
-        //  if(0 != eti->pth_user_time || 0 != eti->pth_system_time) {
-        //     uint64_t diff = (eti->pth_system_time - tp->stime) + (eti->pth_user_time - tp->utime);
-        //     tp->super.percent_cpu = (double)diff * (double)dpl->super.cpuCount / ((double)dpl->global_diff * 100000.0);
-        //  }
          tp->super.percent_cpu = eti->pth_cpu_usage/(double)10.0;
          tp->stime = eti->pth_system_time;
          tp->utime = eti->pth_user_time;
