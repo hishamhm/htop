@@ -365,6 +365,11 @@ void DarwinProcess_scanThreads(DarwinProcess *dp,DarwinProcessList *dpl) {
       if (ret == KERN_SUCCESS) {
          uint64_t tid = 0 - thread_list[i];
          thread_extended_info_t eti = (thread_extended_info_t) thinfo;
+         
+         if(eti->pth_run_state<run_state) {
+           run_state=eti->pth_run_state;
+         }
+
          if(dpl->super.settings->hideThreads)
              continue;
          bool preExisting;
@@ -389,10 +394,6 @@ void DarwinProcess_scanThreads(DarwinProcess *dp,DarwinProcessList *dpl) {
          proc->utime = eti->pth_user_time;
          proc->super.time = (eti->pth_system_time + eti->pth_user_time)/10000000;
          proc->super.priority = eti->pth_curpri;
-
-         if(eti->pth_run_state<run_state) {
-           run_state=eti->pth_run_state;
-         }
 
          if(!preExisting) {
            ProcessList_add((ProcessList*)dpl,(Process*)proc);
