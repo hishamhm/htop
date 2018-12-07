@@ -78,7 +78,7 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    apl->ps_cpus = xCalloc (this->cpuCount, sizeof (perfstat_cpu_t));
 #else
    this->cpuCount = sysconf (_SC_NPROCESSORS_CONF);
-   this->totalMem = sysconf (_SC_AIX_REALMEM);
+   this->totalMem = sysconf (_SC_AIX_REALMEM); /* XXX: returns bogus value on PASE */
 #endif
 
    // smp requires avg + cpus as the 0th entry is avg
@@ -162,18 +162,7 @@ static void AixProcessList_scanMemoryInfo (ProcessList *pl) {
     pl->freeSwap = mt.pgsp_free * 4;
     pl->usedSwap = pl->totalSwap - pl->freeSwap;
 #else
-    struct vminfo64 vi;
-    if (vmgetinfo (&vi, VMINFO64, sizeof (struct vminfo64)) == -1) {
-        fprintf (stderr, "htop: AixProcessList_scanMemoryInfo failed: vmgetinfo error\n");
-        _exit (1);
-    }
-
-    pl->freeMem = vi.memavailable / 0x1000;
-    // XXX: cached memory? nmon can do it...
-    pl->cachedMem = 0;
-    pl->buffersMem = 0;
-    pl->sharedMem = 0;
-    pl->usedMem = pl->totalMem - pl->freeMem;
+    /* XXX: vmgetinfo won't work on PASE */
 #endif
 }
 
