@@ -76,11 +76,22 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    SolarisProcessList* spl = xCalloc(1, sizeof(SolarisProcessList));
    ProcessList* pl = (ProcessList*) spl;
    ProcessList_init(pl, Class(SolarisProcess), usersTable, pidWhiteList, userId);
+   spl->kd = NULL;
+   pl->cpuCount = 0;
 
-   spl->kd = kstat_open();
+   // Failing to obtain a kstat handle is is fatal
+   if ( (spl->kd = kstat_open()) == NULL ) {
+      fprintf(stderr, "\nUnable to open kstat handle.\n");
+      abort();
+   }
 
-   pl->cpuCount = sysconf(_SC_NPROCESSORS_ONLN);
+   // ...as is failing to access sysconf data
+   if ( (pl->cpuCount = sysconf(_SC_NPROCESSORS_ONLN)) <= 0 ) {
+      fprintf(stderr, "\nThe sysconf() system call does not seem to be working.\n");
+      abort();
+   }
 
+   // The extra "cpu" for spl->cpus > 1 is to store aggregate data for all CPUs
    if (pl->cpuCount == 1 ) {
       spl->cpus = xRealloc(spl->cpus, sizeof(CPUData));
    } else {
@@ -94,7 +105,7 @@ static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
    const SolarisProcessList* spl = (SolarisProcessList*) pl;
    int cpus = pl->cpuCount;
    kstat_t *cpuinfo = NULL;
-   int kchain = 0;
+   int kchain = -1;
    kstat_named_t *idletime = NULL;
    kstat_named_t *intrtime = NULL;
    kstat_named_t *krnltime = NULL;
@@ -106,7 +117,7 @@ static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
    uint64_t totaltime = 0;
    int arrskip = 0;
 
-   assert(cpus > 0);
+   // cpus > 0 covered in ProcessList_new()
 
    if (cpus > 1) {
        // Store values for the stats loop one extra element up in the array
@@ -116,17 +127,20 @@ static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
 
    // Calculate per-CPU statistics first
    for (int i = 0; i < cpus; i++) {
-      if (spl->kd != NULL) { cpuinfo = kstat_lookup(spl->kd,"cpu",i,"sys"); }
-      if (cpuinfo != NULL) { kchain = kstat_read(spl->kd,cpuinfo,NULL); }
-      if (kchain  != -1  ) {
-         idletime = kstat_data_lookup(cpuinfo,"cpu_nsec_idle");
-         intrtime = kstat_data_lookup(cpuinfo,"cpu_nsec_intr");
-         krnltime = kstat_data_lookup(cpuinfo,"cpu_nsec_kernel");
-         usertime = kstat_data_lookup(cpuinfo,"cpu_nsec_user");
+      if ( (cpuinfo = kstat_lookup(spl->kd,"cpu",i,"sys")) != NULL) {
+         if ( (kchain = kstat_read(spl->kd,cpuinfo,NULL)) != -1 ) {
+            idletime = kstat_data_lookup(cpuinfo,"cpu_nsec_idle");
+            intrtime = kstat_data_lookup(cpuinfo,"cpu_nsec_intr");
+            krnltime = kstat_data_lookup(cpuinfo,"cpu_nsec_kernel");
+            usertime = kstat_data_lookup(cpuinfo,"cpu_nsec_user");
+         }
       }
 
-      assert( (idletime != NULL) && (intrtime != NULL)
-           && (krnltime != NULL) && (usertime != NULL) );
+      if !( (idletime != NULL) && (intrtime != NULL)
+           && (krnltime != NULL) && (usertime != NULL) ) {
+         fprintf(stderr,"\nCalls to kstat do not appear to be working.\n");
+         abort();
+      }
 
       CPUData* cpuData = &(spl->cpus[i+arrskip]);
       totaltime = (idletime->value.ui64 - cpuData->lidle)
@@ -181,43 +195,37 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    char                *spathbase = NULL;
 
    // Part 1 - physical memory
-   if (spl->kd != NULL) { meminfo    = kstat_lookup(spl->kd,"unix",0,"system_pages"); }
-   if (meminfo != NULL) { ksrphyserr = kstat_read(spl->kd,meminfo,NULL); }
-   if (ksrphyserr != -1) {
-      totalmem_pgs   = kstat_data_lookup( meminfo, "physmem" );
-      lockedmem_pgs  = kstat_data_lookup( meminfo, "pageslocked" );
-      pages          = kstat_data_lookup( meminfo, "pagestotal" );
+   if ( (meminfo = kstat_lookup(spl->kd,"unix",0,"system_pages")) != NULL) {
+      if ( (ksrphyserr = kstat_read(spl->kd,meminfo,NULL)) != -1) {
+         totalmem_pgs   = kstat_data_lookup( meminfo, "physmem" );
+         lockedmem_pgs  = kstat_data_lookup( meminfo, "pageslocked" );
+         pages          = kstat_data_lookup( meminfo, "pagestotal" );
 
-      pl->totalMem   = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
-      pl->usedMem    = lockedmem_pgs->value.ui64 * PAGE_SIZE_KB;
-      // Not sure how to implement this on Solaris - suggestions welcome!
-      pl->cachedMem  = 0;     
-      // Not really "buffers" but the best Solaris analogue that I can find to
-      // "memory in use but not by programs or the kernel itself"
-      pl->buffersMem = (totalmem_pgs->value.ui64 - pages->value.ui64) * PAGE_SIZE_KB;
-    } else {
-      // Fall back to basic sysconf if kstat isn't working
-      pl->totalMem = sysconf(_SC_PHYS_PAGES) * PAGE_SIZE;
-      pl->buffersMem = 0;
-      pl->cachedMem  = 0;
-      pl->usedMem    = pl->totalMem - (sysconf(_SC_AVPHYS_PAGES) * PAGE_SIZE);
+         pl->totalMem   = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
+         pl->usedMem    = lockedmem_pgs->value.ui64 * PAGE_SIZE_KB;
+         // Not sure how to implement this on Solaris - suggestions welcome!
+         pl->cachedMem  = 0;     
+         // Not really "buffers" but the best Solaris analogue that I can find to
+         // "memory in use but not by programs or the kernel itself"
+         pl->buffersMem = (totalmem_pgs->value.ui64 - pages->value.ui64) * PAGE_SIZE_KB;
+       }
    }
    
    // Part 2 - swap
-   nswap = swapctl(SC_GETNSWP, NULL);
-   if (nswap >     0) { sl  = xMalloc((nswap * sizeof(swapent_t)) + sizeof(int)); }
-   if (sl    != NULL) { spathbase = xMalloc( nswap * MAXPATHLEN ); }
-   if (spathbase != NULL) { 
-      spath = spathbase;
-      swapdev = sl->swt_ent;
-      for (int i = 0; i < nswap; i++, swapdev++) {
-         swapdev->ste_path = spath;
-         spath += MAXPATHLEN;
+   if ( (nswap = swapctl(SC_GETNSWP, NULL)) > 0) {
+      if ( (sl = xMalloc((nswap * sizeof(swapent_t)) + sizeof(int))) != NULL) {
+         if ( (spathbase = xMalloc( nswap * MAXPATHLEN )) != NULL) { 
+            spath = spathbase;
+            swapdev = sl->swt_ent;
+            for (int i = 0; i < nswap; i++, swapdev++) {
+               swapdev->ste_path = spath;
+               spath += MAXPATHLEN;
+            }
+         }
+         sl->swt_n = nswap;
       }
-      sl->swt_n = nswap;
    }
-   nswap = swapctl(SC_LIST, sl);
-   if (nswap > 0) { 
+   if ( (nswap = swapctl(SC_LIST, sl)) > 0) { 
       swapdev = sl->swt_ent;
       for (int i = 0; i < nswap; i++, swapdev++) {
          totalswap += swapdev->ste_pages;
@@ -234,7 +242,7 @@ void ProcessList_delete(ProcessList* pl) {
    SolarisProcessList* spl = (SolarisProcessList*) pl;
    ProcessList_done(pl);
    free(spl->cpus);
-   if (spl->kd) kstat_close(spl->kd);
+   kstat_close(spl->kd);
    free(spl);
 }
 
