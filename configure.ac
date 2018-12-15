@@ -64,15 +64,22 @@ AC_CHECK_HEADERS([stdlib.h string.h strings.h sys/param.h sys/time.h unistd.h],[
 ])
 AC_CHECK_HEADERS([execinfo.h],[:],[:])
 
-AC_HEADER_MAJOR
 dnl glibc 2.25 deprecates 'major' and 'minor' in <sys/types.h> and requires to
-dnl include <sys/sysmacros.h>. However the logic in AC_HEADER_MAJOR has not yet
-dnl been updated in Autoconf 2.69, so use a workaround:
-m4_version_prereq([2.70], [],
-[if test "x$ac_cv_header_sys_mkdev_h" = xno; then
-   AC_CHECK_HEADER(sys/sysmacros.h, [AC_DEFINE(MAJOR_IN_SYSMACROS, 1,
-      [Define to 1 if `major', `minor', and `makedev' are declared in <sys/sysmacros.h>.])])
-fi])
+dnl include <sys/sysmacros.h>. Autoconf<=2.69 doesn't care about it.
+AC_DEFUN([AC_HEADER_MAJOR_270], dnl from autoconf lib/autoconf/headers.m4 @e17a30e987d
+[AC_CHECK_HEADERS_ONCE([sys/types.h])
+AC_CHECK_HEADER(sys/mkdev.h,
+    [AC_DEFINE(MAJOR_IN_MKDEV, 1,
+         [Define to 1 if `major', `minor', and `makedev' are
+          declared in <mkdev.h>.])])
+if test $ac_cv_header_sys_mkdev_h = no; then
+  AC_CHECK_HEADER(sys/sysmacros.h,
+      [AC_DEFINE(MAJOR_IN_SYSMACROS, 1,
+           [Define to 1 if `major', `minor', and `makedev'
+            are declared in <sysmacros.h>.])])
+fi
+])# AC_HEADER_MAJOR_270
+m4_version_prereq([2.70], [AC_HEADER_MAJOR], [AC_HEADER_MAJOR_270])
 
 # Checks for typedefs, structures, and compiler characteristics.
 # ----------------------------------------------------------------------
