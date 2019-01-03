@@ -21,7 +21,7 @@ in the source distribution for its full text.
 }*/
 
 int MemoryMeter_attributes[] = {
-   MEMORY_USED, MEMORY_BUFFERS, MEMORY_CACHE
+   COLOR_MEMORY_USED, COLOR_MEMORY_BUFFERS, COLOR_MEMORY_CACHE
 };
 
 static void MemoryMeter_updateValues(Meter* this, char* buffer, int size) {
@@ -40,18 +40,18 @@ static void MemoryMeter_updateValues(Meter* this, char* buffer, int size) {
 static void MemoryMeter_display(Object* cast, RichString* out) {
    char buffer[50];
    Meter* this = (Meter*)cast;
-   RichString_write(out, CRT_colors[METER_TEXT], ":");
+   RichString_write(out, CRT_colors[COLOR_METER_TEXT], ":");
    Meter_humanUnit(buffer, this->total, 50);
-   RichString_append(out, CRT_colors[METER_VALUE], buffer);
+   RichString_append(out, CRT_colors[COLOR_METER_VALUE], buffer);
    Meter_humanUnit(buffer, this->values[0], 50);
-   RichString_append(out, CRT_colors[METER_TEXT], " used:");
-   RichString_append(out, CRT_colors[MEMORY_USED], buffer);
+   RichString_append(out, CRT_colors[COLOR_METER_TEXT], " used:");
+   RichString_append(out, CRT_colors[COLOR_MEMORY_USED], buffer);
    Meter_humanUnit(buffer, this->values[1], 50);
-   RichString_append(out, CRT_colors[METER_TEXT], " buffers:");
-   RichString_append(out, CRT_colors[MEMORY_BUFFERS_TEXT], buffer);
+   RichString_append(out, CRT_colors[COLOR_METER_TEXT], " buffers:");
+   RichString_append(out, CRT_colors[COLOR_MEMORY_BUFFERS_TEXT], buffer);
    Meter_humanUnit(buffer, this->values[2], 50);
-   RichString_append(out, CRT_colors[METER_TEXT], " cache:");
-   RichString_append(out, CRT_colors[MEMORY_CACHE], buffer);
+   RichString_append(out, CRT_colors[COLOR_METER_TEXT], " cache:");
+   RichString_append(out, CRT_colors[COLOR_MEMORY_CACHE], buffer);
 }
 
 MeterClass MemoryMeter_class = {

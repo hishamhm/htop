@@ -42,7 +42,7 @@ static void ListItem_display(Object* cast, RichString* out) {
    xSnprintf(buffer, len, "%s", this->value);
    */
    if (this->moving) {
-      RichString_write(out, CRT_colors[DEFAULT_COLOR],
+      RichString_write(out, CRT_colors[COLOR_DEFAULT_COLOR],
 #ifdef HAVE_LIBNCURSESW
             CRT_utf8 ? "↕ " :
 #endif
@@ -50,7 +50,7 @@ static void ListItem_display(Object* cast, RichString* out) {
    } else {
       RichString_prune(out);
    }
-   RichString_append(out, CRT_colors[DEFAULT_COLOR], this->value/*buffer*/);
+   RichString_append(out, CRT_colors[COLOR_DEFAULT_COLOR], this->value/*buffer*/);
 }
 
 ObjectClass ListItem_class = {

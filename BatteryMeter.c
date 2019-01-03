@@ -29,7 +29,7 @@ typedef enum ACPresence_ {
 }*/
 
 int BatteryMeter_attributes[] = {
-   BATTERY
+   COLOR_BATTERY
 };
 
 static void BatteryMeter_updateValues(Meter * this, char *buffer, int len) {
