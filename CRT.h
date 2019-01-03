@@ -110,7 +110,7 @@ typedef enum ColorElements_ {
    CPU_NICE,
    CPU_NICE_TEXT,
    CPU_NORMAL,
-   CPU_KERNEL,
+   HTOP_CPU_KERNEL,
    CPU_IOWAIT,
    CPU_IRQ,
    CPU_SOFTIRQ,
