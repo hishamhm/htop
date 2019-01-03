@@ -22,6 +22,7 @@ in the source distribution for its full text.
 #include <pwd.h>
 #include <math.h>
 #include <time.h>
+#include <sys/vm_usage.h>
 
 #define MAXCMDLINE 255
 
@@ -55,6 +56,7 @@ typedef struct SolarisProcessList_ {
    ProcessList super;
    kstat_ctl_t* kd;
    CPUData* cpus;
+   zoneid_t this_zone;
 } SolarisProcessList;
 
 }*/
@@ -84,6 +86,9 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
       fprintf(stderr, "\nUnable to open kstat handle.\n");
       abort();
    }
+
+   // Get the zone of the running htop process.
+   spl->this_zone = getzoneid();
 
    // ...as is failing to access sysconf data
    if ( (pl->cpuCount = sysconf(_SC_NPROCESSORS_ONLN)) <= 0 ) {
@@ -193,24 +198,45 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    int                 nswap = 0;
    char                *spath = NULL; 
    char                *spathbase = NULL;
+   vmusage_t           *vmu_vals = NULL;
+   size_t              nvmu_vals = 1;
+   size_t              vmu_vals_len = 0;
 
    // Part 1 - physical memory
+   // This is done very differently for global vs. non-global zones, because
+   // the method needed for non-global, while capable of reporting system-wide
+   // usage, also provides much more limited detail.
+
    if ( (meminfo = kstat_lookup(spl->kd,"unix",0,"system_pages")) != NULL) {
       if ( (ksrphyserr = kstat_read(spl->kd,meminfo,NULL)) != -1) {
          totalmem_pgs   = kstat_data_lookup( meminfo, "physmem" );
          lockedmem_pgs  = kstat_data_lookup( meminfo, "pageslocked" );
          pages          = kstat_data_lookup( meminfo, "pagestotal" );
 
-         pl->totalMem   = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
-         pl->usedMem    = lockedmem_pgs->value.ui64 * PAGE_SIZE_KB;
-         // Not sure how to implement this on Solaris - suggestions welcome!
-         pl->cachedMem  = 0;     
-         // Not really "buffers" but the best Solaris analogue that I can find to
-         // "memory in use but not by programs or the kernel itself"
-         pl->buffersMem = (totalmem_pgs->value.ui64 - pages->value.ui64) * PAGE_SIZE_KB;
-       }
-   }
-   
+         if (spl->this_zone == 0) {
+            // htop is running in the global zone, so get system-wide memory stats
+            pl->totalMem   = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
+            pl->usedMem    = lockedmem_pgs->value.ui64 * PAGE_SIZE_KB;
+            // Not sure how to implement this on Solaris - suggestions welcome!
+            pl->cachedMem  = 0;     
+            // Not really "buffers" but the best Solaris analogue that I can find to
+            // "memory in use but not by programs or the kernel itself"
+            pl->buffersMem = (totalmem_pgs->value.ui64 - pages->value.ui64) * PAGE_SIZE_KB;
+         } else {
+            // htop is running in a non-global zone, so only report mem stats for this zone
+            if ((vmu_vals = (vmusage_t *)calloc(1,sizeof(vmusage_t))) != NULL) {
+               if (getvmusage(VMUSAGE_ZONE, 0, vmu_vals, &nvmu_vals) == 0) { 
+                  pl->usedMem    = (uint64_t)vmu_vals[0].vmu_rss_all / (uint64_t)1024; // Returned in bytes, should be KiB for htop
+                  pl->cachedMem  = 0; // Not available for zones
+                  pl->buffersMem = 0; // Not available for zones
+                  pl->totalMem   = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
+               }
+               free(vmu_vals);
+            }
+         }
+      }
+   }  
+ 
    // Part 2 - swap
    if ( (nswap = swapctl(SC_GETNSWP, NULL)) > 0) {
       if ( (sl = xMalloc((nswap * sizeof(swapent_t)) + sizeof(int))) != NULL) {

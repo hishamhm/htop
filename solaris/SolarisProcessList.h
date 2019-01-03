@@ -41,6 +41,7 @@ typedef struct SolarisProcessList_ {
    ProcessList super;
    kstat_ctl_t* kd;
    CPUData* cpus;
+   zoneid_t this_zone;
 } SolarisProcessList;
 
 
