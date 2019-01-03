@@ -136,8 +136,8 @@ static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
          }
       }
 
-      if !( (idletime != NULL) && (intrtime != NULL)
-           && (krnltime != NULL) && (usertime != NULL) ) {
+      if (!((idletime != NULL) && (intrtime != NULL)
+           && (krnltime != NULL) && (usertime != NULL))) {
          fprintf(stderr,"\nCalls to kstat do not appear to be working.\n");
          abort();
       }
