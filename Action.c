@@ -354,7 +354,7 @@ static Htop_Reaction actionFilterByUser(State* st) {
 
 Htop_Reaction Action_follow(State* st) {
    st->pl->following = MainPanel_selectedPid((MainPanel*)st->panel);
-   Panel_setSelectionColor(st->panel, CRT_colors[PANEL_SELECTION_FOLLOW]);
+   Panel_setSelectionColor(st->panel, CRT_colors[COLOR_PANEL_SELECTION_FOLLOW]);
    return HTOP_KEEP_FOLLOWING;
 }
 
@@ -448,7 +448,7 @@ static Htop_Reaction actionHelp(State* st) {
    Settings* settings = st->settings;
 
    clear();
-   attrset(CRT_colors[HELP_BOLD]);
+   attrset(CRT_colors[COLOR_HELP_BOLD]);
 
    for (int i = 0; i < LINES-1; i++)
       mvhline(i, 0, ' ', COLS);
@@ -456,43 +456,43 @@ static Htop_Reaction actionHelp(State* st) {
    mvaddstr(0, 0, "htop " VERSION " - " COPYRIGHT);
    mvaddstr(1, 0, "Released under the GNU GPL. See 'man' page for more info.");
 
-   attrset(CRT_colors[DEFAULT_COLOR]);
+   attrset(CRT_colors[COLOR_DEFAULT_COLOR]);
    mvaddstr(3, 0, "CPU usage bar: ");
    #define addattrstr(a,s) attrset(a);addstr(s)
-   addattrstr(CRT_colors[BAR_BORDER], "[");
+   addattrstr(CRT_colors[COLOR_BAR_BORDER], "[");
    if (settings->detailedCPUTime) {
-      addattrstr(CRT_colors[CPU_NICE_TEXT], "low"); addstr("/");
-      addattrstr(CRT_colors[CPU_NORMAL], "normal"); addstr("/");
-      addattrstr(CRT_colors[HTOP_CPU_KERNEL], "kernel"); addstr("/");
-      addattrstr(CRT_colors[CPU_IRQ], "irq"); addstr("/");
-      addattrstr(CRT_colors[CPU_SOFTIRQ], "soft-irq"); addstr("/");
-      addattrstr(CRT_colors[CPU_STEAL], "steal"); addstr("/");
-      addattrstr(CRT_colors[CPU_GUEST], "guest"); addstr("/");
-      addattrstr(CRT_colors[CPU_IOWAIT], "io-wait");
-      addattrstr(CRT_colors[BAR_SHADOW], " used%");
+      addattrstr(CRT_colors[COLOR_CPU_NICE_TEXT], "low"); addstr("/");
+      addattrstr(CRT_colors[COLOR_CPU_NORMAL], "normal"); addstr("/");
+      addattrstr(CRT_colors[COLOR_CPU_KERNEL], "kernel"); addstr("/");
+      addattrstr(CRT_colors[COLOR_CPU_IRQ], "irq"); addstr("/");
+      addattrstr(CRT_colors[COLOR_CPU_SOFTIRQ], "soft-irq"); addstr("/");
+      addattrstr(CRT_colors[COLOR_CPU_STEAL], "steal"); addstr("/");
+      addattrstr(CRT_colors[COLOR_CPU_GUEST], "guest"); addstr("/");
+      addattrstr(CRT_colors[COLOR_CPU_IOWAIT], "io-wait");
+      addattrstr(CRT_colors[COLOR_BAR_SHADOW], " used%");
    } else {
-      addattrstr(CRT_colors[CPU_NICE_TEXT], "low-priority"); addstr("/");
-      addattrstr(CRT_colors[CPU_NORMAL], "normal"); addstr("/");
-      addattrstr(CRT_colors[HTOP_CPU_KERNEL], "kernel"); addstr("/");
-      addattrstr(CRT_colors[CPU_GUEST], "virtualiz");
-      addattrstr(CRT_colors[BAR_SHADOW], "               used%");
+      addattrstr(CRT_colors[COLOR_CPU_NICE_TEXT], "low-priority"); addstr("/");
+      addattrstr(CRT_colors[COLOR_CPU_NORMAL], "normal"); addstr("/");
+      addattrstr(CRT_colors[COLOR_CPU_KERNEL], "kernel"); addstr("/");
+      addattrstr(CRT_colors[COLOR_CPU_GUEST], "virtualiz");
+      addattrstr(CRT_colors[COLOR_BAR_SHADOW], "               used%");
    }
-   addattrstr(CRT_colors[BAR_BORDER], "]");
-   attrset(CRT_colors[DEFAULT_COLOR]);
+   addattrstr(CRT_colors[COLOR_BAR_BORDER], "]");
+   attrset(CRT_colors[COLOR_DEFAULT_COLOR]);
    mvaddstr(4, 0, "Memory bar:    ");
-   addattrstr(CRT_colors[BAR_BORDER], "[");
-   addattrstr(CRT_colors[MEMORY_USED], "used"); addstr("/");
-   addattrstr(CRT_colors[MEMORY_BUFFERS_TEXT], "buffers"); addstr("/");
-   addattrstr(CRT_colors[MEMORY_CACHE], "cache");
-   addattrstr(CRT_colors[BAR_SHADOW], "                            used/total");
-   addattrstr(CRT_colors[BAR_BORDER], "]");
-   attrset(CRT_colors[DEFAULT_COLOR]);
+   addattrstr(CRT_colors[COLOR_BAR_BORDER], "[");
+   addattrstr(CRT_colors[COLOR_MEMORY_USED], "used"); addstr("/");
+   addattrstr(CRT_colors[COLOR_MEMORY_BUFFERS_TEXT], "buffers"); addstr("/");
+   addattrstr(CRT_colors[COLOR_MEMORY_CACHE], "cache");
+   addattrstr(CRT_colors[COLOR_BAR_SHADOW], "                            used/total");
+   addattrstr(CRT_colors[COLOR_BAR_BORDER], "]");
+   attrset(CRT_colors[COLOR_DEFAULT_COLOR]);
    mvaddstr(5, 0, "Swap bar:      ");
-   addattrstr(CRT_colors[BAR_BORDER], "[");
-   addattrstr(CRT_colors[SWAP], "used");
-   addattrstr(CRT_colors[BAR_SHADOW], "                                          used/total");
-   addattrstr(CRT_colors[BAR_BORDER], "]");
-   attrset(CRT_colors[DEFAULT_COLOR]);
+   addattrstr(CRT_colors[COLOR_BAR_BORDER], "[");
+   addattrstr(CRT_colors[COLOR_SWAP], "used");
+   addattrstr(CRT_colors[COLOR_BAR_SHADOW], "                                          used/total");
+   addattrstr(CRT_colors[COLOR_BAR_BORDER], "]");
+   attrset(CRT_colors[COLOR_DEFAULT_COLOR]);
    mvaddstr(6,0, "Type and layout of header meters are configurable in the setup screen.");
    if (CRT_colorScheme == COLORSCHEME_MONOCHROME) {
       mvaddstr(7, 0, "In monochrome, meters display as different chars, in order: |#*@$%&.");
@@ -500,17 +500,17 @@ static Htop_Reaction actionHelp(State* st) {
    mvaddstr( 8, 0, " Status: R: running; S: sleeping; T: traced/stopped; Z: zombie; D: disk sleep");
    for (int i = 0; helpLeft[i].info; i++) { mvaddstr(9+i, 9,  helpLeft[i].info); }
    for (int i = 0; helpRight[i].info; i++) { mvaddstr(9+i, 49, helpRight[i].info); }
-   attrset(CRT_colors[HELP_BOLD]);
+   attrset(CRT_colors[COLOR_HELP_BOLD]);
    for (int i = 0; helpLeft[i].key;  i++) { mvaddstr(9+i, 0,  helpLeft[i].key); }
    for (int i = 0; helpRight[i].key; i++) { mvaddstr(9+i, 40, helpRight[i].key); }
-   attrset(CRT_colors[PROCESS_THREAD]);
+   attrset(CRT_colors[COLOR_PROCESS_THREAD]);
    mvaddstr(16, 32, "threads");
    mvaddstr(17, 26, "threads");
-   attrset(CRT_colors[DEFAULT_COLOR]);
+   attrset(CRT_colors[COLOR_DEFAULT_COLOR]);
 
-   attrset(CRT_colors[HELP_BOLD]);
+   attrset(CRT_colors[COLOR_HELP_BOLD]);
    mvaddstr(23,0, "Press any key to return.");
-   attrset(CRT_colors[DEFAULT_COLOR]);
+   attrset(CRT_colors[COLOR_DEFAULT_COLOR]);
    refresh();
    CRT_readKey();
    clear();

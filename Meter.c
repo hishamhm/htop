@@ -247,11 +247,11 @@ static void TextMeterMode_draw(Meter* this, int x, int y, int w) {
    Meter_updateValues(this, buffer, METER_BUFFER_LEN - 1);
    (void) w;
 
-   attrset(CRT_colors[METER_TEXT]);
+   attrset(CRT_colors[COLOR_METER_TEXT]);
    mvaddstr(y, x, this->caption);
    int captionLen = strlen(this->caption);
    x += captionLen;
-   attrset(CRT_colors[RESET_COLOR]);
+   attrset(CRT_colors[COLOR_RESET_COLOR]);
    RichString_begin(out);
    Meter_displayBuffer(this, buffer, &out);
    RichString_printVal(out, y, x);
@@ -267,12 +267,12 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
    Meter_updateValues(this, buffer, METER_BUFFER_LEN - 1);
 
    w -= 2;
-   attrset(CRT_colors[METER_TEXT]);
+   attrset(CRT_colors[COLOR_METER_TEXT]);
    int captionLen = 3;
    mvaddnstr(y, x, this->caption, captionLen);
    x += captionLen;
    w -= captionLen;
-   attrset(CRT_colors[BAR_BORDER]);
+   attrset(CRT_colors[COLOR_BAR_BORDER]);
    mvaddch(y, x, '[');
    mvaddch(y, x + w, ']');
    
@@ -280,7 +280,7 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
    x++;
 
    if (w < 1) {
-      attrset(CRT_colors[RESET_COLOR]);
+      attrset(CRT_colors[COLOR_RESET_COLOR]);
       return;
    }
    char bar[w + 1];
@@ -323,12 +323,12 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
       offset = CLAMP(offset, 0, w);
    }
    if (offset < w) {
-      attrset(CRT_colors[BAR_SHADOW]);
+      attrset(CRT_colors[COLOR_BAR_SHADOW]);
       mvaddnstr(y, x + offset, bar + offset, w - offset);
    }
 
    move(y, x + w + 1);
-   attrset(CRT_colors[RESET_COLOR]);
+   attrset(CRT_colors[COLOR_RESET_COLOR]);
 }
 
 /* ---------- GraphMeterMode ---------- */
@@ -373,7 +373,7 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       GraphMeterMode_pixPerRow = PIXPERROW_ASCII;
    }
 
-   attrset(CRT_colors[METER_TEXT]);
+   attrset(CRT_colors[COLOR_METER_TEXT]);
    int captionLen = 3;
    mvaddnstr(y, x, this->caption, captionLen);
    x += captionLen;
@@ -409,17 +409,17 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       int v1 = CLAMP((int) lround(data->values[i] * pix), 1, pix);
       int v2 = CLAMP((int) lround(data->values[i+1] * pix), 1, pix);
 
-      int colorIdx = GRAPH_1;
+      int colorIdx = COLOR_GRAPH_1;
       for (int line = 0; line < GRAPH_HEIGHT; line++) {
          int line1 = CLAMP(v1 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line)), 0, GraphMeterMode_pixPerRow);
          int line2 = CLAMP(v2 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line)), 0, GraphMeterMode_pixPerRow);
 
          attrset(CRT_colors[colorIdx]);
          mvaddstr(y+line, x+k, GraphMeterMode_dots[line1 * (GraphMeterMode_pixPerRow + 1) + line2]);
-         colorIdx = GRAPH_2;
+         colorIdx = COLOR_GRAPH_2;
       }
    }
-   attrset(CRT_colors[RESET_COLOR]);
+   attrset(CRT_colors[COLOR_RESET_COLOR]);
 }
 
 /* ---------- LEDMeterMode ---------- */
@@ -468,7 +468,7 @@ static void LEDMeterMode_draw(Meter* this, int x, int y, int w) {
       CRT_utf8 ? y+1 :
 #endif
       y+2;
-   attrset(CRT_colors[LED_COLOR]);
+   attrset(CRT_colors[COLOR_LED_COLOR]);
    mvaddstr(yText, x, this->caption);
    int xx = x + strlen(this->caption);
    int len = RichString_sizeVal(out);
@@ -482,7 +482,7 @@ static void LEDMeterMode_draw(Meter* this, int x, int y, int w) {
          xx += 1;
       }
    }
-   attrset(CRT_colors[RESET_COLOR]);
+   attrset(CRT_colors[COLOR_RESET_COLOR]);
    RichString_end(out);
 }
 
@@ -531,7 +531,7 @@ static void BlankMeter_display(Object* cast, RichString* out) {
 }
 
 int BlankMeter_attributes[] = {
-   DEFAULT_COLOR
+   COLOR_DEFAULT_COLOR
 };
 
 MeterClass BlankMeter_class = {

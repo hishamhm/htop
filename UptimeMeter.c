@@ -14,7 +14,7 @@ in the source distribution for its full text.
 }*/
 
 int UptimeMeter_attributes[] = {
-   UPTIME
+   COLOR_UPTIME
 };
 
 static void UptimeMeter_updateValues(Meter* this, char* buffer, int len) {

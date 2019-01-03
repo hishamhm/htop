@@ -82,10 +82,10 @@ void TraceScreen_delete(Object* cast) {
 }
 
 void TraceScreen_draw(InfoScreen* this) {
-   attrset(CRT_colors[PANEL_HEADER_FOCUS]);
+   attrset(CRT_colors[COLOR_PANEL_HEADER_FOCUS]);
    mvhline(0, 0, ' ', COLS);
    mvprintw(0, 0, "Trace of process %d - %s", this->process->pid, this->process->comm);
-   attrset(CRT_colors[DEFAULT_COLOR]);
+   attrset(CRT_colors[COLOR_DEFAULT_COLOR]);
    IncSet_drawBar(this->inc);
 }
 

@@ -180,7 +180,7 @@ void Header_reinit(Header* this) {
 void Header_draw(const Header* this) {
    int height = this->height;
    int pad = this->pad;
-   attrset(CRT_colors[RESET_COLOR]);
+   attrset(CRT_colors[COLOR_RESET_COLOR]);
    for (int y = 0; y < height; y++) {
       mvhline(y, 0, ' ', COLS);
    }

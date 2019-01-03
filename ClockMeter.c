@@ -16,7 +16,7 @@ in the source distribution for its full text.
 }*/
 
 int ClockMeter_attributes[] = {
-   CLOCK
+   COLOR_CLOCK
 };
 
 static void ClockMeter_updateValues(Meter* this, char* buffer, int size) {

@@ -16,7 +16,7 @@ in the source distribution for its full text.
 }*/
 
 int HostnameMeter_attributes[] = {
-   HOSTNAME
+   COLOR_HOSTNAME
 };
 
 static void HostnameMeter_updateValues(Meter* this, char* buffer, int size) {
