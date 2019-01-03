@@ -57,6 +57,8 @@ typedef struct SolarisProcessList_ {
    kstat_ctl_t* kd;
    CPUData* cpus;
    zoneid_t this_zone;
+   size_t zone_used_phys;
+   size_t zone_max_phys;
 } SolarisProcessList;
 
 }*/
@@ -191,6 +193,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    kstat_named_t       *totalmem_pgs = NULL;
    kstat_named_t       *lockedmem_pgs = NULL;
    kstat_named_t       *pages = NULL;
+   kstat_named_t       *freemem_pgs = NULL;
    struct swaptable    *sl = NULL;
    struct swapent      *swapdev = NULL;
    uint64_t            totalswap = 0;
@@ -212,24 +215,27 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
          totalmem_pgs   = kstat_data_lookup( meminfo, "physmem" );
          lockedmem_pgs  = kstat_data_lookup( meminfo, "pageslocked" );
          pages          = kstat_data_lookup( meminfo, "pagestotal" );
+         freemem_pgs    = kstat_data_lookup( meminfo, "pagesfree" );
 
          if (spl->this_zone == 0) {
             // htop is running in the global zone, so get system-wide memory stats
             pl->totalMem   = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
-            pl->usedMem    = lockedmem_pgs->value.ui64 * PAGE_SIZE_KB;
-            // Not sure how to implement this on Solaris - suggestions welcome!
-            pl->cachedMem  = 0;     
-            // Not really "buffers" but the best Solaris analogue that I can find to
-            // "memory in use but not by programs or the kernel itself"
-            pl->buffersMem = (totalmem_pgs->value.ui64 - pages->value.ui64) * PAGE_SIZE_KB;
+            pl->usedMem    = (totalmem_pgs->value.ui64 - freemem_pgs->value.ui64) * PAGE_SIZE_KB;
+            // Not sure how to implement these on Solaris - suggestions welcome!
+            pl->buffersMem = 0;     
+            pl->cachedMem  = 0;
+            spl->zone_used_phys = 0;
+            spl->zone_max_phys  = 0;
          } else {
             // htop is running in a non-global zone, so only report mem stats for this zone
             if ((vmu_vals = (vmusage_t *)calloc(1,sizeof(vmusage_t))) != NULL) {
                if (getvmusage(VMUSAGE_ZONE, 0, vmu_vals, &nvmu_vals) == 0) { 
-                  pl->usedMem    = (uint64_t)vmu_vals[0].vmu_rss_all / (uint64_t)1024; // Returned in bytes, should be KiB for htop
-                  pl->cachedMem  = 0; // Not available for zones
-                  pl->buffersMem = 0; // Not available for zones
                   pl->totalMem   = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
+                  pl->usedMem    = (totalmem_pgs->value.ui64 - freemem_pgs->value.ui64) * PAGE_SIZE_KB;
+                  // Not sure how to implement these on Solaris - suggestions welcome!
+                  pl->buffersMem = 0;       
+                  pl->cachedMem  = 0;
+                  spl->zone_used_phys = vmu_vals[0].vmu_rss_all / 1024; // Returned in bytes, should be KiB for htop
                }
                free(vmu_vals);
             }
