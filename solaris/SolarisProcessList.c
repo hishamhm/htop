@@ -246,6 +246,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    struct swapent      *swapdev = NULL;
    uint64_t            totalswap = 0;
    uint64_t            totalfree = 0;
+   uint64_t            zramcap = 0;
    int                 nswap = 0;
    char                *spath = NULL; 
    char                *spathbase = NULL;
@@ -253,6 +254,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    vmusage_t           *vmu_vals = NULL;
    size_t              nvmu_vals = 1;
    size_t              real_sys_used = 0;
+   int                 ret;
 
    // Part 1 - physical memory
    // This is done very differently for global vs. non-global zones, because
@@ -281,18 +283,22 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
 
             if ( spl->kbitness == spl->ebitness ) {
                // htop is kernel-native bitness, 32 or 64
-               getvmusage(VMUSAGE_ZONE, 1, vmu_vals, &nvmu_vals); 
+               getvmusage(VMUSAGE_ZONE, 0, vmu_vals, &nvmu_vals); 
                pl->usedMem  = vmu_vals[0].vmu_rss_all / 1024; // Returned in bytes, should be KiB for htop
             } else if ( spl->kbitness == 64 ) {
                // htop is not kernel native bitness, e.g. 32-bit htop with a 64-bit kernel
-               getvmusage(VMUSAGE_ZONE, 1, vmu_vals64, &nvmu_vals);
+               getvmusage(VMUSAGE_ZONE, 0, vmu_vals64, &nvmu_vals);
                pl->usedMem  = vmu_vals64[0].vmu_rss_all / 1024; // Returned in bytes, should be KiB for htop
             } else {
                // Huh?  64-bit app on a 32-bit kernel?  Nope.  Maybe it's 2030 and 128-bit architectures
                // are now a thing?
                pl->usedMem  = 0;
             }
-               
+
+            ret = zone_getattr(spl->this_zone,ZONE_ATTR_PHYS_MCAP,&zramcap,sizeof(zramcap)); 
+            if ( ret < 0 ) zramcap = 0;
+
+            spl->zmaxmem = zramcap / 1024;               
             if ( real_sys_used > spl->zmaxmem ) {
                spl->sysusedmem = real_sys_used - spl->zmaxmem;
             } else {
