@@ -191,8 +191,6 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    kstat_t             *meminfo = NULL;
    int                 ksrphyserr = -1;
    kstat_named_t       *totalmem_pgs = NULL;
-   kstat_named_t       *lockedmem_pgs = NULL;
-   kstat_named_t       *pages = NULL;
    kstat_named_t       *freemem_pgs = NULL;
    struct swaptable    *sl = NULL;
    struct swapent      *swapdev = NULL;
@@ -203,7 +201,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    char                *spathbase = NULL;
    vmusage_t           *vmu_vals = NULL;
    size_t              nvmu_vals = 1;
-   size_t              vmu_vals_len = 0;
+   size_t              real_sys_used = 0;
 
    // Part 1 - physical memory
    // This is done very differently for global vs. non-global zones, because
@@ -213,8 +211,6 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    if ( (meminfo = kstat_lookup(spl->kd,"unix",0,"system_pages")) != NULL) {
       if ( (ksrphyserr = kstat_read(spl->kd,meminfo,NULL)) != -1) {
          totalmem_pgs   = kstat_data_lookup( meminfo, "physmem" );
-         lockedmem_pgs  = kstat_data_lookup( meminfo, "pageslocked" );
-         pages          = kstat_data_lookup( meminfo, "pagestotal" );
          freemem_pgs    = kstat_data_lookup( meminfo, "pagesfree" );
 
          if (spl->this_zone == 0) {
@@ -229,8 +225,13 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
             if ((vmu_vals = (vmusage_t *)calloc(1,sizeof(vmusage_t))) != NULL) {
                if (getvmusage(VMUSAGE_ZONE, 0, vmu_vals, &nvmu_vals) == 0) { 
                   pl->totalMem    = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
-                  spl->zmaxmem    = 0;
-                  spl->sysusedmem = (totalmem_pgs->value.ui64 - freemem_pgs->value.ui64) * PAGE_SIZE_KB;
+                  spl->zmaxmem    = 0; // Quota minus pl->usedMem
+                  real_sys_used = (totalmem_pgs->value.ui64 - freemem_pgs->value.ui64) * PAGE_SIZE_KB;
+                  if ( real_sys_used > spl->zmaxmem ) {
+                     spl->sysusedmem = real_sys_used - spl->zmaxmem;
+                  } else {
+                     spl->sysusedmem = 0;
+                  }
                   pl->usedMem     = vmu_vals[0].vmu_rss_all / 1024; // Returned in bytes, should be KiB for htop
                }
                free(vmu_vals);
