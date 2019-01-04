@@ -23,6 +23,7 @@ in the source distribution for its full text.
 #include <math.h>
 #include <time.h>
 #include <sys/vm_usage.h>
+#include <sys/systeminfo.h>
 
 #define MAXCMDLINE 255
 
@@ -59,9 +60,33 @@ typedef struct SolarisProcessList_ {
    zoneid_t this_zone;
    size_t zmaxmem;
    size_t sysusedmem;
+   char* karch;
+   uint_t kbitness;
+   char* earch;
+   uint_t ebitness;
 } SolarisProcessList;
 
 }*/
+
+// Used in case htop is 32-bit but we're on a 64-bit kernel
+typedef struct htop_vmusage64 {
+	id_t vmu_zoneid;
+	uint_t vmu_type;
+	id_t vmu_id;
+	int alignment_padding;
+	uint64_t vmu_rss_all;
+	uint64_t vmu_rss_private;
+	uint64_t vmu_rss_shared;
+	uint64_t vmu_swap_all;
+	uint64_t vmu_swap_private;
+	uint64_t vmu_swap_shared;
+} htop_vmusage64_t;
+
+static uint_t get_bitness(const char *isa) {
+   if (strcmp(isa, "sparc") == 0 || strcmp(isa, "i386") == 0) return (32); 
+   if (strcmp(isa, "sparcv9") == 0 || strcmp(isa, "amd64") == 0) return (64);
+   return (0);
+}
 
 char* SolarisProcessList_readZoneName(kstat_ctl_t* kd, SolarisProcess* sproc) {
   char* zname;
@@ -89,12 +114,37 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
       abort();
    }
 
-   // Get the zone of the running htop process.
-   spl->this_zone = getzoneid();
-
    // ...as is failing to access sysconf data
    if ( (pl->cpuCount = sysconf(_SC_NPROCESSORS_ONLN)) <= 0 ) {
       fprintf(stderr, "\nThe sysconf() system call does not seem to be working.\n");
+      abort();
+   }
+
+   // Get the zone of the running htop process.
+   spl->this_zone = getzoneid();
+
+   spl->karch = (char *)calloc(8,sizeof(char));
+   spl->earch = (char *)calloc(8,sizeof(char));
+
+   // Various info on the architecture of the kernel and the current binary
+   // which is needed to correctly get zone memory usage and limit info
+   if (sysinfo(SI_ARCHITECTURE_K,spl->karch,8) == -1) {   
+      fprintf(stderr, "\nUnable to determine kernel architecture.\n");
+      abort();
+   }
+    
+   if ((spl->kbitness = get_bitness(spl->karch)) == 0) {
+      fprintf(stderr, "\nUnable to determine kernel bitness.\n");
+      abort();
+   }
+
+   if (sysinfo(SI_ARCHITECTURE_NATIVE,spl->earch,8) == -1) {
+      fprintf(stderr, "\nUnable to determine architecture of this program.\n");
+      abort();
+   }
+
+   if ((spl->ebitness = get_bitness(spl->earch)) == 0) {
+      fprintf(stderr, "\nUnable to determine bitness of this program.\n");
       abort();
    }
 
@@ -199,6 +249,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    int                 nswap = 0;
    char                *spath = NULL; 
    char                *spathbase = NULL;
+   htop_vmusage64_t    *vmu_vals64 = NULL;
    vmusage_t           *vmu_vals = NULL;
    size_t              nvmu_vals = 1;
    size_t              real_sys_used = 0;
@@ -222,20 +273,34 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
             spl->sysusedmem  = 0;
          } else {
             // htop is running in a non-global zone, so only report mem stats for this zone
-            if ((vmu_vals = (vmusage_t *)calloc(1,sizeof(vmusage_t))) != NULL) {
-               if (getvmusage(VMUSAGE_ZONE, 0, vmu_vals, &nvmu_vals) == 0) { 
-                  pl->totalMem    = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
-                  spl->zmaxmem    = 0; // Quota minus pl->usedMem
-                  real_sys_used = (totalmem_pgs->value.ui64 - freemem_pgs->value.ui64) * PAGE_SIZE_KB;
-                  if ( real_sys_used > spl->zmaxmem ) {
-                     spl->sysusedmem = real_sys_used - spl->zmaxmem;
-                  } else {
-                     spl->sysusedmem = 0;
-                  }
-                  pl->usedMem     = vmu_vals[0].vmu_rss_all / 1024; // Returned in bytes, should be KiB for htop
-               }
-               free(vmu_vals);
+            pl->totalMem    = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
+            spl->zmaxmem    = 0;
+            real_sys_used   = (totalmem_pgs->value.ui64 - freemem_pgs->value.ui64) * PAGE_SIZE_KB;
+            vmu_vals        = (vmusage_t *)calloc(1,sizeof(vmusage_t));
+            vmu_vals64      = (htop_vmusage64_t *)calloc(1,sizeof(htop_vmusage64_t));
+
+            if ( spl->kbitness == spl->ebitness ) {
+               // htop is kernel-native bitness, 32 or 64
+               getvmusage(VMUSAGE_ZONE, 1, vmu_vals, &nvmu_vals); 
+               pl->usedMem  = vmu_vals[0].vmu_rss_all / 1024; // Returned in bytes, should be KiB for htop
+            } else if ( spl->kbitness == 64 ) {
+               // htop is not kernel native bitness, e.g. 32-bit htop with a 64-bit kernel
+               getvmusage(VMUSAGE_ZONE, 1, vmu_vals64, &nvmu_vals);
+               pl->usedMem  = vmu_vals64[0].vmu_rss_all / 1024; // Returned in bytes, should be KiB for htop
+            } else {
+               // Huh?  64-bit app on a 32-bit kernel?  Nope.  Maybe it's 2030 and 128-bit architectures
+               // are now a thing?
+               pl->usedMem  = 0;
             }
+               
+            if ( real_sys_used > spl->zmaxmem ) {
+               spl->sysusedmem = real_sys_used - spl->zmaxmem;
+            } else {
+               spl->sysusedmem = 0;
+            }
+
+            free(vmu_vals);
+            free(vmu_vals64);
          }
       }
    }  
@@ -270,6 +335,8 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
 void ProcessList_delete(ProcessList* pl) {
    SolarisProcessList* spl = (SolarisProcessList*) pl;
    ProcessList_done(pl);
+   free(spl->earch);
+   free(spl->karch);
    free(spl->cpus);
    kstat_close(spl->kd);
    free(spl);
