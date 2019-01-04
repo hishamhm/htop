@@ -21,7 +21,7 @@ in the source distribution for its full text.
 }*/
 
 int SolarisMemoryMeter_attributes[] = {
-   COLOR_MEMORY_USED, COLOR_MEMORY_BUFFERS, COLOR_MEMORY_CACHE
+   COLOR_MEMORY_USED, COLOR_MEMORY_BUFFERS, COLOR_PROCESS_SHADOW
 };
 
 static void SolarisMemoryMeter_updateValues(Meter* this, char* buffer, int size) {
@@ -51,7 +51,7 @@ static void SolarisMemoryMeter_display(Object* cast, RichString* out) {
    RichString_append(out, CRT_colors[COLOR_MEMORY_BUFFERS_TEXT], buffer);
    Meter_humanUnit(buffer, this->values[2], 50);
    RichString_append(out, CRT_colors[COLOR_METER_TEXT], " system used:");
-   RichString_append(out, CRT_colors[COLOR_MEMORY_CACHE], buffer);
+   RichString_append(out, CRT_colors[COLOR_PROCESS_SHADOW], buffer);
 }
 
 MeterClass SolarisMemoryMeter_class = {
