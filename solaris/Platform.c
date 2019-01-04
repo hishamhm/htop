@@ -208,10 +208,11 @@ double Platform_setCPUValues(Meter* this, int cpu) {
 
 void Platform_setMemoryValues(Meter* this) {
    ProcessList* pl = (ProcessList*) this->pl;
+   SolarisProcessList* spl = (SolarisProcessList*) this->pl;
    this->total = pl->totalMem;
    this->values[0] = pl->usedMem;
-   this->values[1] = pl->buffersMem;
-   this->values[2] = pl->cachedMem;
+   this->values[1] = spl->zmaxmem;
+   this->values[2] = spl->sysusedmem;
 }
 
 void Platform_setSwapValues(Meter* this) {
