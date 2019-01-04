@@ -10,7 +10,7 @@ in the source distribution for its full text.
 #include "Platform.h"
 #include "Meter.h"
 #include "CPUMeter.h"
-#include "MemoryMeter.h"
+#include "SolarisMemoryMeter.h"
 #include "SwapMeter.h"
 #include "TasksMeter.h"
 #include "LoadAverageMeter.h"
@@ -110,7 +110,7 @@ MeterClass* Platform_meterTypes[] = {
    &ClockMeter_class,
    &LoadAverageMeter_class,
    &LoadMeter_class,
-   &MemoryMeter_class,
+   &SolarisMemoryMeter_class,
    &SwapMeter_class,
    &TasksMeter_class,
    &BatteryMeter_class,
