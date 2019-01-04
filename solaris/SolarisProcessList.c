@@ -57,8 +57,8 @@ typedef struct SolarisProcessList_ {
    kstat_ctl_t* kd;
    CPUData* cpus;
    zoneid_t this_zone;
-   size_t zone_used_phys;
-   size_t zone_max_phys;
+   size_t zmaxmem;
+   size_t sysusedmem;
 } SolarisProcessList;
 
 }*/
@@ -222,20 +222,16 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
             pl->totalMem   = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
             pl->usedMem    = (totalmem_pgs->value.ui64 - freemem_pgs->value.ui64) * PAGE_SIZE_KB;
             // Not sure how to implement these on Solaris - suggestions welcome!
-            pl->buffersMem = 0;     
-            pl->cachedMem  = 0;
-            spl->zone_used_phys = 0;
-            spl->zone_max_phys  = 0;
+            spl->zmaxmem = 0;
+            spl->sysusedmem  = 0;
          } else {
             // htop is running in a non-global zone, so only report mem stats for this zone
             if ((vmu_vals = (vmusage_t *)calloc(1,sizeof(vmusage_t))) != NULL) {
                if (getvmusage(VMUSAGE_ZONE, 0, vmu_vals, &nvmu_vals) == 0) { 
-                  pl->totalMem   = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
-                  pl->usedMem    = (totalmem_pgs->value.ui64 - freemem_pgs->value.ui64) * PAGE_SIZE_KB;
-                  // Not sure how to implement these on Solaris - suggestions welcome!
-                  pl->buffersMem = 0;       
-                  pl->cachedMem  = 0;
-                  spl->zone_used_phys = vmu_vals[0].vmu_rss_all / 1024; // Returned in bytes, should be KiB for htop
+                  pl->totalMem    = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
+                  spl->zmaxmem    = 0;
+                  spl->sysusedmem = (totalmem_pgs->value.ui64 - freemem_pgs->value.ui64) * PAGE_SIZE_KB;
+                  pl->usedMem     = vmu_vals[0].vmu_rss_all / 1024; // Returned in bytes, should be KiB for htop
                }
                free(vmu_vals);
             }
