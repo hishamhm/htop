@@ -407,6 +407,7 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
       proc->user            = UsersTable_getRef(pl->usersTable, proc->st_uid);
       proc->comm            = xStrdup(_psinfo->pr_fname);
       proc->commLen         = strnlen(_psinfo->pr_fname,PRFNSZ);
+      sproc->dmodel         = _psinfo->pr_dmodel;
    }
 
    // End common code pass 1
