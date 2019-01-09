@@ -34,7 +34,8 @@ typedef enum SolarisProcessFields {
    CONTID = 105,
    LWPID = 106,
    DM = 107,
-   LAST_PROCESSFIELD = 108,
+   PSEC = 108, 
+   LAST_PROCESSFIELD = 109,
 } SolarisProcessField;
 
 
@@ -52,6 +53,7 @@ typedef struct SolarisProcess_ {
    pid_t      realppid;
    pid_t      lwpid;
    char       dmodel;
+   secflagset_t esecflags;
 } SolarisProcess;
 
 
@@ -62,6 +64,8 @@ typedef struct SolarisProcess_ {
 #ifndef Process_isUserlandThread
 #define Process_isUserlandThread(_process) (_process->pid != _process->tgid)
 #endif
+
+#define PROC_SEC_UNAVAIL 0xFFFFFFFFFFFFFFFF
 
 }*/
 
@@ -108,6 +112,7 @@ ProcessFieldData Process_fields[] = {
    [CONTID] = { .name = "CONTID", .title = " CNTID ", .description = "Contract ID", .flags = 0, },
    [LWPID] = { .name = "LWPID", .title = " LWPID ", .description = "LWP ID", .flags = 0, },
    [DM] = { .name = "DM", .title = "DM ", .description = "Data Model (32- or 64-bit)", .flags = 0, },
+   [PSEC] = { .name = "PSEC", .title = "PSEC ", .description = "Process Security Flags (ASLR, Forbidnullmap, Noexecstack)", .flags = 0, },
    [LAST_PROCESSFIELD] = { .name = "*** report bug! ***", .title = NULL, .description = NULL, .flags = 0, },
 };
 
@@ -174,6 +179,31 @@ void SolarisProcess_writeField(Process* this, RichString* str, ProcessField fiel
       }
       break;
    }
+   case PSEC:{
+      if (sp->esecflags == PROC_SEC_UNAVAIL) {
+         xSnprintf(buffer, n, "     ");
+      } else {
+         buffer[0] = ' ';
+         if (secflag_isset(sp->esecflags,PROC_SEC_ASLR)) {
+            buffer[1] = 'A';
+         } else {
+            buffer[1] = '-';
+         }
+         if (secflag_isset(sp->esecflags,PROC_SEC_FORBIDNULLMAP)) {
+            buffer[2] = 'F';
+         } else {
+            buffer[2] = '-';
+         }
+         if (secflag_isset(sp->esecflags,PROC_SEC_NOEXECSTACK)) {
+            buffer[3] = 'N';
+         } else {
+            buffer[3] = '-';
+         } 
+         buffer[4] = ' ';
+         buffer[5] = '\0';
+      }
+      break;
+   }
    default:
       Process_writeField(this, str, field);
       return;
@@ -212,6 +242,8 @@ long SolarisProcess_compare(const void* v1, const void* v2) {
       return (p1->lwpid - p2->lwpid);
    case DM:
       return (p1->dmodel - p2->dmodel);
+   case PSEC:
+      return (p1->esecflags - p2->esecflags);
    default:
       return Process_compare(v1, v2);
    }
