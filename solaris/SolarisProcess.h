@@ -45,7 +45,9 @@ typedef struct SolarisProcess_ {
    pid_t      realppid;
    pid_t      lwpid;
    char       dmodel;
+#ifdef PRSECFLAGS_VERSION_1
    secflagset_t esecflags;
+#endif
 } SolarisProcess;
 
 
