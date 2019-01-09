@@ -377,10 +377,12 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
    Process *proc             = ProcessList_getProcess(pl, getpid, &preExisting, (Process_New) SolarisProcess_new);
    SolarisProcess *sproc     = (SolarisProcess*) proc;
    struct ps_prochandle *ph  = Pgrab(_psinfo->pr_pid,PGRAB_RDONLY,&perr);
+#ifdef PRSECFLAGS_VERSION_1
    prsecflags_t *psf         = NULL;
    if (!perr) {
       psferr = Psecflags(ph,&psf);
    } 
+#endif
    gettimeofday(&tv, NULL);
 
    // Common code pass 1
@@ -404,12 +406,14 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
    proc->m_resident         = _psinfo->pr_rssize/PAGE_SIZE_KB;
    proc->m_size             = _psinfo->pr_size/PAGE_SIZE_KB;
    proc->user               = UsersTable_getRef(pl->usersTable, proc->st_uid);
+#ifdef PRSECFLAGS_VERSION_1
    if (!psferr) {
       sproc->esecflags      = psf->pr_effective;
       Psecflags_free(psf);
    } else {
       sproc->esecflags      = PROC_SEC_UNAVAIL;
    }
+#endif
    if (!preExisting) {
       sproc->realpid        = _psinfo->pr_pid;
       sproc->lwpid          = lwpid_real;

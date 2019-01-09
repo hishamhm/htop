@@ -53,7 +53,9 @@ typedef struct SolarisProcess_ {
    pid_t      realppid;
    pid_t      lwpid;
    char       dmodel;
+#ifdef PRSECFLAGS_VERSION_1
    secflagset_t esecflags;
+#endif
 } SolarisProcess;
 
 
@@ -180,8 +182,11 @@ void SolarisProcess_writeField(Process* this, RichString* str, ProcessField fiel
       break;
    }
    case PSEC:{
+#ifdef PRSECFLAGS_VERSION_1
       if (sp->esecflags == PROC_SEC_UNAVAIL) {
+#endif
          xSnprintf(buffer, n, "     ");
+#ifdef PRSECFLAGS_VERSION_1
       } else {
          buffer[0] = ' ';
          if (secflag_isset(sp->esecflags,PROC_SEC_ASLR)) {
@@ -202,6 +207,7 @@ void SolarisProcess_writeField(Process* this, RichString* str, ProcessField fiel
          buffer[4] = ' ';
          buffer[5] = '\0';
       }
+#endif
       break;
    }
    default:
@@ -243,7 +249,11 @@ long SolarisProcess_compare(const void* v1, const void* v2) {
    case DM:
       return (p1->dmodel - p2->dmodel);
    case PSEC:
+#ifdef PRSECFLAGS_VERSION_1
       return (p1->esecflags - p2->esecflags);
+#else
+      return 0;
+#endif
    default:
       return Process_compare(v1, v2);
    }
