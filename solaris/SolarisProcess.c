@@ -22,6 +22,7 @@ in the source distribution for its full text.
 #include <zone.h>
 #include <sys/proc.h>
 #include <libproc.h>
+#include <sys/procfs.h>
 
 typedef enum SolarisProcessFields {
    // Add platform-specific fields here, with ids >= 100
@@ -32,7 +33,8 @@ typedef enum SolarisProcessFields {
    POOLID = 104,
    CONTID = 105,
    LWPID = 106,
-   LAST_PROCESSFIELD = 107,
+   DM = 107,
+   LAST_PROCESSFIELD = 108,
 } SolarisProcessField;
 
 
@@ -105,6 +107,7 @@ ProcessFieldData Process_fields[] = {
    [POOLID] = { .name = "POOLID", .title = " POLID ", .description = "Pool ID", .flags = 0, },
    [CONTID] = { .name = "CONTID", .title = " CNTID ", .description = "Contract ID", .flags = 0, },
    [LWPID] = { .name = "LWPID", .title = " LWPID ", .description = "LWP ID", .flags = 0, },
+   [DM] = { .name = "DM", .title = "DM ", .description = "Data Model (32- or 64-bit)", .flags = 0, },
    [LAST_PROCESSFIELD] = { .name = "*** report bug! ***", .title = NULL, .description = NULL, .flags = 0, },
 };
 
@@ -151,7 +154,7 @@ void SolarisProcess_writeField(Process* this, RichString* str, ProcessField fiel
    case POOLID: xSnprintf(buffer, n, Process_pidFormat, sp->poolid); break;
    case CONTID: xSnprintf(buffer, n, Process_pidFormat, sp->contid); break;
    case ZONE:{
-      xSnprintf(buffer, n, "%-*s ", ZONENAME_MAX/4, sp->zname); break;
+      xSnprintf(buffer, n, "%-*s ", ZONENAME_MAX/4, sp->zname);
       if (buffer[ZONENAME_MAX/4] != '\0') {
          buffer[ZONENAME_MAX/4] = ' ';
          buffer[(ZONENAME_MAX/4)+1] = '\0';
@@ -161,6 +164,16 @@ void SolarisProcess_writeField(Process* this, RichString* str, ProcessField fiel
    case PID: xSnprintf(buffer, n, Process_pidFormat, sp->realpid); break;
    case PPID: xSnprintf(buffer, n, Process_pidFormat, sp->realppid); break;
    case LWPID: xSnprintf(buffer, n, Process_pidFormat, sp->lwpid); break;
+   case DM:{
+      if (sp->dmodel == PR_MODEL_ILP32) {
+         xSnprintf(buffer, n, "32 ");
+      } else if (sp->dmodel == PR_MODEL_LP64) {
+         xSnprintf(buffer, n, "64 ");
+      } else {
+         xSnprintf(buffer, n, "?? ");
+      }
+      break;
+   }
    default:
       Process_writeField(this, str, field);
       return;
@@ -197,6 +210,8 @@ long SolarisProcess_compare(const void* v1, const void* v2) {
       return (p1->realppid - p2->realppid);
    case LWPID:
       return (p1->lwpid - p2->lwpid);
+   case DM:
+      return (p1->dmodel - p2->dmodel);
    default:
       return Process_compare(v1, v2);
    }
