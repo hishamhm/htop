@@ -26,7 +26,8 @@ typedef enum SolarisProcessFields {
    CONTID = 105,
    LWPID = 106,
    DM = 107,
-   LAST_PROCESSFIELD = 108,
+   PSEC = 108, 
+   LAST_PROCESSFIELD = 109,
 } SolarisProcessField;
 
 
@@ -44,6 +45,7 @@ typedef struct SolarisProcess_ {
    pid_t      realppid;
    pid_t      lwpid;
    char       dmodel;
+   secflagset_t esecflags;
 } SolarisProcess;
 
 
@@ -54,6 +56,8 @@ typedef struct SolarisProcess_ {
 #ifndef Process_isUserlandThread
 #define Process_isUserlandThread(_process) (_process->pid != _process->tgid)
 #endif
+
+#define PROC_SEC_UNAVAIL 0xFFFFFFFFFFFFFFFF
 
 
 extern ProcessClass SolarisProcess_class;
