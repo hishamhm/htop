@@ -398,13 +398,13 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
    proc->tty_nr             = _psinfo->pr_ttydev;
    proc->m_resident         = _psinfo->pr_rssize/PAGE_SIZE_KB;
    proc->m_size             = _psinfo->pr_size/PAGE_SIZE_KB;
+   proc->user               = UsersTable_getRef(pl->usersTable, proc->st_uid);
 
    if (!preExisting) {
       sproc->realpid        = _psinfo->pr_pid;
       sproc->lwpid          = lwpid_real;
       sproc->zoneid         = _psinfo->pr_zoneid;
       sproc->zname          = SolarisProcessList_readZoneName(spl->kd,sproc); 
-      proc->user            = UsersTable_getRef(pl->usersTable, proc->st_uid);
       proc->comm            = xStrdup(_psinfo->pr_fname);
       proc->commLen         = strnlen(_psinfo->pr_fname,PRFNSZ);
       sproc->dmodel         = _psinfo->pr_dmodel;
