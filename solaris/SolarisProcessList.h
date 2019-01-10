@@ -5,7 +5,7 @@
 /*
 htop - SolarisProcessList.h
 (C) 2014 Hisham H. Muhammad
-(C) 2017,2018 Guy M. Broome
+(C) 2017-2019 Guy M. Broome
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
@@ -52,6 +52,8 @@ typedef struct SolarisProcessList_ {
 
 
 // Used in case htop is 32-bit but we're on a 64-bit kernel
+// in which case it is needed to correct case zone memory
+// usage info
 
 char* SolarisProcessList_readZoneName(kstat_ctl_t* kd, SolarisProcess* sproc);
 
