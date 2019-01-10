@@ -419,9 +419,7 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
    proc->st_uid             = _psinfo->pr_euid;
    proc->pgrp               = _psinfo->pr_pgid;
    proc->nlwp               = _psinfo->pr_nlwp;
-   // tty_nr does not currently work correctly, as Solaris and illumos have larger
-   // dev_t (ulong_t) than the portable htop code allows (unsigned int).
-   proc->tty_nr             = _psinfo->pr_ttydev;
+   sproc->sol_tty_nr        = _psinfo->pr_ttydev;
    proc->m_resident         = _psinfo->pr_rssize/PAGE_SIZE_KB;
    proc->m_size             = _psinfo->pr_size/PAGE_SIZE_KB;
    proc->user               = UsersTable_getRef(pl->usersTable, proc->st_uid);

@@ -27,7 +27,8 @@ typedef enum SolarisProcessFields {
    LWPID = 106,
    DM = 107,
    PSEC = 108,
-   LAST_PROCESSFIELD = 109,
+   SOLTTY_NR = 109, 
+   LAST_PROCESSFIELD = 110,
 } SolarisProcessField;
 
 
@@ -45,6 +46,7 @@ typedef struct SolarisProcess_ {
    pid_t      realppid;
    pid_t      lwpid;
    char       dmodel;
+   dev_t      sol_tty_nr;
 #ifdef PRSECFLAGS_VERSION_1
    secflagset_t esecflags;
 #endif
