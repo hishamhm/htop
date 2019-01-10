@@ -35,7 +35,8 @@ typedef enum SolarisProcessFields {
    LWPID = 106,
    DM = 107,
    PSEC = 108,
-   LAST_PROCESSFIELD = 109,
+   SOLTTY_NR = 109, 
+   LAST_PROCESSFIELD = 110,
 } SolarisProcessField;
 
 
@@ -53,6 +54,7 @@ typedef struct SolarisProcess_ {
    pid_t      realppid;
    pid_t      lwpid;
    char       dmodel;
+   dev_t      sol_tty_nr;
 #ifdef PRSECFLAGS_VERSION_1
    secflagset_t esecflags;
 #endif
@@ -89,7 +91,7 @@ ProcessFieldData Process_fields[] = {
    [PPID] = { .name = "PPID", .title = "   PPID ", .description = "Parent process ID", .flags = 0, },
    [PGRP] = { .name = "PGRP", .title = "   PGRP ", .description = "Process group ID", .flags = 0, },
    [SESSION] = { .name = "SESSION", .title = "    SID ", .description = "Process's session ID", .flags = 0, },
-   [TTY_NR] = { .name = "TTY_NR", .title = "    TTY ", .description = "Controlling terminal", .flags = 0, },
+   [SOLTTY_NR] = { .name = "TTY_NR", .title = "      TTY ", .description = "Controlling terminal", .flags = 0, },
    [TPGID] = { .name = "TPGID", .title = "  TPGID ", .description = "Process ID of the fg process group of the controlling terminal", .flags = 0, },
    [MINFLT] = { .name = "MINFLT", .title = "     MINFLT ", .description = "Number of minor faults which have not required loading a memory page from disk", .flags = 0, },
    [MAJFLT] = { .name = "MAJFLT", .title = "     MAJFLT ", .description = "Number of major faults which have required loading a memory page from disk", .flags = 0, },
@@ -210,6 +212,14 @@ void SolarisProcess_writeField(Process* this, RichString* str, ProcessField fiel
 #endif
       break;
    }
+   case SOLTTY_NR:{
+      if ((major(sp->sol_tty_nr) < 10000) && (minor(sp->sol_tty_nr) < 10000)) {
+         xSnprintf(buffer, n, "%4lu:%4lu ", major(sp->sol_tty_nr), minor(sp->sol_tty_nr));
+      } else {
+         xSnprintf(buffer, n, "          ");
+      }
+      break;
+   }
    default:
       Process_writeField(this, str, field);
       return;
@@ -254,6 +264,8 @@ long SolarisProcess_compare(const void* v1, const void* v2) {
 #else
       return 0;
 #endif
+   case SOLTTY_NR:
+      return (p1->sol_tty_nr - p2->sol_tty_nr);
    default:
       return Process_compare(v1, v2);
    }
