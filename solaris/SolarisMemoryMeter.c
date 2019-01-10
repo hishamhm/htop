@@ -60,7 +60,7 @@ MeterClass SolarisMemoryMeter_class = {
       .delete = Meter_delete,
       .display = SolarisMemoryMeter_display,
    },
-   .updateValues = SolarisMemoryMeter_updateValues, 
+   .updateValues = SolarisMemoryMeter_updateValues,
    .defaultMode = BAR_METERMODE,
    .maxItems = 3,
    .total = 100.0,

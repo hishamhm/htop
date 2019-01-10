@@ -1,7 +1,7 @@
 /*
 htop - SolarisProcessList.c
 (C) 2014 Hisham H. Muhammad
-(C) 2017,2018 Guy M. Broome
+(C) 2017-2019 Guy M. Broome
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
@@ -69,6 +69,8 @@ typedef struct SolarisProcessList_ {
 }*/
 
 // Used in case htop is 32-bit but we're on a 64-bit kernel
+// in which case it is needed to correct case zone memory
+// usage info
 typedef struct htop_vmusage64 {
 	id_t vmu_zoneid;
 	uint_t vmu_type;
@@ -83,7 +85,7 @@ typedef struct htop_vmusage64 {
 } htop_vmusage64_t;
 
 static uint_t get_bitness(const char *isa) {
-   if (strcmp(isa, "sparc") == 0 || strcmp(isa, "i386") == 0) return (32); 
+   if (strcmp(isa, "sparc") == 0 || strcmp(isa, "i386") == 0) return (32);
    if (strcmp(isa, "sparcv9") == 0 || strcmp(isa, "amd64") == 0) return (64);
    return (0);
 }
@@ -128,11 +130,11 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
 
    // Various info on the architecture of the kernel and the current binary
    // which is needed to correctly get zone memory usage and limit info
-   if (sysinfo(SI_ARCHITECTURE_K,spl->karch,8) == -1) {   
+   if (sysinfo(SI_ARCHITECTURE_K,spl->karch,8) == -1) {
       fprintf(stderr, "\nUnable to determine kernel architecture.\n");
       abort();
    }
-    
+
    if ((spl->kbitness = get_bitness(spl->karch)) == 0) {
       fprintf(stderr, "\nUnable to determine kernel bitness.\n");
       abort();
@@ -283,7 +285,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
 
             if ( spl->kbitness == spl->ebitness ) {
                // htop is kernel-native bitness, 32 or 64
-               getvmusage(VMUSAGE_ZONE, 0, vmu_vals, &nvmu_vals); 
+               getvmusage(VMUSAGE_ZONE, 0, vmu_vals, &nvmu_vals);
                pl->usedMem  = vmu_vals[0].vmu_rss_all / 1024; // Returned in bytes, should be KiB for htop
             } else if ( spl->kbitness == 64 ) {
                // htop is not kernel native bitness, e.g. 32-bit htop with a 64-bit kernel
@@ -295,10 +297,10 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
                pl->usedMem  = 0;
             }
 
-            ret = zone_getattr(spl->this_zone,ZONE_ATTR_PHYS_MCAP,&zramcap,sizeof(zramcap)); 
+            ret = zone_getattr(spl->this_zone,ZONE_ATTR_PHYS_MCAP,&zramcap,sizeof(zramcap));
             if ( ret < 0 ) zramcap = 0;
 
-            spl->zmaxmem = zramcap / 1024;               
+            spl->zmaxmem = zramcap / 1024;
             if ( real_sys_used > spl->zmaxmem ) {
                spl->sysusedmem = real_sys_used - spl->zmaxmem;
             } else {
@@ -309,8 +311,8 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
             free(vmu_vals64);
          }
       }
-   }  
- 
+   }
+
    // Part 2 - swap
    if ( (nswap = swapctl(SC_GETNSWP, NULL)) > 0) {
       if ( (sl = xMalloc((nswap * sizeof(swapent_t)) + sizeof(int))) != NULL) {
@@ -355,37 +357,52 @@ void ProcessList_delete(ProcessList* pl) {
  */ 
 
 int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *listptr) {
+   ProcessList *pl = (ProcessList*) listptr;
+   SolarisProcessList *spl = (SolarisProcessList*) listptr;
    struct timeval tv;
    struct tm date;
    bool preExisting;
    pid_t getpid;
-
-   // Setup process list
-   ProcessList *pl = (ProcessList*) listptr;
-   SolarisProcessList *spl = (SolarisProcessList*) listptr;
    int perr = -1;
    int psferr = -1;
+
+   // Setup for using pseudo-PIDs in the htop process table while
+   // displaying the real PIDs in user output, since LWPs don't have
+   // unique PIDs on Solaris or illumos
+   // NOTE: LWPIDs greater than 1023 on a given process will not be
+   //   listed by htop, due to size limits of the pid_t field.  I
+   //   don't currently see any way around this.  Suggestions welcome.
    id_t lwpid_real = _lwpsinfo->pr_lwpid;
    if (lwpid_real > 1023) return 0;
    pid_t lwpid   = (_psinfo->pr_pid * 1024) + lwpid_real;
    bool onMasterLWP = (_lwpsinfo->pr_lwpid == _psinfo->pr_lwp.pr_lwpid);
    if (onMasterLWP) {
+      // Left-shifting the top level PID, while subordinate
+      // LWPs have that base plus the LWPID as their "htop PID."
+      // This gives us unique PIDs per-LWP for the htop PID table
+      // _with correct sorting_ at the cost of the 1023 LWP limit.
       getpid = _psinfo->pr_pid * 1024;
    } else {
       getpid = lwpid;
    } 
+
+   // Can't do this until we have done the pseudo-PID setup above
    Process *proc             = ProcessList_getProcess(pl, getpid, &preExisting, (Process_New) SolarisProcess_new);
    SolarisProcess *sproc     = (SolarisProcess*) proc;
-   struct ps_prochandle *ph  = Pgrab(_psinfo->pr_pid,PGRAB_RDONLY,&perr);
+
+   // Grab a read-only process handle.  Only used for getting
+   // process security flags at the moment, and that only works
+   // on illumos.
 #ifdef PRSECFLAGS_VERSION_1
+   struct ps_prochandle *ph  = Pgrab(_psinfo->pr_pid,PGRAB_RDONLY,&perr);
    prsecflags_t *psf         = NULL;
    if (!perr) {
       psferr = Psecflags(ph,&psf);
-   } 
+   }
 #endif
    gettimeofday(&tv, NULL);
 
-   // Common code pass 1
+   // For new and existing entries in the htop proc table for all LWPs
    proc->show               = false;
    sproc->taskid            = _psinfo->pr_taskid;
    sproc->projid            = _psinfo->pr_projid;
@@ -402,18 +419,22 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
    proc->st_uid             = _psinfo->pr_euid;
    proc->pgrp               = _psinfo->pr_pgid;
    proc->nlwp               = _psinfo->pr_nlwp;
+   // tty_nr does not currently work correctly, as Solaris and illumos have larger
+   // dev_t (ulong_t) than the portable htop code allows (unsigned int).
    proc->tty_nr             = _psinfo->pr_ttydev;
    proc->m_resident         = _psinfo->pr_rssize/PAGE_SIZE_KB;
    proc->m_size             = _psinfo->pr_size/PAGE_SIZE_KB;
    proc->user               = UsersTable_getRef(pl->usersTable, proc->st_uid);
-#ifdef PRSECFLAGS_VERSION_1
+#ifdef PRSECFLAGS_VERSION_1 // illumos only
    if (!psferr) {
       sproc->esecflags      = psf->pr_effective;
       Psecflags_free(psf);
    } else {
       sproc->esecflags      = PROC_SEC_UNAVAIL;
    }
+   if (!perr) Pfree(ph);
 #endif
+   // For new htop proc table entries only, for all LWPs
    if (!preExisting) {
       sproc->realpid        = _psinfo->pr_pid;
       sproc->lwpid          = lwpid_real;
@@ -424,18 +445,16 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
       sproc->dmodel         = _psinfo->pr_dmodel;
    }
 
-   if (!perr) Pfree(ph);
-
-   // End common code pass 1
-
-   if (onMasterLWP) { // Are we on the representative LWP?
+   // For new and existing entries in the htop proc table, but only for rep. LWP 
+   if (onMasterLWP) {
       proc->ppid            = (_psinfo->pr_ppid * 1024);
       proc->tgid            = (_psinfo->pr_ppid * 1024);
       sproc->realppid       = _psinfo->pr_ppid;
       // See note above (in common section) about this BINARY FRACTION
       proc->percent_cpu     = ((uint16_t)_psinfo->pr_pctcpu/(double)32768)*(double)100.0;
       proc->time            = (_psinfo->pr_time.tv_sec * 100) + (_psinfo->pr_time.tv_nsec / 10000000);
-      if(!preExisting) { // Tasks done only for NEW processes
+      // For existing htop proc table entries, and only for rep. LWP
+      if(!preExisting) {
          sproc->is_lwp = false;
          proc->starttime_ctime = _psinfo->pr_start.tv_sec;
       }
@@ -455,10 +474,12 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
          }
       }
       proc->show = !(pl->settings->hideKernelThreads && sproc->kernel);
-   } else { // We are not in the master LWP, so jump to the LWP handling code
+   } else {
+   // For new and existing entries in the htop proc table, but only for non-rep. LWPs
       proc->percent_cpu        = ((uint16_t)_lwpsinfo->pr_pctcpu/(double)32768)*(double)100.0;
       proc->time               = (_lwpsinfo->pr_time.tv_sec * 100) + (_lwpsinfo->pr_time.tv_nsec / 10000000);
-      if (!preExisting) { // Tasks done only for NEW LWPs
+      // For existing proc table entries, but only for non-rep. LWPs
+      if (!preExisting) {
          sproc->is_lwp         = true; 
          proc->basenameOffset  = -1;
          proc->ppid            = _psinfo->pr_pid * 1024;
@@ -470,10 +491,9 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
       // Top-level process only gets this for the representative LWP
       if (sproc->kernel  && !pl->settings->hideKernelThreads)   proc->show = true;
       if (!sproc->kernel && !pl->settings->hideUserlandThreads) proc->show = true;
-   } // Top-level LWP or subordinate LWP
+   }
 
-   // Common code pass 2
-
+   // For new entries only, for all LWPs
    if (!preExisting) {
       if ((sproc->realppid <= 0) && !(sproc->realpid <= 1)) {
          sproc->kernel = true;
@@ -485,8 +505,6 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
       ProcessList_add(pl, proc);
    }
    proc->updated = true;
-
-   // End common code pass 2
 
    return 0;
 }

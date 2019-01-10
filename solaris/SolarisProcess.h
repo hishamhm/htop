@@ -5,7 +5,7 @@
 /*
 htop - SolarisProcess.h
 (C) 2015 Hisham H. Muhammad
-(C) 2017,2018 Guy M. Broome
+(C) 2017-2019 Guy M. Broome
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
@@ -26,7 +26,7 @@ typedef enum SolarisProcessFields {
    CONTID = 105,
    LWPID = 106,
    DM = 107,
-   PSEC = 108, 
+   PSEC = 108,
    LAST_PROCESSFIELD = 109,
 } SolarisProcessField;
 
