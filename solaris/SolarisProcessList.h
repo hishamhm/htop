@@ -44,15 +44,13 @@ typedef struct SolarisProcessList_ {
    zoneid_t this_zone;
    size_t zmaxmem;
    size_t sysusedmem;
-   char* karch;
-   uint_t kbitness;
-   char* earch;
-   uint_t ebitness;
+   bool samearch;
+   bool karch64;
 } SolarisProcessList;
 
 
 // Used in case htop is 32-bit but we're on a 64-bit kernel
-// in which case it is needed to correct case zone memory
+// in which case it is needed to correctly cast zone memory
 // usage info
 
 char* SolarisProcessList_readZoneName(kstat_ctl_t* kd, SolarisProcess* sproc);

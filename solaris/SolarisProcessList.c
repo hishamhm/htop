@@ -60,10 +60,8 @@ typedef struct SolarisProcessList_ {
    zoneid_t this_zone;
    size_t zmaxmem;
    size_t sysusedmem;
-   char* karch;
-   uint_t kbitness;
-   char* earch;
-   uint_t ebitness;
+   bool samearch;
+   bool karch64;
 } SolarisProcessList;
 
 }*/
@@ -109,6 +107,10 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    ProcessList_init(pl, Class(SolarisProcess), usersTable, pidWhiteList, userId);
    spl->kd = NULL;
    pl->cpuCount = 0;
+   char* karch;
+   uint_t kbitness;
+   char* earch;
+   uint_t ebitness;
 
    // Failing to obtain a kstat handle is is fatal
    if ( (spl->kd = kstat_open()) == NULL ) {
@@ -125,27 +127,27 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    // Get the zone of the running htop process.
    spl->this_zone = getzoneid();
 
-   spl->karch = (char *)calloc(8,sizeof(char));
-   spl->earch = (char *)calloc(8,sizeof(char));
+   karch = (char *)calloc(8,sizeof(char));
+   earch = (char *)calloc(8,sizeof(char));
 
    // Various info on the architecture of the kernel and the current binary
    // which is needed to correctly get zone memory usage and limit info
-   if (sysinfo(SI_ARCHITECTURE_K,spl->karch,8) == -1) {
+   if (sysinfo(SI_ARCHITECTURE_K,karch,8) == -1) {
       fprintf(stderr, "\nUnable to determine kernel architecture.\n");
       abort();
    }
 
-   if ((spl->kbitness = get_bitness(spl->karch)) == 0) {
+   if ((kbitness = get_bitness(karch)) == 0) {
       fprintf(stderr, "\nUnable to determine kernel bitness.\n");
       abort();
    }
 
-   if (sysinfo(SI_ARCHITECTURE_NATIVE,spl->earch,8) == -1) {
+   if (sysinfo(SI_ARCHITECTURE_NATIVE,earch,8) == -1) {
       fprintf(stderr, "\nUnable to determine architecture of this program.\n");
       abort();
    }
 
-   if ((spl->ebitness = get_bitness(spl->earch)) == 0) {
+   if ((ebitness = get_bitness(earch)) == 0) {
       fprintf(stderr, "\nUnable to determine bitness of this program.\n");
       abort();
    }
@@ -156,6 +158,14 @@ ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, ui
    } else {
       spl->cpus = xRealloc(spl->cpus, (pl->cpuCount + 1) * sizeof(CPUData));
    }
+
+   // These are the values actually used by the memory info update function,
+   // and since they are not going to change during the lifetime of a single
+   // htop process, we can pre-compute them here.
+   spl->samearch = (kbitness == ebitness);
+   spl->karch64  = (kbitness == 64);
+
+   free(earch); free(karch);
 
    return pl;
 }
@@ -283,11 +293,11 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
             vmu_vals        = (vmusage_t *)calloc(1,sizeof(vmusage_t));
             vmu_vals64      = (htop_vmusage64_t *)calloc(1,sizeof(htop_vmusage64_t));
 
-            if ( spl->kbitness == spl->ebitness ) {
+            if ( spl->samearch ) {
                // htop is kernel-native bitness, 32 or 64
                getvmusage(VMUSAGE_ZONE, 0, vmu_vals, &nvmu_vals);
                pl->usedMem  = vmu_vals[0].vmu_rss_all / 1024; // Returned in bytes, should be KiB for htop
-            } else if ( spl->kbitness == 64 ) {
+            } else if ( spl->karch64 ) {
                // htop is not kernel native bitness, e.g. 32-bit htop with a 64-bit kernel
                getvmusage(VMUSAGE_ZONE, 0, vmu_vals64, &nvmu_vals);
                pl->usedMem  = vmu_vals64[0].vmu_rss_all / 1024; // Returned in bytes, should be KiB for htop
@@ -343,8 +353,6 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
 void ProcessList_delete(ProcessList* pl) {
    SolarisProcessList* spl = (SolarisProcessList*) pl;
    ProcessList_done(pl);
-   free(spl->earch);
-   free(spl->karch);
    free(spl->cpus);
    kstat_close(spl->kd);
    free(spl);
