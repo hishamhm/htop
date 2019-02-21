@@ -230,5 +230,5 @@ long OpenBSDProcess_compare(const void* v1, const void* v2) {
 }
 
 bool Process_isThread(Process* this) {
-   return (Process_isKernelThread(this));
+   return (Process_isKernelThread(this) || Process_isUserlandThread(this));
 }

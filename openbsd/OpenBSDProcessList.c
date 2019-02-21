@@ -230,9 +230,7 @@ void ProcessList_goThroughEntries(ProcessList* this) {
 
    OpenBSDProcessList_scanMemoryInfo(this);
 
-   // use KERN_PROC_KTHREAD to also include kernel threads
-   struct kinfo_proc* kprocs = kvm_getprocs(opl->kd, KERN_PROC_ALL, 0, sizeof(struct kinfo_proc), &count);
-   //struct kinfo_proc* kprocs = getprocs(KERN_PROC_ALL, 0, &count);
+   struct kinfo_proc* kprocs = kvm_getprocs(opl->kd, KERN_PROC_KTHREAD | KERN_PROC_SHOW_THREADS, 0, sizeof(struct kinfo_proc), &count);
 
    gettimeofday(&tv, NULL);
 
@@ -240,16 +238,17 @@ void ProcessList_goThroughEntries(ProcessList* this) {
       kproc = &kprocs[i];
 
       preExisting = false;
-      proc = ProcessList_getProcess(this, kproc->p_pid, &preExisting, (Process_New) OpenBSDProcess_new);
+      proc = ProcessList_getProcess(this, kproc->p_tid == -1 ? kproc->p_pid : kproc->p_tid, &preExisting, (Process_New) OpenBSDProcess_new);
       fp = (OpenBSDProcess*) proc;
 
       proc->show = ! ((hideKernelThreads && Process_isKernelThread(proc))
                   || (hideUserlandThreads && Process_isUserlandThread(proc)));
 
       if (!preExisting) {
-         proc->ppid = kproc->p_ppid;
+         proc->ppid = kproc->p_tid == -1 ? kproc->p_ppid : kproc->p_pid;
          proc->tpgid = kproc->p_tpgid;
          proc->tgid = kproc->p_pid;
+         proc->pid = kproc->p_tid == -1 ? kproc->p_pid : kproc->p_tid;
          proc->session = kproc->p_sid;
          proc->tty_nr = kproc->p_tdev;
          proc->pgrp = kproc->p__pgid;
