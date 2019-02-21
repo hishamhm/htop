@@ -219,78 +219,108 @@ void ProcessList_goThroughEntries(ProcessList* this) {
    Settings* settings = this->settings;
    bool hideKernelThreads = settings->hideKernelThreads;
    bool hideUserlandThreads = settings->hideUserlandThreads;
-   struct kinfo_proc* kproc;
+   struct kinfo_proc *kproc, *kthr, *kproc_copy;
    bool preExisting;
+   bool singleThread;
    Process* proc;
    OpenBSDProcess* fp;
    int count = 0;
+   int nthreads = 0;
    int i;
+   int j;
 
    OpenBSDProcessList_scanMemoryInfo(this);
 
-   struct kinfo_proc* kprocs = kvm_getprocs(opl->kd, KERN_PROC_KTHREAD | KERN_PROC_SHOW_THREADS, 0, sizeof(struct kinfo_proc), &count);
+   struct kinfo_proc* kprocs = kvm_getprocs(opl->kd, KERN_PROC_KTHREAD | KERN_PROC_ALL, 0, sizeof(struct kinfo_proc), &count);
+
+   kproc_copy = xCalloc(sizeof(struct kinfo_proc), count);
+   memcpy((void *) kproc_copy, kprocs, sizeof(struct kinfo_proc) * count);
 
    for (i = 0; i < count; i++) {
-      kproc = &kprocs[i];
+      kproc = &kproc_copy[i];
 
-      preExisting = false;
-      proc = ProcessList_getProcess(this, kproc->p_tid == -1 ? kproc->p_pid : kproc->p_tid, &preExisting, (Process_New) OpenBSDProcess_new);
-      fp = (OpenBSDProcess*) proc;
+      struct kinfo_proc* kthreads = kvm_getprocs(opl->kd, KERN_PROC_PID | KERN_PROC_SHOW_THREADS, kproc->p_pid, sizeof(struct kinfo_proc), &nthreads);
 
-      proc->show = ! ((hideKernelThreads && Process_isKernelThread(proc))
-                  || (hideUserlandThreads && Process_isUserlandThread(proc)));
+      singleThread = true;
+      if (nthreads > 2) {
+         singleThread = false;
+      }
 
-      if (!preExisting) {
-         proc->ppid = kproc->p_tid == -1 ? kproc->p_ppid : kproc->p_pid;
-         proc->tpgid = kproc->p_tpgid;
-         proc->tgid = kproc->p_pid;
-         proc->pid = kproc->p_tid == -1 ? kproc->p_pid : kproc->p_tid;
-         proc->session = kproc->p_sid;
-         proc->tty_nr = kproc->p_tdev;
-         proc->pgrp = kproc->p__pgid;
-         proc->st_uid = kproc->p_uid;
-         proc->starttime_ctime = kproc->p_ustart_sec;
-         proc->user = UsersTable_getRef(this->usersTable, proc->st_uid);
-         ProcessList_add((ProcessList*)this, proc);
-         proc->comm = OpenBSDProcessList_readProcessName(opl->kd, kproc, &proc->basenameOffset);
-      } else {
-         if (settings->updateProcessNames) {
-            free(proc->comm);
-            proc->comm = OpenBSDProcessList_readProcessName(opl->kd, kproc, &proc->basenameOffset);
+      for (j = 0; j < nthreads; j++) {
+         kthr = &kthreads[j];
+
+         if (singleThread && kthr->p_tid == -1) {
+            continue;
          }
-      }
 
-      proc->m_size = kproc->p_vm_dsize;
-      proc->m_resident = kproc->p_vm_rssize;
-      proc->percent_mem = (proc->m_resident * PAGE_SIZE_KB) / (double)(this->totalMem) * 100.0;
-      proc->percent_cpu = CLAMP(getpcpu(kproc), 0.0, this->cpuCount*100.0);
-      //proc->nlwp = kproc->p_numthreads;
-      //proc->time = kproc->p_rtime_sec + ((kproc->p_rtime_usec + 500000) / 10);
-      proc->nice = kproc->p_nice - 20;
-      proc->time = kproc->p_rtime_sec + ((kproc->p_rtime_usec + 500000) / 1000000);
-      proc->time *= 100;
-      proc->priority = kproc->p_priority - PZERO;
+         preExisting = false;
+         proc = ProcessList_getProcess(this, singleThread || kthr->p_tid == -1 ? kthr->p_pid : kthr->p_tid, &preExisting, (Process_New) OpenBSDProcess_new);
+	 // XXX FIXME -- the hashtable lookup in ProcessList_getProcess returns a bogus pointer for some reason.
+         if (proc == (Process *) 1)
+            continue;
+         fp = (OpenBSDProcess*) proc;
 
-      switch (kproc->p_stat) {
-         case SIDL:    proc->state = 'I'; break;
-         case SRUN:    proc->state = 'R'; break;
-         case SSLEEP:  proc->state = 'S'; break;
-         case SSTOP:   proc->state = 'T'; break;
-         case SZOMB:   proc->state = 'Z'; break;
-         case SDEAD:   proc->state = 'D'; break;
-         case SONPROC: proc->state = 'P'; break;
-         default:      proc->state = '?';
-      }
+         proc->show = ! ((hideKernelThreads && Process_isKernelThread(proc))
+                     || (hideUserlandThreads && Process_isUserlandThread(proc)));
 
-      if (Process_isKernelThread(proc)) {
-         this->kernelThreads++;
-      }
+         if (!preExisting) {
+            proc->ppid = singleThread || kthr->p_tid == -1 ? kthr->p_ppid : kthr->p_pid;
+            proc->tpgid = kthr->p_tpgid;
+            proc->tgid = kthr->p_pid;
+            proc->pid = singleThread || kthr->p_tid == -1 ? kthr->p_pid : kthr->p_tid;
+            proc->session = kthr->p_sid;
+            proc->tty_nr = kthr->p_tdev;
+            proc->pgrp = kthr->p__pgid;
+            proc->st_uid = kthr->p_uid;
+            proc->starttime_ctime = kthr->p_ustart_sec;
+            proc->user = UsersTable_getRef(this->usersTable, proc->st_uid);
+            ProcessList_add((ProcessList*)this, proc);
+            proc->comm = OpenBSDProcessList_readProcessName(opl->kd, kthr, &proc->basenameOffset);
+         } else {
+            if (settings->updateProcessNames) {
+               free(proc->comm);
+               proc->comm = OpenBSDProcessList_readProcessName(opl->kd, kthr, &proc->basenameOffset);
+            }
+         }
 
-      this->totalTasks++;
-      // SRUN ('R') means runnable, not running
-      if (proc->state == 'P') {
-         this->runningTasks++;
+         proc->m_size = kthr->p_vm_dsize;
+         proc->m_resident = kthr->p_vm_rssize;
+         proc->percent_mem = (proc->m_resident * PAGE_SIZE_KB) / (double)(this->totalMem) * 100.0;
+         proc->percent_cpu = CLAMP(getpcpu(kthr), 0.0, this->cpuCount*100.0);
+         //proc->nlwp = kthr->p_numthreads;
+         //proc->time = kthr->p_rtime_sec + ((kthr->p_rtime_usec + 500000) / 10);
+         proc->nice = kthr->p_nice - 20;
+         proc->time = kthr->p_rtime_sec + ((kthr->p_rtime_usec + 500000) / 1000000);
+         proc->time *= 100;
+         proc->priority = kthr->p_priority - PZERO;
+
+         switch (kthr->p_stat) {
+            case SIDL:    proc->state = 'I'; break;
+            case SRUN:    proc->state = 'R'; break;
+            case SSLEEP:  proc->state = 'S'; break;
+            case SSTOP:   proc->state = 'T'; break;
+            case SZOMB:   proc->state = 'Z'; break;
+            case SDEAD:   proc->state = 'D'; break;
+            case SONPROC: proc->state = 'P'; break;
+            default:      proc->state = '?';
+         }
+
+         if (Process_isKernelThread(proc)) {
+            this->kernelThreads++;
+         }
+
+	 if (!singleThread && kthr->p_tid != -1) {
+	    this->userlandThreads++;
+	 }
+
+         this->totalTasks++;
+         // SRUN ('R') means runnable, not running
+         if (proc->state == 'P') {
+            this->runningTasks++;
+         }
+         proc->updated = true;
       }
-      proc->updated = true;
    }
+
+   free(kproc_copy);
 }
