@@ -1,0 +1,4 @@
+gcc
+make
+ncurses-libs
+ncurses-devel
