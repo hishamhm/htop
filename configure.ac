@@ -22,6 +22,18 @@ AM_INIT_AUTOMAKE([1.11])
 AC_PROG_CC
 AM_PROG_CC_C_O
 
+m4_ifdef([PKG_PROG_PKG_CONFIG], [
+   PKG_PROG_PKG_CONFIG()
+], [
+   pkg_m4_absent=1
+   m4_warning([configure is generated without pkg.m4. 'make dist' target will be disabled.])
+   AC_MSG_ERROR([htop requires pkg-config for checking delayacct and ncurses requirements. Please install pkg-config and run ./autogen.sh to rebuild the configure script.])
+])
+
+AS_IF([ test -z "$PKG_CONFIG" ], [
+   AC_MSG_ERROR([Cannot find pkg-config which is required for delayacct and ncurses lookup])
+])
+
 # Required by hwloc scripts
 AC_USE_SYSTEM_EXTENSIONS
 
@@ -162,76 +174,32 @@ if test "x$enable_taskstats" = xyes; then
     AC_DEFINE(HAVE_TASKSTATS, 1, [Define if taskstats support enabled.])
 fi
 
-# HTOP_CHECK_SCRIPT(LIBNAME, FUNCTION, DEFINE, CONFIG_SCRIPT, ELSE_PART)
-m4_define([HTOP_CHECK_SCRIPT],
-[
-   if test ! -z "m4_toupper($HTOP_[$1]_CONFIG_SCRIPT)"; then
-      # to be used to set the path to ncurses*-config when cross-compiling
-      htop_config_script_libs=$(m4_toupper($HTOP_[$1]_CONFIG_SCRIPT) --libs 2> /dev/null)
-      htop_config_script_cflags=$(m4_toupper($HTOP_[$1]_CONFIG_SCRIPT) --cflags 2> /dev/null)
-   else
-      htop_config_script_libs=$([$4] --libs 2> /dev/null)
-      htop_config_script_cflags=$([$4] --cflags 2> /dev/null)
-   fi
-   htop_script_success=no
-   htop_save_LDFLAGS="$LDFLAGS"
-   htop_save_CFLAGS="$CFLAGS"
-   if test ! "x$htop_config_script_libs" = x; then
-      LDFLAGS="$htop_config_script_libs $LDFLAGS"
-      CFLAGS="$htop_config_script_cflags $CFLAGS"
-      AC_CHECK_LIB([$1], [$2], [
-         AC_DEFINE([$3], 1, [The library is present.])
-         LIBS="$htop_config_script_libs $LIBS "
-         htop_script_success=yes
-      ], [
-        CFLAGS="$htop_save_CFLAGS"
-      ])
-      LDFLAGS="$htop_save_LDFLAGS"
-   fi
-   if test "x$htop_script_success" = xno; then
-      [$5]
-   fi
-])
-
-# HTOP_CHECK_LIB(LIBNAME, FUNCTION, DEFINE, ELSE_PART)
-m4_define([HTOP_CHECK_LIB],
-[
-   AC_CHECK_LIB([$1], [$2], [
-      AC_DEFINE([$3], 1, [The library is present.])
-      LIBS="-l[$1] $LIBS "
-   ], [$4])
-])
-
 AC_ARG_ENABLE(unicode, [AS_HELP_STRING([--enable-unicode], [enable Unicode support])], ,enable_unicode="yes")
-if test "x$enable_unicode" = xyes; then
-   HTOP_CHECK_SCRIPT([ncursesw6], [addnwstr], [HAVE_LIBNCURSESW], "ncursesw6-config",
-    HTOP_CHECK_SCRIPT([ncursesw], [addnwstr], [HAVE_LIBNCURSESW], "ncursesw6-config",
-     HTOP_CHECK_SCRIPT([ncursesw], [addnwstr], [HAVE_LIBNCURSESW], "ncursesw5-config",
-      HTOP_CHECK_SCRIPT([ncurses], [addnwstr], [HAVE_LIBNCURSESW], "ncurses5-config",
-       HTOP_CHECK_LIB([ncursesw6], [addnwstr], [HAVE_LIBNCURSESW],
-        HTOP_CHECK_LIB([ncursesw], [addnwstr], [HAVE_LIBNCURSESW],
-         HTOP_CHECK_LIB([ncurses], [addnwstr], [HAVE_LIBNCURSESW],
-       missing_libraries="$missing_libraries libncursesw"
-       AC_MSG_ERROR([You may want to use --disable-unicode or install libncursesw.])
-   )))))))
 
-   AC_CHECK_HEADERS([ncursesw/curses.h],[:],
-      [AC_CHECK_HEADERS([ncurses/ncurses.h],[:],
-         [AC_CHECK_HEADERS([ncurses/curses.h],[:],
-            [AC_CHECK_HEADERS([ncurses.h],[:],[missing_headers="$missing_headers $ac_header"])])])])
-else
-   HTOP_CHECK_SCRIPT([ncurses6], [refresh], [HAVE_LIBNCURSES], "ncurses6-config",
-    HTOP_CHECK_SCRIPT([ncurses], [refresh], [HAVE_LIBNCURSES], "ncurses5-config",
-     HTOP_CHECK_LIB([ncurses6],  [refresh], [HAVE_LIBNCURSES],
-      HTOP_CHECK_LIB([ncurses],  [refresh], [HAVE_LIBNCURSES],
-      missing_libraries="$missing_libraries libncurses"
-   ))))
-   
-   AC_CHECK_HEADERS([curses.h],[:],
-      [AC_CHECK_HEADERS([ncurses/curses.h],[:],
+NCURSES_IMPL="ncurses"
+AS_IF([ test "x$enable_unicode" = xyes ], [
+   AS_IF([ ${PKG_CONFIG} --exists ncursesw6 ], [NCURSES_IMPL="ncursesw6"],
+         [ ${PKG_CONFIG} --exists ncursesw ], [NCURSES_IMPL="ncursesw"], [
+         NCURSES_IMPL="ncurses"])])
+
+PKG_CHECK_MODULES([NCURSES], [$NCURSES_IMPL], [
+   CFLAGS="$NCURSES_CFLAGS $CFLAGS"
+   LIBS="$NCURSES_LIBS $LIBS"
+   AC_DEFINE([HAVE_LIBNCURSES], 1, [The library is present.])
+   AS_IF([ test x$NCURSES_IMPL = xncursesw || test x$NCURSES_IMPL = xncursesw6 ], [
+      AC_CHECK_HEADERS([ncursesw/curses.h],[:],
          [AC_CHECK_HEADERS([ncurses/ncurses.h],[:],
-            [AC_CHECK_HEADERS([ncurses.h],[:],[missing_headers="$missing_headers $ac_header"])])])])
-fi
+            [AC_CHECK_HEADERS([ncurses/curses.h],[:],
+               [AC_CHECK_HEADERS([ncurses.h],[:],[missing_headers="$missing_headers $ac_header"])])])])
+      ], [
+      AC_CHECK_HEADERS([curses.h],[:],
+         [AC_CHECK_HEADERS([ncurses/curses.h],[:],
+            [AC_CHECK_HEADERS([ncurses/ncurses.h],[:],
+               [AC_CHECK_HEADERS([ncurses.h],[:],[missing_headers="$missing_headers $ac_header"])])])])
+      ])           
+   ],[
+   missing_libraries="$missing_libraries lib$NCURSES_IMPL"
+])
 
 if test "$my_htop_platform" = "freebsd"; then
    AC_CHECK_LIB([kvm], [kvm_open], [], [missing_libraries="$missing_libraries libkvm"])
@@ -282,20 +250,12 @@ then
 fi
 
 AC_ARG_ENABLE(delayacct, [AS_HELP_STRING([--enable-delayacct], [enable Linux delay accounting])],, enable_delayacct="no")
-if test "x$enable_delayacct" = xyes
-then
-   m4_ifdef([PKG_PROG_PKG_CONFIG], [
-      PKG_PROG_PKG_CONFIG()
+if test "x$enable_delayacct" = xyes; then
       PKG_CHECK_MODULES(LIBNL3, libnl-3.0, [], [missing_libraries="$missing_libraries libnl-3"])
       PKG_CHECK_MODULES(LIBNL3GENL, libnl-genl-3.0, [], [missing_libraries="$missing_libraries libnl-genl-3"])
       CFLAGS="$CFLAGS $LIBNL3_CFLAGS $LIBNL3GENL_CFLAGS"
       LIBS="$LIBS $LIBNL3_LIBS $LIBNL3GENL_LIBS"
       AC_DEFINE(HAVE_DELAYACCT, 1, [Define if delay accounting support should be enabled.])
-   ], [
-      pkg_m4_absent=1
-      m4_warning([configure is generated without pkg.m4. 'make dist' target will be disabled.])
-      AC_MSG_ERROR([htop on Linux requires pkg-config for checking delayacct requirements. Please install pkg-config and run ./autogen.sh to rebuild the configure script.])
-   ])
 fi
 
 
