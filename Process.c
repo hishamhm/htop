@@ -157,6 +157,7 @@ typedef struct ProcessFieldData_ {
    const char* title;
    const char* description;
    int flags;
+   int width;
 } ProcessFieldData;
 
 // Implemented in platform-specific code:
@@ -211,6 +212,9 @@ void Process_setupColumnWidths() {
       Process_fields[Process_pidColumns[i].id].title = Process_titleBuffer[i];
    }
    xSnprintf(Process_pidFormat, sizeof(Process_pidFormat), "%%%dd ", digits);
+   for (int i = 0; i != LAST_PROCESSFIELD; ++i) {
+       Process_fields[i].width = -1;
+   }
 }
 
 void Process_humanNumber(RichString* str, unsigned long number, bool coloring) {
@@ -479,15 +483,20 @@ void Process_writeField(Process* this, RichString* str, ProcessField field) {
       } else {
          xSnprintf(buffer, n, "%-9d ", this->st_uid);
       }
-      if (buffer[9] != '\0') {
-         buffer[9] = ' ';
-         buffer[10] = '\0';
-      }
       break;
    }
    default:
       xSnprintf(buffer, n, "- ");
    }
+
+   if (Process_fields[field].width > 0) {
+      char* dummy;
+      if (asprintf(&dummy, "%-*s", Process_fields[field].width, buffer) != -1) {
+         strcpy(buffer, dummy);
+         free(dummy);
+      }
+   }
+
    RichString_append(str, attr, buffer);
 }
 

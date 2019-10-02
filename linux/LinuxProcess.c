@@ -143,7 +143,7 @@ typedef struct LinuxProcess_ {
 } LinuxProcess;
 
 #ifndef Process_isKernelThread
-#define Process_isKernelThread(_process) ((LinuxProcess*)(_process)->isKernelThread)
+#define Process_isKernelThread(_process) (((LinuxProcess*)(_process))->isKernelThread)
 #endif
 
 #ifndef Process_isUserlandThread
@@ -398,6 +398,14 @@ void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field)
    default:
       Process_writeField((Process*)this, str, field);
       return;
+   }
+
+   if (Process_fields[field].width > 0) {
+      char* dummy;
+      if (asprintf(&dummy, "%-*s", Process_fields[field].width, buffer) != -1) {
+         strcpy(buffer, dummy);
+         free(dummy);
+      }
    }
    RichString_append(str, attr, buffer);
 }

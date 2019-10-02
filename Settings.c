@@ -244,8 +244,24 @@ static bool Settings_read(Settings* this, const char* fileName) {
       } else if (String_eq(option[0], "right_meter_modes")) {
          Settings_readMeterModes(this, option[1], 1);
          didReadMeters = true;
-      }
+      } else if (String_eq(option[0], "column_padding")) {
+        int nData;
+        char** data = String_split(option[1], ':', &nData);
+        if (data) {
+           if (nData >= 2) {
+              for (int i = 0; i != LAST_PROCESSFIELD; ++i) {
+                 if (!Process_fields[i].name) {
+                    continue;
+                 }
+                 if (!strcmp(Process_fields[i].name, data[0])) {
+                    Process_fields[i].width = atoi(data[1]);
+                 }
+              }
+           }
+           String_freeArray(data);
+        }
       String_freeArray(option);
+     }
    }
    fclose(fd);
    if (!didReadMeters) {
