@@ -336,6 +336,12 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "left_meter_modes="); writeMeterModes(this, fd, 0);
    fprintf(fd, "right_meters="); writeMeters(this, fd, 1);
    fprintf(fd, "right_meter_modes="); writeMeterModes(this, fd, 1);
+   for (int i = 0; i != LAST_PROCESSFIELD; ++i) {
+      if (Process_fields[i].width <= 0) {
+        continue;
+     }
+     fprintf(fd, "column_padding=%s:%d\n", Process_fields[i].name, Process_fields[i].width);
+   }
    fclose(fd);
    return true;
 }
