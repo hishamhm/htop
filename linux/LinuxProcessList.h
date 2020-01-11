@@ -81,6 +81,10 @@ typedef struct LinuxProcessList_ {
 #define PROCMEMINFOFILE PROCDIR "/meminfo"
 #endif
 
+#ifndef ZFSINFOFILE
+#define ZFSINFOFILE "/proc/spl/kstat/zfs/arcstats"
+#endif
+
 #ifndef PROCTTYDRIVERSFILE
 #define PROCTTYDRIVERSFILE PROCDIR "/tty/drivers"
 #endif

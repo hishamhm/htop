@@ -233,6 +233,11 @@ else
             [AC_CHECK_HEADERS([ncurses.h],[:],[missing_headers="$missing_headers $ac_header"])])])])
 fi
 
+AC_ARG_ENABLE(zfs_cache_awareness, [AC_HELP_STRING([--enable-zfs-cache-awareness],[enable ZFS cache awareness for memory usage])], enable_zfs_cache_awareness="yes",enable_zfs_cache_awareness="no")
+if test "x$enable_zfs_cache_awareness" = xyes; then
+    AC_DEFINE(HAVE_ZFS, 1, [Define if we want the memory meter to be aware of the ZFS cache])
+fi
+
 if test "$my_htop_platform" = "freebsd"; then
    AC_CHECK_LIB([kvm], [kvm_open], [], [missing_libraries="$missing_libraries libkvm"])
 fi
