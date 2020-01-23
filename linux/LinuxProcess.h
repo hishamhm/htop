@@ -144,7 +144,7 @@ typedef struct LinuxProcess_ {
 #endif
 
 
-long long btime; /* semi-global */
+extern long long btime; /* semi-global */
 
 extern ProcessFieldData Process_fields[];
 
