@@ -164,8 +164,10 @@ int Platform_getMaxPid() {
    int vproc = 32778; // Reasonable Solaris default
    kc = kstat_open();
    if (kc != NULL) { kshandle = kstat_lookup(kc,"unix",0,"var"); }
-   if (kshandle != NULL) { kstat_read(kc,kshandle,NULL); }
-   ksvar = kshandle->ks_data;
+   if (kshandle != NULL) { 
+      kstat_read(kc,kshandle,NULL); 
+      ksvar = kshandle->ks_data;
+   }
    if (ksvar->v_proc > 0 ) {
       vproc = ksvar->v_proc;
    }
