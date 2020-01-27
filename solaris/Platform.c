@@ -167,9 +167,8 @@ int Platform_getMaxPid() {
    if (kshandle != NULL) { 
       kstat_read(kc,kshandle,NULL); 
       ksvar = kshandle->ks_data;
-   }
-   if (ksvar->v_proc > 0 ) {
-      vproc = ksvar->v_proc;
+      if (ksvar->v_proc > 0 )
+        vproc = ksvar->v_proc;
    }
    if (kc != NULL) { kstat_close(kc); }
    return vproc; 
