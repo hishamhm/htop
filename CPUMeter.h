@@ -39,6 +39,8 @@ extern MeterClass AllCPUsMeter_class;
 
 extern MeterClass AllCPUs2Meter_class;
 
+extern MeterClass AllCPUs4Meter_class;
+
 extern MeterClass LeftCPUsMeter_class;
 
 extern MeterClass RightCPUsMeter_class;
@@ -47,5 +49,8 @@ extern MeterClass LeftCPUs2Meter_class;
 
 extern MeterClass RightCPUs2Meter_class;
 
+extern MeterClass LeftCPUs4Meter_class;
+
+extern MeterClass RightCPUs4Meter_class;
 
 #endif
