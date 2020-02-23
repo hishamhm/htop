@@ -250,8 +250,10 @@ if test "$my_htop_platform" = "solaris"; then
    AC_CHECK_LIB([malloc], [free], [], [missing_libraries="$missing_libraries libmalloc"])
 fi
 
-dnl PASE doesn't have libperfstat, it's not fatal as a result
-if test "$my_htop_platform" = "aix" && test "$target_os" != "os400"; then
+if test "$my_htop_platform" = "aix"; then
+   dnl Required for vsnprintf definition
+   CPPFLAGS="$CPPFLAGS -D_XOPEN_SOURCE=700"
+   dnl AIX has this, PASE does not
    AC_CHECK_LIB([perfstat], [perfstat_memory_total])
 fi
 
