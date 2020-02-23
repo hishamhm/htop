@@ -47,6 +47,8 @@ extern //ProcessPidColumn Process_pidColumns[];
 
 void Platform_getLoadAverage(double* one, double* five, double* fifteen);
 
+int Platform_getUptime();
+
 int Platform_getMaxPid();
 
 double Platform_setCPUValues(Meter* this, int cpu);
