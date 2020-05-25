@@ -312,7 +312,7 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "highlight_megabytes=%d\n", (int) this->highlightMegabytes);
    fprintf(fd, "highlight_threads=%d\n", (int) this->highlightThreads);
    fprintf(fd, "tree_view=%d\n", (int) this->treeView);
-   fprintf(fd, "expand_level=%d\n", (int) this->collapseLevel);
+   fprintf(fd, "collapse_level=%d\n", (int) this->collapseLevel);
    fprintf(fd, "header_margin=%d\n", (int) this->headerMargin);
    fprintf(fd, "detailed_cpu_time=%d\n", (int) this->detailedCPUTime);
    fprintf(fd, "cpu_count_from_zero=%d\n", (int) this->countCPUsFromZero);
