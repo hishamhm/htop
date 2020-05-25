@@ -183,6 +183,17 @@ static void ProcessList_buildTree(ProcessList* this, pid_t pid, int level, int i
       Process* process = (Process*) (Vector_get(children, i));
       if (!show)
          process->show = false;
+      if (this->settings->collapseLevel != -1 && level + 2 > this->settings->collapseLevel) {
+         bool hasChild = false;
+         for (int i = Vector_size(this->processes) - 1; i >= 0; i--) {
+            Process* gc = (Process*) (Vector_get(this->processes, i));
+            if (gc->show && Process_isChildOf(gc, process->pid)) {
+               hasChild = true;
+               break;
+            }
+         }
+         process->showChildren = !hasChild;
+      }
       int s = this->processes2->items;
       if (direction == 1)
          Vector_add(this->processes2, process);
@@ -252,6 +263,7 @@ void ProcessList_sort(ProcessList* this) {
                process = (Process*)(Vector_take(this->processes, i));
                process->indent = 0;
                Vector_add(this->processes2, process);
+               process->showChildren = process->settings->collapseLevel != 0 && process->showChildren;
                ProcessList_buildTree(this, process->pid, 0, 0, direction, process->showChildren);
                break;
             }

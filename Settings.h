@@ -29,6 +29,7 @@ typedef struct Settings_ {
    int flags;
    int colorScheme;
    int delay;
+   int collapseLevel;
 
    int cpuCount;
    int direction;

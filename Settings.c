@@ -38,6 +38,7 @@ typedef struct Settings_ {
    int flags;
    int colorScheme;
    int delay;
+   int collapseLevel;
 
    int cpuCount;
    int direction;
@@ -196,6 +197,8 @@ static bool Settings_read(Settings* this, const char* fileName) {
          this->direction = atoi(option[1]);
       } else if (String_eq(option[0], "tree_view")) {
          this->treeView = atoi(option[1]);
+      } else if (String_eq(option[0], "collapse_level")) {
+         this->collapseLevel = atoi(option[1]);
       } else if (String_eq(option[0], "hide_threads")) {
          this->hideThreads = atoi(option[1]);
       } else if (String_eq(option[0], "hide_kernel_threads")) {
@@ -309,6 +312,7 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "highlight_megabytes=%d\n", (int) this->highlightMegabytes);
    fprintf(fd, "highlight_threads=%d\n", (int) this->highlightThreads);
    fprintf(fd, "tree_view=%d\n", (int) this->treeView);
+   fprintf(fd, "expand_level=%d\n", (int) this->collapseLevel);
    fprintf(fd, "header_margin=%d\n", (int) this->headerMargin);
    fprintf(fd, "detailed_cpu_time=%d\n", (int) this->detailedCPUTime);
    fprintf(fd, "cpu_count_from_zero=%d\n", (int) this->countCPUsFromZero);
@@ -336,6 +340,7 @@ Settings* Settings_new(int cpuCount) {
    this->hideKernelThreads = false;
    this->hideUserlandThreads = false;
    this->treeView = false;
+   this->collapseLevel = -1;
    this->highlightBaseName = false;
    this->highlightMegabytes = false;
    this->detailedCPUTime = false;

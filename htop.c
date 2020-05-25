@@ -43,6 +43,7 @@ static void printHelpFlag() {
          "-h --help                   Print this help screen\n"
          "-s --sort-key=COLUMN        Sort by COLUMN (try --sort-key=help for a list)\n"
          "-t --tree                   Show the tree view by default\n"
+         "-l --level=LEVEL            Collapse trees deeper than LEVEL by default\n"
          "-u --user=USERNAME          Show only processes of a given user\n"
          "-p --pid=PID,[,PID,PID...]  Show only the given PIDs\n"
          "-v --version                Print version info\n"
@@ -63,6 +64,7 @@ typedef struct CommandLineSettings_ {
    int delay;
    bool useColors;
    bool treeView;
+   int collapseLevel;
 } CommandLineSettings;
 
 static CommandLineSettings parseArguments(int argc, char** argv) {
@@ -74,6 +76,7 @@ static CommandLineSettings parseArguments(int argc, char** argv) {
       .delay = -1,
       .useColors = true,
       .treeView = false,
+      .collapseLevel = -1,
    };
 
    static struct option long_opts[] =
@@ -86,13 +89,14 @@ static CommandLineSettings parseArguments(int argc, char** argv) {
       {"no-color", no_argument,         0, 'C'},
       {"no-colour",no_argument,         0, 'C'},
       {"tree",     no_argument,         0, 't'},
+      {"level",    required_argument,   0, 'l'},
       {"pid",      required_argument,   0, 'p'},
       {0,0,0,0}
    };
 
    int opt, opti=0;
    /* Parse arguments */
-   while ((opt = getopt_long(argc, argv, "hvCs:td:u:p:", long_opts, &opti))) {
+   while ((opt = getopt_long(argc, argv, "hvCs:tl:d:u:p:", long_opts, &opti))) {
       if (opt == EOF) break;
       switch (opt) {
          case 'h':
@@ -132,6 +136,12 @@ static CommandLineSettings parseArguments(int argc, char** argv) {
             break;
          case 't':
             flags.treeView = true;
+            break;
+         case 'l':
+            if (sscanf(optarg, "%16d", &(flags.collapseLevel)) == 1) {
+               if (flags.collapseLevel < 0) flags.collapseLevel = -1;
+               if (flags.collapseLevel > 100) flags.collapseLevel = 100;
+            }
             break;
          case 'p': {
             char* argCopy = xStrdup(optarg);
@@ -205,6 +215,8 @@ int main(int argc, char** argv) {
       settings->colorScheme = COLORSCHEME_MONOCHROME;
    if (flags.treeView)
       settings->treeView = true;
+   if (flags.collapseLevel != -1)
+      settings->collapseLevel = flags.collapseLevel;
 
    CRT_init(settings->delay, settings->colorScheme);
    

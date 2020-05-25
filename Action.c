@@ -152,6 +152,7 @@ static bool expandCollapse(Panel* panel) {
    Process* p = (Process*) Panel_getSelected(panel);
    if (!p) return false;
    p->showChildren = !p->showChildren;
+   p->settings->collapseLevel = -1;
    return true;
 }
 
