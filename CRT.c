@@ -59,6 +59,19 @@ typedef enum TreeStr_ {
    TREE_STR_COUNT
 } TreeStr;
 
+typedef enum CheckStr_ {
+   CHECK_STR_NONE,
+   CHECK_STR_PARTIAL,
+   CHECK_STR_FULL,
+   CHECK_STR_COUNT
+} CheckStr;
+
+typedef enum CollapStr_ {
+   COLLAP_STR_OPEN,
+   COLLAP_STR_CLOSE,
+   COLLAP_STR_COUNT
+} CollapStr;
+
 typedef enum ColorSchemes_ {
    COLORSCHEME_DEFAULT = 0,
    COLORSCHEME_MONOCHROME = 1,
@@ -149,6 +162,17 @@ const char *CRT_treeStrAscii[TREE_STR_COUNT] = {
    "-", // TREE_STR_SHUT
 };
 
+const char *CRT_checkStrAscii[CHECK_STR_COUNT] = {
+   "[ ]", // CHECK_STR_NONE
+   "[o]", // CHECK_STR_PARTIAL
+   "[x]", // CHECK_STR_FULL
+};
+
+const char *CRT_collapStrAscii[COLLAP_STR_COUNT] = {
+   "[-]", // COLLAP_STR_OPEN
+   "[+]", // COLLAP_STR_CLOSE
+};
+
 #ifdef HAVE_LIBNCURSESW
 
 const char *CRT_treeStrUtf8[TREE_STR_COUNT] = {
@@ -161,11 +185,26 @@ const char *CRT_treeStrUtf8[TREE_STR_COUNT] = {
    "\xe2\x94\x80", // TREE_STR_SHUT ─
 };
 
+const char *CRT_checkStrUtf8[CHECK_STR_COUNT] = {
+   "\xe2\x98\x90", // CHECK_STR_NONE    ☐
+   "\xe2\x98\x92", // CHECK_STR_PARTIAL ☒
+   "\xe2\x98\x91", // CHECK_STR_FULL    ☑
+};
+
+const char *CRT_collapStrUtf8[COLLAP_STR_COUNT] = {
+   "\xe2\x8a\x9f", // COLLAP_STR_OPEN  ⊟
+   "\xe2\x8a\x9e", // COLLAP_STR_CLOSE ⊞
+};
+
 bool CRT_utf8 = false;
 
 #endif
 
 const char **CRT_treeStr = CRT_treeStrAscii;
+
+const char **CRT_checkStr = CRT_checkStrAscii;
+
+const char **CRT_collapStr = CRT_collapStrAscii;
 
 static bool CRT_hasColors;
 
@@ -672,6 +711,18 @@ void CRT_init(int delay, int colorScheme) {
       CRT_utf8 ? CRT_treeStrUtf8 :
 #endif
       CRT_treeStrAscii;
+
+   CRT_checkStr =
+#ifdef HAVE_LIBNCURSESW
+      CRT_utf8 ? CRT_checkStrUtf8 :
+#endif
+      CRT_checkStrAscii;
+
+   CRT_collapStr =
+#ifdef HAVE_LIBNCURSESW
+      CRT_utf8 ? CRT_collapStrUtf8 :
+#endif
+      CRT_collapStrAscii;
 
 #if NCURSES_MOUSE_VERSION > 1
    mousemask(BUTTON1_RELEASED | BUTTON4_PRESSED | BUTTON5_PRESSED, NULL);

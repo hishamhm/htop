@@ -47,6 +47,19 @@ typedef enum TreeStr_ {
    TREE_STR_COUNT
 } TreeStr;
 
+typedef enum CheckStr_ {
+   CHECK_STR_NONE,
+   CHECK_STR_PARTIAL,
+   CHECK_STR_FULL,
+   CHECK_STR_COUNT
+} CheckStr;
+
+typedef enum CollapStr_ {
+   COLLAP_STR_OPEN,
+   COLLAP_STR_CLOSE,
+   COLLAP_STR_COUNT
+} CollapStr;
+
 typedef enum ColorSchemes_ {
    COLORSCHEME_DEFAULT = 0,
    COLORSCHEME_MONOCHROME = 1,
@@ -128,15 +141,27 @@ void CRT_handleSIGSEGV(int sgn);
 
 extern const char *CRT_treeStrAscii[TREE_STR_COUNT];
 
+extern const char *CRT_checkStrAscii[CHECK_STR_COUNT];
+
+extern const char *CRT_collapStrAscii[COLLAP_STR_COUNT];
+
 #ifdef HAVE_LIBNCURSESW
 
 extern const char *CRT_treeStrUtf8[TREE_STR_COUNT];
+
+extern const char *CRT_checkStrUtf8[CHECK_STR_COUNT];
+
+extern const char *CRT_collapStrUtf8[COLLAP_STR_COUNT];
 
 extern bool CRT_utf8;
 
 #endif
 
 extern const char **CRT_treeStr;
+
+extern const char **CRT_checkStr;
+
+extern const char **CRT_collapStr;
 
 extern int CRT_delay;
 
