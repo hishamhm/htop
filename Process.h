@@ -5,13 +5,13 @@
 /*
 htop - Process.h
 (C) 2004-2015 Hisham H. Muhammad
+(C) 2020 Red Hat, Inc.  All Rights Reserved.
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
 #ifdef MAJOR_IN_MKDEV
-#elif defined(MAJOR_IN_SYSMACROS) || \
-   (defined(HAVE_SYS_SYSMACROS_H) && HAVE_SYS_SYSMACROS_H)
+#elif defined(MAJOR_IN_SYSMACROS)
 #endif
 
 #ifdef __ANDROID__
@@ -61,7 +61,7 @@ typedef enum ProcessFields {
 
 typedef struct ProcessPidColumn_ {
    int id;
-   char* label;
+   const char* label;
 } ProcessPidColumn;
 
 typedef struct Process_ {
@@ -166,43 +166,45 @@ typedef struct ProcessClass_ {
 #define ONE_K 1024L
 #define ONE_M (ONE_K * ONE_K)
 #define ONE_G (ONE_M * ONE_K)
+#define ONE_T ((long long)ONE_G * ONE_K)
 
 #define ONE_DECIMAL_K 1000L
 #define ONE_DECIMAL_M (ONE_DECIMAL_K * ONE_DECIMAL_K)
 #define ONE_DECIMAL_G (ONE_DECIMAL_M * ONE_DECIMAL_K)
+#define ONE_DECIMAL_T ((long long)ONE_DECIMAL_G * ONE_DECIMAL_K)
 
 extern char Process_pidFormat[20];
 
-void Process_setupColumnWidths();
+extern void Process_setupColumnWidths();
 
-void Process_humanNumber(RichString* str, unsigned long number, bool coloring);
+extern void Process_humanNumber(RichString* str, unsigned long number, bool coloring);
 
-void Process_colorNumber(RichString* str, unsigned long long number, bool coloring);
+extern void Process_colorNumber(RichString* str, unsigned long long number, bool coloring);
 
-void Process_printTime(RichString* str, unsigned long long totalHundredths);
+extern void Process_printTime(RichString* str, unsigned long long totalHundredths);
 
-void Process_outputRate(RichString* str, char* buffer, int n, double rate, int coloring);
+extern void Process_outputRate(RichString* str, char* buffer, int n, double rate, int coloring);
 
-void Process_writeField(Process* this, RichString* str, ProcessField field);
+extern void Process_writeField(Process* this, RichString* str, ProcessField field);
 
-void Process_display(Object* cast, RichString* out);
+extern void Process_display(Object* cast, RichString* out);
 
-void Process_done(Process* this);
+extern void Process_done(Process* this);
 
 extern ProcessClass Process_class;
 
-void Process_init(Process* this, struct Settings_* settings);
+extern void Process_init(Process* this, struct Settings_* settings);
 
-void Process_toggleTag(Process* this);
+extern void Process_toggleTag(Process* this);
 
-bool Process_setPriority(Process* this, int priority);
+extern bool Process_setPriority(Process* this, int priority);
 
-bool Process_changePriorityBy(Process* this, int delta);
+extern bool Process_changePriorityBy(Process* this, Arg delta);
 
-void Process_sendSignal(Process* this, int sgn);
+extern bool Process_sendSignal(Process* this, Arg sgn);
 
-long Process_pidCompare(const void* v1, const void* v2);
+extern long Process_pidCompare(const void* v1, const void* v2);
 
-long Process_compare(const void* v1, const void* v2);
+extern long Process_compare(const void* v1, const void* v2);
 
 #endif

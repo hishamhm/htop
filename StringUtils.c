@@ -30,8 +30,9 @@ char* String_cat(const char* s1, const char* s2) {
    int l1 = strlen(s1);
    int l2 = strlen(s2);
    char* out = xMalloc(l1 + l2 + 1);
-   strncpy(out, s1, l1);
-   strncpy(out+l1, s2, l2+1);
+   memcpy(out, s1, l1);
+   memcpy(out+l1, s2, l2+1);
+   out[l1 + l2] = '\0';
    return out;
 }
 
@@ -80,10 +81,7 @@ char** String_split(const char* s, char sep, int* n) {
       s += size + 1;
    }
    if (s[0] != '\0') {
-      int size = strlen(s);
-      char* token = xMalloc(size + 1);
-      strncpy(token, s, size + 1);
-      out[ctr] = token;
+      out[ctr] = xStrdup(s);
       ctr++;
    }
    out = xRealloc(out, sizeof(char*) * (ctr + 1));
@@ -116,7 +114,7 @@ char* String_getToken(const char* line, const unsigned short int numMatch) {
 
       if (lastState == 0 && inWord == 1)
          count++;
-    
+
       if(inWord == 1){
          if (count == numMatch && line[i] != ' ' && line[i] != '\0' && line[i] != '\n' && line[i] != (char)EOF) {
             match[foundCount] = line[i];

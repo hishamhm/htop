@@ -1,12 +1,15 @@
 /*
 htop - Process.c
 (C) 2004-2015 Hisham H. Muhammad
+(C) 2020 Red Hat, Inc.  All Rights Reserved.
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
 
 #include "Process.h"
 #include "Settings.h"
+
+#include "config.h"
 
 #include "CRT.h"
 #include "StringUtils.h"
@@ -30,8 +33,7 @@ in the source distribution for its full text.
 #include <math.h>
 #ifdef MAJOR_IN_MKDEV
 #include <sys/mkdev.h>
-#elif defined(MAJOR_IN_SYSMACROS) || \
-   (defined(HAVE_SYS_SYSMACROS_H) && HAVE_SYS_SYSMACROS_H)
+#elif defined(MAJOR_IN_SYSMACROS)
 #include <sys/sysmacros.h>
 #endif
 
@@ -83,7 +85,7 @@ typedef enum ProcessFields {
 
 typedef struct ProcessPidColumn_ {
    int id;
-   char* label;
+   const char* label;
 } ProcessPidColumn;
 
 typedef struct Process_ {
@@ -191,10 +193,12 @@ static int Process_getuid = -1;
 #define ONE_K 1024L
 #define ONE_M (ONE_K * ONE_K)
 #define ONE_G (ONE_M * ONE_K)
+#define ONE_T ((long long)ONE_G * ONE_K)
 
 #define ONE_DECIMAL_K 1000L
 #define ONE_DECIMAL_M (ONE_DECIMAL_K * ONE_DECIMAL_K)
 #define ONE_DECIMAL_G (ONE_DECIMAL_M * ONE_DECIMAL_K)
+#define ONE_DECIMAL_T ((long long)ONE_DECIMAL_G * ONE_DECIMAL_K)
 
 char Process_pidFormat[20] = "%7d ";
 
@@ -216,7 +220,7 @@ void Process_setupColumnWidths() {
 void Process_humanNumber(RichString* str, unsigned long number, bool coloring) {
    char buffer[11];
    int len;
-   
+
    int largeNumberColor = CRT_colors[LARGE_NUMBER];
    int processMegabytesColor = CRT_colors[PROCESS_MEGABYTES];
    int processColor = CRT_colors[PROCESS];
@@ -224,7 +228,7 @@ void Process_humanNumber(RichString* str, unsigned long number, bool coloring) {
       largeNumberColor = CRT_colors[PROCESS];
       processMegabytesColor = CRT_colors[PROCESS];
    }
- 
+
    if(number >= (10 * ONE_DECIMAL_M)) {
       #ifdef __LP64__
       if(number >= (100 * ONE_DECIMAL_G)) {
@@ -277,8 +281,15 @@ void Process_colorNumber(RichString* str, unsigned long long number, bool colori
    if ((long long) number == -1LL) {
       int len = snprintf(buffer, 13, "    no perm ");
       RichString_appendn(str, CRT_colors[PROCESS_SHADOW], buffer, len);
-   } else if (number > 10000000000) {
-      xSnprintf(buffer, 13, "%11llu ", number / 1000);
+   } else if (number >= 100000LL * ONE_DECIMAL_T) {
+      xSnprintf(buffer, 13, "%11llu ", number / ONE_DECIMAL_G);
+      RichString_appendn(str, largeNumberColor, buffer, 12);
+   } else if (number >= 100LL * ONE_DECIMAL_T) {
+      xSnprintf(buffer, 13, "%11llu ", number / ONE_DECIMAL_M);
+      RichString_appendn(str, largeNumberColor, buffer, 8);
+      RichString_appendn(str, processMegabytesColor, buffer+8, 4);
+   } else if (number >= 10LL * ONE_DECIMAL_G) {
+      xSnprintf(buffer, 13, "%11llu ", number / ONE_DECIMAL_K);
       RichString_appendn(str, largeNumberColor, buffer, 5);
       RichString_appendn(str, processMegabytesColor, buffer+5, 3);
       RichString_appendn(str, processColor, buffer+8, 4);
@@ -358,14 +369,17 @@ void Process_outputRate(RichString* str, char* buffer, int n, double rate, int c
    } else if (rate < ONE_K) {
       int len = snprintf(buffer, n, "%7.2f B/s ", rate);
       RichString_appendn(str, processColor, buffer, len);
-   } else if (rate < ONE_K * ONE_K) {
+   } else if (rate < ONE_M) {
       int len = snprintf(buffer, n, "%7.2f K/s ", rate / ONE_K);
       RichString_appendn(str, processColor, buffer, len);
-   } else if (rate < ONE_K * ONE_K * ONE_K) {
-      int len = snprintf(buffer, n, "%7.2f M/s ", rate / ONE_K / ONE_K);
+   } else if (rate < ONE_G) {
+      int len = snprintf(buffer, n, "%7.2f M/s ", rate / ONE_M);
       RichString_appendn(str, processMegabytesColor, buffer, len);
+   } else if (rate < ONE_T) {
+      int len = snprintf(buffer, n, "%7.2f G/s ", rate / ONE_G);
+      RichString_appendn(str, largeNumberColor, buffer, len);
    } else {
-      int len = snprintf(buffer, n, "%7.2f G/s ", rate / ONE_K / ONE_K / ONE_K);
+      int len = snprintf(buffer, n, "%7.2f T/s ", rate / ONE_T);
       RichString_appendn(str, largeNumberColor, buffer, len);
    }
 }
@@ -380,9 +394,9 @@ void Process_writeField(Process* this, RichString* str, ProcessField field) {
    switch (field) {
    case PERCENT_CPU: {
       if (this->percent_cpu > 999.9) {
-         xSnprintf(buffer, n, "%4u ", (unsigned int)this->percent_cpu); 
+         xSnprintf(buffer, n, "%4u ", (unsigned int)this->percent_cpu);
       } else if (this->percent_cpu > 99.9) {
-         xSnprintf(buffer, n, "%3u. ", (unsigned int)this->percent_cpu); 
+         xSnprintf(buffer, n, "%3u. ", (unsigned int)this->percent_cpu);
       } else {
          xSnprintf(buffer, n, "%4.1f ", this->percent_cpu);
       }
@@ -390,7 +404,7 @@ void Process_writeField(Process* this, RichString* str, ProcessField field) {
    }
    case PERCENT_MEM: {
       if (this->percent_mem > 99.9) {
-         xSnprintf(buffer, n, "100. "); 
+         xSnprintf(buffer, n, "100. ");
       } else {
          xSnprintf(buffer, n, "%4.1f ", this->percent_mem);
       }
@@ -471,7 +485,7 @@ void Process_writeField(Process* this, RichString* str, ProcessField field) {
       }
       break;
    }
-   case ST_UID: xSnprintf(buffer, n, "%4d ", this->st_uid); break;
+   case ST_UID: xSnprintf(buffer, n, "%5d ", this->st_uid); break;
    case TIME: Process_printTime(str, this->time); return;
    case TGID: xSnprintf(buffer, n, Process_pidFormat, this->tgid); break;
    case TPGID: xSnprintf(buffer, n, Process_pidFormat, this->tpgid); break;
@@ -549,14 +563,15 @@ bool Process_setPriority(Process* this, int priority) {
    return (err == 0);
 }
 
-bool Process_changePriorityBy(Process* this, int delta) {
-   return Process_setPriority(this, this->nice + delta);
+bool Process_changePriorityBy(Process* this, Arg delta) {
+   return Process_setPriority(this, this->nice + delta.i);
 }
 
-void Process_sendSignal(Process* this, int sgn) {
+bool Process_sendSignal(Process* this, Arg sgn) {
    CRT_dropPrivileges();
-   kill(this->pid, (int) sgn);
+   bool ok = (kill(this->pid, sgn.i) == 0);
    CRT_restorePrivileges();
+   return ok;
 }
 
 long Process_pidCompare(const void* v1, const void* v2) {

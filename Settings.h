@@ -22,7 +22,7 @@ typedef struct {
 
 typedef struct Settings_ {
    char* filename;
-   
+
    MeterColumnSettings columns[2];
 
    ProcessField* fields;
@@ -36,6 +36,8 @@ typedef struct Settings_ {
 
    bool countCPUsFromZero;
    bool detailedCPUTime;
+   bool showCPUUsage;
+   bool showCPUFrequency;
    bool treeView;
    bool showProgramPath;
    bool hideThreads;
@@ -49,6 +51,11 @@ typedef struct Settings_ {
    bool updateProcessNames;
    bool accountGuestInCPUMeter;
    bool headerMargin;
+   bool enableMouse;
+   bool vimMode;
+   #ifdef HAVE_LIBHWLOC
+   bool topologyAffinity;
+   #endif
 
    bool changed;
 } Settings;
@@ -58,12 +65,12 @@ typedef struct Settings_ {
 #endif
 
 
-void Settings_delete(Settings* this);
+extern void Settings_delete(Settings* this);
 
-bool Settings_write(Settings* this);
+extern bool Settings_write(Settings* this);
 
-Settings* Settings_new(int cpuCount);
+extern Settings* Settings_new(int cpuCount);
 
-void Settings_invertSortOrder(Settings* this);
+extern void Settings_invertSortOrder(Settings* this);
 
 #endif

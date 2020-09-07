@@ -11,11 +11,17 @@
 #include <assert.h>
 #include <stdlib.h>
 
-void* xMalloc(size_t size);
+extern void fail(void);
 
-void* xCalloc(size_t nmemb, size_t size);
+extern void* xMalloc(size_t size);
 
-void* xRealloc(void* ptr, size_t size);
+extern void* xCalloc(size_t nmemb, size_t size);
+
+extern void* xRealloc(void* ptr, size_t size);
+
+#undef xAsprintf
+
+#define xAsprintf(strp, fmt, ...) do { int _r=asprintf(strp, fmt, __VA_ARGS__); if (_r < 0) { fail(); } } while(0)
 
 #define xSnprintf(fmt, len, ...) do { int _l=len; int _n=snprintf(fmt, _l, __VA_ARGS__); if (!(_n > -1 && _n < _l)) { curs_set(1); endwin(); err(1, NULL); } } while(0)
 
@@ -32,9 +38,9 @@ void* xRealloc(void* ptr, size_t size);
 #endif
 #if (__has_attribute(nonnull) || \
     ((__GNUC__ > 3) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 3)))
-char* xStrdup_(const char* str) __attribute__((nonnull));
+extern char* xStrdup_(const char* str) __attribute__((nonnull));
 #endif // __has_attribute(nonnull) || GNU C 3.3 or later
 
-char* xStrdup_(const char* str);
+extern char* xStrdup_(const char* str);
 
 #endif

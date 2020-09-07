@@ -5,6 +5,7 @@
 /*
 htop - LinuxProcess.h
 (C) 2014 Hisham H. Muhammad
+(C) 2020 Red Hat, Inc.  All Rights Reserved.
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
@@ -15,6 +16,7 @@ in the source distribution for its full text.
 #define PROCESS_FLAG_LINUX_VSERVER  0x0400
 #define PROCESS_FLAG_LINUX_CGROUP   0x0800
 #define PROCESS_FLAG_LINUX_OOM      0x1000
+#define PROCESS_FLAG_LINUX_SMAPS    0x2000
 
 typedef enum UnsupportedProcessFields {
    FLAGS = 9,
@@ -78,7 +80,10 @@ typedef enum LinuxProcessFields {
    PERCENT_IO_DELAY = 117,
    PERCENT_SWAP_DELAY = 118,
    #endif
-   LAST_PROCESSFIELD = 119,
+   M_PSS = 119,
+   M_SWAP = 120,
+   M_PSSWP = 121,
+   LAST_PROCESSFIELD = 122,
 } LinuxProcessField;
 
 #include "IOPriority.h"
@@ -94,6 +99,9 @@ typedef struct LinuxProcess_ {
    unsigned long long int cutime;
    unsigned long long int cstime;
    long m_share;
+   long m_pss;
+   long m_swap;
+   long m_psswp;
    long m_trs;
    long m_drs;
    long m_lrs;
@@ -108,7 +116,7 @@ typedef struct LinuxProcess_ {
    unsigned long long io_write_bytes;
    unsigned long long io_cancelled_write_bytes;
    unsigned long long io_rate_read_time;
-   unsigned long long io_rate_write_time;   
+   unsigned long long io_rate_write_time;
    double io_rate_read_bps;
    double io_rate_write_bps;
    #endif
@@ -144,7 +152,8 @@ typedef struct LinuxProcess_ {
 #endif
 
 
-long long btime; /* semi-global */
+/* semi-global */
+extern long long btime;
 
 extern ProcessFieldData Process_fields[];
 
@@ -152,9 +161,9 @@ extern ProcessPidColumn Process_pidColumns[];
 
 extern ProcessClass LinuxProcess_class;
 
-LinuxProcess* LinuxProcess_new(Settings* settings);
+extern LinuxProcess* LinuxProcess_new(Settings* settings);
 
-void Process_delete(Object* cast);
+extern void Process_delete(Object* cast);
 
 /*
 [1] Note that before kernel 2.6.26 a process that has not asked for
@@ -166,19 +175,18 @@ extern io_priority;
 */
 #define LinuxProcess_effectiveIOPriority(p_) (IOPriority_class(p_->ioPriority) == IOPRIO_CLASS_NONE ? IOPriority_tuple(IOPRIO_CLASS_BE, (p_->super.nice + 20) / 5) : p_->ioPriority)
 
-IOPriority LinuxProcess_updateIOPriority(LinuxProcess* this);
+extern IOPriority LinuxProcess_updateIOPriority(LinuxProcess* this);
 
-bool LinuxProcess_setIOPriority(LinuxProcess* this, IOPriority ioprio);
+extern bool LinuxProcess_setIOPriority(LinuxProcess* this, Arg ioprio);
 
 #ifdef HAVE_DELAYACCT
-void LinuxProcess_printDelay(float delay_percent, char* buffer, int n);
+extern void LinuxProcess_printDelay(float delay_percent, char* buffer, int n);
 #endif
 
-void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field);
+extern void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field);
 
-long LinuxProcess_compare(const void* v1, const void* v2);
+extern long LinuxProcess_compare(const void* v1, const void* v2);
 
-bool Process_isThread(Process* this);
-
+extern bool Process_isThread(Process* this);
 
 #endif

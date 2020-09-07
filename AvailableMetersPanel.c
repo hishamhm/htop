@@ -52,7 +52,7 @@ static inline void AvailableMetersPanel_addMeter(Header* header, Panel* panel, M
 static HandlerResult AvailableMetersPanel_eventHandler(Panel* super, int ch) {
    AvailableMetersPanel* this = (AvailableMetersPanel*) super;
    Header* header = this->header;
-   
+
    ListItem* selected = (ListItem*) Panel_getSelected(super);
    int param = selected->key & 0xff;
    int type = selected->key >> 16;
@@ -104,7 +104,7 @@ AvailableMetersPanel* AvailableMetersPanel_new(Settings* settings, Header* heade
    Panel* super = (Panel*) this;
    FunctionBar* fuBar = FunctionBar_newEnterEsc("Add   ", "Done   ");
    Panel_init(super, 1, 1, 1, 1, Class(ListItem), true, fuBar);
-   
+
    this->settings = settings;
    this->header = header;
    this->leftPanel = leftMeters;
@@ -127,7 +127,7 @@ AvailableMetersPanel* AvailableMetersPanel_new(Settings* settings, Header* heade
       Panel_add(super, (Object*) ListItem_new("CPU average", 0));
       for (int i = 1; i <= cpus; i++) {
          char buffer[50];
-         xSnprintf(buffer, 50, "%s %d", type->uiName, i);
+         xSnprintf(buffer, 50, "%s %d", type->uiName, Settings_cpuId(this->settings, i - 1));
          Panel_add(super, (Object*) ListItem_new(buffer, i));
       }
    } else {

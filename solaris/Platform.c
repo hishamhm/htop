@@ -17,6 +17,8 @@ in the source distribution for its full text.
 #include "ClockMeter.h"
 #include "HostnameMeter.h"
 #include "UptimeMeter.h"
+#include "zfs/ZfsArcMeter.h"
+#include "zfs/ZfsCompressedArcMeter.h"
 #include "SolarisProcess.h"
 #include "SolarisProcessList.h"
 
@@ -48,7 +50,7 @@ typedef struct var kvar_t;
 typedef struct envAccum_ {
    size_t capacity;
    size_t size;
-   size_t bytes; 
+   size_t bytes;
    char *env;
 } envAccum;
 
@@ -122,6 +124,8 @@ MeterClass* Platform_meterTypes[] = {
    &RightCPUsMeter_class,
    &LeftCPUs2Meter_class,
    &RightCPUs2Meter_class,
+   &ZfsArcMeter_class,
+   &ZfsCompressedArcMeter_class,
    &BlankMeter_class,
    NULL
 };
@@ -136,7 +140,7 @@ extern char Process_pidFormat[20];
 
 int Platform_getUptime() {
    int boot_time = 0;
-   int curr_time = time(NULL);   
+   int curr_time = time(NULL);
    struct utmpx * ent;
 
    while (( ent = getutxent() )) {
@@ -170,7 +174,7 @@ int Platform_getMaxPid() {
       vproc = ksvar->v_proc;
    }
    if (kc != NULL) { kstat_close(kc); }
-   return vproc; 
+   return vproc;
 }
 
 double Platform_setCPUValues(Meter* this, int cpu) {
@@ -203,6 +207,9 @@ double Platform_setCPUValues(Meter* this, int cpu) {
 
    percent = CLAMP(percent, 0.0, 100.0);
    if (isnan(percent)) percent = 0.0;
+
+   v[CPU_METER_FREQUENCY] = -1;
+
    return percent;
 }
 
@@ -220,10 +227,22 @@ void Platform_setSwapValues(Meter* this) {
    this->values[0] = pl->usedSwap;
 }
 
+void Platform_setZfsArcValues(Meter* this) {
+   SolarisProcessList* spl = (SolarisProcessList*) this->pl;
+
+   ZfsArcMeter_readStats(this, &(spl->zfs));
+}
+
+void Platform_setZfsCompressedArcValues(Meter* this) {
+   SolarisProcessList* spl = (SolarisProcessList*) this->pl;
+
+   ZfsCompressedArcMeter_readStats(this, &(spl->zfs));
+}
+
 static int Platform_buildenv(void *accum, struct ps_prochandle *Phandle, uintptr_t addr, const char *str) {
    envAccum *accump = accum;
    (void) Phandle;
-   (void) addr; 
+   (void) addr;
    size_t thissz = strlen(str);
    if ((thissz + 2) > (accump->capacity - accump->size))
       accump->env = xRealloc(accump->env, accump->capacity *= 2);
@@ -232,7 +251,7 @@ static int Platform_buildenv(void *accum, struct ps_prochandle *Phandle, uintptr
    strlcpy( accump->env + accump->size, str, (accump->capacity - accump->size));
    strncpy( accump->env + accump->size + thissz + 1, "\n", 1);
    accump->size = accump->size + thissz + 1;
-   return 0; 
+   return 0;
 }
 
 char* Platform_getProcessEnv(pid_t pid) {
@@ -240,7 +259,7 @@ char* Platform_getProcessEnv(pid_t pid) {
    pid_t realpid = pid / 1024;
    int graberr;
    struct ps_prochandle *Phandle;
-   
+
    if ((Phandle = Pgrab(realpid,PGRAB_RDONLY,&graberr)) == NULL)
       return "Unable to read process environment.";
 
@@ -248,7 +267,7 @@ char* Platform_getProcessEnv(pid_t pid) {
    envBuilder.size     = 0;
    envBuilder.env      = xMalloc(envBuilder.capacity);
 
-   (void) Penv_iter(Phandle,Platform_buildenv,&envBuilder); 
+   (void) Penv_iter(Phandle,Platform_buildenv,&envBuilder);
 
    Prelease(Phandle, 0);
 

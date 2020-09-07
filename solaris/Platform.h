@@ -27,7 +27,7 @@ typedef struct var kvar_t;
 typedef struct envAccum_ {
    size_t capacity;
    size_t size;
-   size_t bytes; 
+   size_t bytes;
    char *env;
 } envAccum;
 
@@ -59,6 +59,10 @@ double Platform_setCPUValues(Meter* this, int cpu);
 void Platform_setMemoryValues(Meter* this);
 
 void Platform_setSwapValues(Meter* this);
+
+void Platform_setZfsArcValues(Meter* this);
+
+void Platform_setZfsCompressedArcValues(Meter* this);
 
 char* Platform_getProcessEnv(pid_t pid);
 

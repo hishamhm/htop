@@ -12,6 +12,10 @@ in the source distribution for its full text.
 
 #define MAXCMDLINE 255
 
+#define GZONE	"global    "
+#define UZONE	"unknown   "
+
+#include "zfs/ZfsArcStats.h"
 
 #include <kstat.h>
 #include <sys/param.h>
@@ -22,7 +26,7 @@ in the source distribution for its full text.
 #include <sys/swap.h>
 
 #define ZONE_ERRMSGLEN 1024
-char zone_errmsg[ZONE_ERRMSGLEN];
+extern char zone_errmsg[ZONE_ERRMSGLEN];
 
 typedef struct CPUData_ {
    double userPercent;
@@ -41,6 +45,7 @@ typedef struct SolarisProcessList_ {
    ProcessList super;
    kstat_ctl_t* kd;
    CPUData* cpus;
+   ZfsArcStats zfs;
 } SolarisProcessList;
 
 
@@ -54,7 +59,7 @@ void ProcessList_delete(ProcessList* pl);
  *       and MUST conform to the appropriate definition in order
  *       to work.  See libproc(3LIB) on a Solaris or Illumos
  *       system for more info.
- */ 
+ */
 
 int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *listptr);
 

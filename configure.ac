@@ -2,10 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.65)
-AC_INIT([htop],[2.2.0],[hisham@gobolinux.org])
-
-SOURCE_DATE_EPOCH="${SOURCE_DATE_EPOCH:-$(date +%s)}"
-year=$(date -u -d "@$SOURCE_DATE_EPOCH" "+%Y" 2>/dev/null || date -u -r "$SOURCE_DATE_EPOCH" "+%Y" 2>/dev/null || date -u "+%Y")
+AC_INIT([htop],[3.0.1],[htop@groups.io])
 
 AC_CONFIG_SRCDIR([htop.c])
 AC_CONFIG_AUX_DIR([.])
@@ -69,7 +66,7 @@ dnl glibc 2.25 deprecates 'major' and 'minor' in <sys/types.h> and requires to
 dnl include <sys/sysmacros.h>. However the logic in AC_HEADER_MAJOR has not yet
 dnl been updated in Autoconf 2.69, so use a workaround:
 m4_version_prereq([2.70], [],
-[if test "x$ac_cv_header_sys_mkdev_h" = xno; then
+[if test "x$ac_cv_header_sys_mkdev_h" != xyes; then
    AC_CHECK_HEADER(sys/sysmacros.h, [AC_DEFINE(MAJOR_IN_SYSMACROS, 1,
       [Define to 1 if `major', `minor', and `makedev' are declared in <sys/sysmacros.h>.])])
 fi])
@@ -114,20 +111,12 @@ AC_SUBST(wextra_flag)
 # ----------------------------------------------------------------------
 PROCDIR=/proc
 
-AC_ARG_ENABLE(proc, [AS_HELP_STRING([--enable-proc], [use Linux-compatible proc filesystem])], enable_proc="yes", enable_proc="no")
-if test "x$enable_proc" = xyes; then
-   # An enabled proc assumes we're emulating Linux.
-   my_htop_platform=linux
-   AC_DEFINE(HAVE_PROC, 1, [Define if using a Linux-compatible proc filesystem.])
-fi
-
 AC_ARG_WITH(proc, [AS_HELP_STRING([--with-proc=DIR], [Location of a Linux-compatible proc filesystem (default=/proc).])],
-
-if test -n "$withval"; then
-   AC_DEFINE_UNQUOTED(PROCDIR, "$withval", [Path of proc filesystem])
-   PROCDIR="$withval"
-fi,
-AC_DEFINE(PROCDIR, "/proc", [Path of proc filesystem]))
+  if test -n "$withval"; then
+    AC_DEFINE_UNQUOTED(PROCDIR, "$withval", [Path of proc filesystem])
+    PROCDIR="$withval"
+  fi,
+  AC_DEFINE(PROCDIR, "/proc", [Path of proc filesystem]))
 
 if test "x$cross_compiling" = xno; then
    if test "x$enable_proc" = xyes; then
@@ -226,7 +215,7 @@ else
       HTOP_CHECK_LIB([ncurses],  [refresh], [HAVE_LIBNCURSES],
       missing_libraries="$missing_libraries libncurses"
    ))))
-   
+
    AC_CHECK_HEADERS([curses.h],[:],
       [AC_CHECK_HEADERS([ncurses/curses.h],[:],
          [AC_CHECK_HEADERS([ncurses/ncurses.h],[:],
@@ -298,6 +287,12 @@ then
    ])
 fi
 
+AC_ARG_ENABLE([werror], [AS_HELP_STRING([--enable-werror], [Treat warnings as errors (default: warnings are not errors)])], [enable_werror="$enableval"], [enable_werror=no])
+AS_IF([test "x$enable_werror" = "xyes"], [AM_CFLAGS="$AM_CFLAGS -Werror"])
+AC_SUBST([AM_CFLAGS])
+
+AC_CHECK_PROGS(PYTHON, [python python3 python2])
+AC_SUBST(PYTHON)
 
 # Bail out on errors.
 # ----------------------------------------------------------------------
@@ -308,7 +303,7 @@ if test ! -z "$missing_headers"; then
   AC_MSG_ERROR([missing headers: $missing_headers])
 fi
 
-AC_DEFINE_UNQUOTED(COPYRIGHT, "(C) 2004-$year Hisham Muhammad", [Copyright message.])
+AC_DEFINE_UNQUOTED(COPYRIGHT, "(C) 2004-2018 Hisham Muhammad", [Copyright message.])
 
 # We're done, let's go!
 # ----------------------------------------------------------------------
@@ -321,6 +316,7 @@ AM_CONDITIONAL([HTOP_SOLARIS], [test "$my_htop_platform" = solaris])
 AM_CONDITIONAL([HTOP_UNSUPPORTED], [test "$my_htop_platform" = unsupported])
 AC_SUBST(my_htop_platform)
 AC_CONFIG_FILES([Makefile htop.1])
+AC_CONFIG_FILES([scripts/MakeHeader.py], [chmod +x scripts/MakeHeader.py])
 AC_OUTPUT
 
 if test "$my_htop_platform" = "unsupported"
@@ -336,3 +332,20 @@ then
    echo "****************************************************************"
    echo ""
 fi
+
+AC_MSG_RESULT([
+  ${PACKAGE_NAME} ${VERSION}
+
+  platform:                $my_htop_platform
+  proc directory:          $PROCDIR
+  openvz:                  $enable_openvz
+  cgroup:                  $enable_cgroup
+  vserver:                 $enable_vserver
+  ancient vserver:         $enable_ancient_vserver
+  taskstats:               $enable_taskstats
+  unicode:                 $enable_unicode
+  linux affinity:          $enable_linux_affinity
+  hwlock:                  $enable_hwloc
+  setuid:                  $enable_setuid
+  linux delay accounting:  $enable_delayacct
+])

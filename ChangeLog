@@ -1,3 +1,79 @@
+What's new in version 3.0.1
+
+* Coverity fixes, CI improvements, documentation updates
+* BUGFIX: Fix early exit with longer sysfs battery paths
+* BUGFIX: Improve OOM output, fix sorting
+(thanks to Christian Göttsche)
+* Rework check buttons and tree open/closed
+(thanks to Bert Wesarg)
+* Add -U/--no-unicode option to disable unicode
+(thanks to Christian Hesse)
+* Improvements to the affinity panel
+(thanks to Bert Wesarg)
+
+What's new in version 3.0.0
+
+* New maintainers - after a prolonged period of inactivity
+  from Hisham, the creator and original maintainer, a team
+  of community maintainers have volunteered to take over a
+  fork at https://htop.dev and https://github.com/htop-dev
+  to keep the project going.
+
+* Support ZFS ARC statistics
+  (thanks to Ross Williams)
+* Support more than 2 smaller CPU meter columns
+  (thanks to Christoph Budziszewski)
+* Support Linux proportional set size metrics
+  (thanks to @linvinus, @ntninja and @himikof)
+* Support Linux pressure stall information metrics
+  (thanks to Ran Benita)
+* New display option to show CPU frequency in CPU meters
+  (thanks to Arnav Singh)
+* Update Linux sysfs battery discovery for recent kernels
+  (thanks to @smattie)
+* Add hardware topology information in the affinity panel
+  (thanks to Bert Wesarg)
+* Add timestamp reporting to the strace screen
+  (thanks to Mario Harjac)
+* Add simple, optional vim key mapping mode
+  (thanks to Daniel Flanagan)
+* Added an option to disable the mouse
+  (thanks to MartinJM)
+* Add Solaris11 compatibility
+  (thanks to Jan Senolt)
+* Without an argument -u uses $USER value automatically
+  (thanks to @solanav)
+* Support less(1) search navigation shortcuts
+  (thanks to @syrrim)
+* Update the FreeBSD maximum PID to match FreeBSD change
+  (thanks to @multiplexd)
+* Report values larger than 100 terabytes
+  (thanks to @adrien1018)
+* Widen ST_UID (UID) column to allow for UIDs > 9999
+  (thanks to DLange)
+* BUGFIX: fix makefiles for building with clang
+  (thanks to Jorge Pereira)
+* BUGFIX: fix <sys/sysmacros.h> major() usage
+  (thanks to @wataash and Kang-Che Sung)
+* BUGFIX: fix the STARTTIME column on FreeBSD
+  (thanks to Rob Crowston)
+* BUGFIX: truncate overwide jail names on FreeBSD
+  (thanks to Rob Crowston)
+* BUGFIX: fix reported memory values on FreeBSD
+  (thanks to Tobias Kortkamp)
+* BUGFIX: fix reported CPU meter values on OpenBSD
+  (thanks to @motet-a)
+* BUGFIX: correctly identify other types of zombie process
+  (thanks to @joder)
+* BUGFIX: improve follow-process handling in some situations
+  (thanks to @wangqr)
+* BUGFIX: fix custom meters reverting to unexpected setting
+  (thanks to @wangqr)
+* BUGFIX: close pipe after running lsof(1)
+  (thanks to Jesin)
+* BUGFIX: meters honour setting of counting CPUs from 0/1
+  (thanks to @rnsanchez)
+
 What's new in version 2.2.0
 
 * Solaris/Illumos/OpenIndiana support
@@ -158,7 +234,7 @@ What's new in version 1.0.2
 What's new in version 1.0.1
 
 * Move .htoprc to XDG-compliant path ~/.config/htop/htoprc,
-  respecting $XDG_CONFIG_HOME 
+  respecting $XDG_CONFIG_HOME
   (thanks to Hadzhimurad Ustarkhan for the suggestion.)
 * Safer behavior on the kill screen, to make it harder to kill the wrong process.
 * Fix for building in FreeBSD 8.2
@@ -546,7 +622,7 @@ What's new in version 0.3.1
 
 What's new in version 0.3
 
-* BUGFIX: no dirt left on screen on horizontal scrolling 
+* BUGFIX: no dirt left on screen on horizontal scrolling
 * Signal selection on "kill" command
 * Color-coding for users, nice and process status
 * "Follow" function

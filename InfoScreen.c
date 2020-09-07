@@ -56,7 +56,7 @@ static const char* const InfoScreenKeys[] = {"F3", "F4", "F5", "Esc"};
 
 static int InfoScreenEvents[] = {KEY_F(3), KEY_F(4), KEY_F(5), 27};
 
-InfoScreen* InfoScreen_init(InfoScreen* this, Process* process, FunctionBar* bar, int height, char* panelHeader) {
+InfoScreen* InfoScreen_init(InfoScreen* this, Process* process, FunctionBar* bar, int height, const char* panelHeader) {
    this->process = process;
    if (!bar) {
       bar = FunctionBar_new(InfoScreenFunctions, InfoScreenKeys, InfoScreenEvents);
@@ -75,12 +75,12 @@ InfoScreen* InfoScreen_done(InfoScreen* this) {
    return this;
 }
 
-void InfoScreen_drawTitled(InfoScreen* this, char* fmt, ...) {
+void InfoScreen_drawTitled(InfoScreen* this, const char* fmt, ...) {
    va_list ap;
    va_start(ap, fmt);
    attrset(CRT_colors[METER_TEXT]);
    mvhline(0, 0, ' ', COLS);
-   wmove(stdscr, 0, 0);
+   (void) wmove(stdscr, 0, 0);
    vw_printw(stdscr, fmt, ap);
    attrset(CRT_colors[DEFAULT_COLOR]);
    this->display->needsRedraw = true;
@@ -120,7 +120,7 @@ void InfoScreen_run(InfoScreen* this) {
       }
       set_escdelay(25);
       int ch = getch();
-      
+
       if (ch == ERR) {
          if (As_InfoScreen(this)->onErr) {
             InfoScreen_onErr(this);
@@ -131,19 +131,21 @@ void InfoScreen_run(InfoScreen* this) {
       if (ch == KEY_MOUSE) {
          MEVENT mevent;
          int ok = getmouse(&mevent);
-         if (ok == OK)
+         if (ok == OK) {
             if (mevent.y >= panel->y && mevent.y < LINES - 1) {
                Panel_setSelected(panel, mevent.y - panel->y + panel->scrollV);
                ch = 0;
-            } if (mevent.y == LINES - 1)
+            } else if (mevent.y == LINES - 1) {
                ch = IncSet_synthesizeEvent(this->inc, mevent.x);
+            }
+	 }
       }
 
       if (this->inc->active) {
          IncSet_handleKey(this->inc, ch, panel, IncSet_getListItemValue, this->lines);
          continue;
       }
-      
+
       switch(ch) {
       case ERR:
          continue;

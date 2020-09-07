@@ -1,31 +1,40 @@
-.TH "HTOP" "1" "2015" "@PACKAGE_STRING@" "Utils"
+.TH "HTOP" "1" "2020" "@PACKAGE_STRING@" "User Commands"
 .SH "NAME"
 htop \- interactive process viewer
 .SH "SYNOPSIS"
-.LP 
-.B htop [\fI\-dChustv\fR]
-.SH "DESCRIPTION"
-.LP 
-Htop is a free (GPL) ncurses-based process viewer for Linux.
 .LP
-It is similar to top, but allows you to scroll vertically and horizontally,
-so you can see all the processes running on the system, along with their full
-command lines, as well as viewing them as a process tree, selecting multiple
-processes and acting on them all at once.
+.B htop
+.RB [ \-dChpustv ]
+.SH "DESCRIPTION"
+.LP
+.B htop
+is a cross-platform ncurses-based process viewer.
+.LP
+It is similar to
+.BR top ,
+but allows you to scroll vertically and horizontally, and interact using
+a pointing device (mouse).
+You can observe all processes running on the system, along with their
+command line arguments, as well as view them in a tree format, select
+multiple processes and acting on them all at once.
 .LP
 Tasks related to processes (killing, renicing) can be done without
 entering their PIDs.
-.br 
+.br
 .SH "COMMAND-LINE OPTIONS"
 .LP
 Mandatory arguments to long options are mandatory for short options too.
-.LP 
+.LP
 .TP
 \fB\-d \-\-delay=DELAY\fR
-Delay between updates, in tenths of seconds
+Delay between updates, in tenths of seconds. If the delay value is
+less than 1 it is increased to 1, i.e. 1/10 second. If the delay value
+is greater than 100, it is decreased to 100, i.e. 10 seconds.
 .TP
 \fB\-C \-\-no-color \-\-no-colour\fR
-Start htop in monochrome mode
+Start
+.B htop
+in monochrome mode
 .TP
 \fB\-h \-\-help
 Display a help message and exit
@@ -39,17 +48,19 @@ Sort by this column (use \-\-sort\-key help for a column list)
 \fB\-u \-\-user=USERNAME\fR
 Show only the processes of a given user
 .TP
+\fB\-U \-\-no-unicode\fR
+Do not use unicode but ASCII characters for graph meters
+.TP
 \fB\-v \-\-version
 Output version information and exit
 .TP
 \fB\-t \-\-tree
 Show processes in tree view
-.PP
-.br 
 .SH "INTERACTIVE COMMANDS"
-.LP 
-The following commands are supported while in htop:
-.LP 
+.LP
+The following commands are supported while in
+.BR htop :
+.LP
 .TP 5
 .B Up, Alt-k
 Select (highlight) the previous process in the process list. Scroll the list
@@ -151,7 +162,7 @@ Quit
 Invert the sort order: if sort order is increasing, switch to decreasing, and
 vice-versa.
 .TP
-.B +, \- 
+.B +, \-
 When in tree view mode, expand or collapse subtree. When a subtree is collapsed
 a "+" sign shows to the left of the process name.
 .TP
@@ -194,19 +205,22 @@ Refresh: redraw screen and recalculate values.
 .B Numbers
 PID search: type in process ID and the selection highlight will be moved to it.
 .PD
-
 .SH "COLUMNS"
-.LP 
+.LP
 The following columns can display data about each process. A value of '\-' in
 all the rows indicates that a column is unsupported on your system, or
-currently unimplemented in htop. The names below are the ones used in the
+currently unimplemented in
+.BR htop .
+The names below are the ones used in the
 "Available Columns" section of the setup screen. If a different name is
-shown in htop's main screen, it is shown below in parenthesis.
-.LP 
+shown in
+.BR htop 's
+main screen, it is shown below in parenthesis.
+.LP
 .TP 5
 .B Command
 The full command line of the process (i.e. program name and arguments).
-.TP 
+.TP
 .B PID
 The process ID.
 .TP
@@ -227,7 +241,7 @@ The process's group ID.
 .TP
 .B SESSION (SID)
 The process's session ID.
-.TP 
+.TP
 .B TTY_NR (TTY)
 The controlling terminal of the process.
 .TP
@@ -389,36 +403,44 @@ The percentage of time spent swapping in pages. Requires CAP_NET_ADMIN.
 .TP
 .B All other flags
 Currently unsupported (always displays '-').
-
 .SH "CONFIG FILE"
-.LP 
-By default htop reads its configuration from the XDG-compliant path
-~/.config/htop/htoprc -- the configuration file is overwritten by htop's
-in-program Setup configuration, so it should not be hand-edited. If no
-user configuration exists htop tries to read the system-wide configuration
-from @sysconfdir@/htoprc and as a last resort, falls back to its
-hard coded defaults.
+.LP
+By default
+.B htop
+reads its configuration from the XDG-compliant path
+.IR ~/.config/htop/htoprc .
+The configuration file is overwritten by
+.BR htop 's
+in-program Setup configuration, so it should not be hand-edited.
+If no user configuration exists
+.B htop
+tries to read the system-wide configuration from
+.I @sysconfdir@/htoprc
+and as a last resort, falls back to its hard coded defaults.
 .LP
 You may override the location of the configuration file using the $HTOPRC
 environment variable (so you can have multiple configurations for different
 machines that share the same home directory, for example).
-
 .SH "MEMORY SIZES"
 .LP
-Memory sizes in htop are displayed as they are in tools from the GNU Coreutils
-(when ran with the --human-readable option). This means that sizes are printed
-in powers of 1024. (e.g., 1023M = 1072693248 Bytes)
+Memory sizes in
+.B htop
+are displayed in a human-readable form.
+Sizes are printed in powers of 1024. (e.g., 1023M = 1072693248 Bytes)
 .LP
-The decision to use this convention was made in order to conserve screen space
-and make memory size representations consistent throughout htop.
-
+The decision to use this convention was made in order to conserve screen
+space and make memory size representations consistent throughout
+.BR htop .
 .SH "SEE ALSO"
-proc(5), top(1), free(1), ps(1), uptime(1), limits.conf(5)
-
+.BR proc (5),
+.BR top (1),
+.BR free (1),
+.BR ps (1),
+.BR uptime (1)
+and
+.BR limits.conf (5).
 .SH "AUTHORS"
-.LP 
-htop is developed by Hisham Muhammad <hisham@gobolinux.org>.
 .LP
-This man page was written by Bartosz Fenski <fenio@o2.pl> for the Debian
-GNU/Linux distribution (but it may be used by others). It was updated by Hisham
-Muhammad, and later by Vincent Launchbury, who wrote the 'Columns' section.
+.B htop
+was originally developed by Hisham Muhammad.
+Nowadays it is maintained by the community at <htop@groups.io>.

@@ -62,11 +62,11 @@ typedef struct State_ {
 
 }*/
 
-Object* Action_pickFromVector(State* st, Panel* list, int x) {
+Object* Action_pickFromVector(State* st, Panel* list, int x, bool followProcess) {
    Panel* panel = st->panel;
    Header* header = st->header;
    Settings* settings = st->settings;
-   
+
    int y = panel->y;
    ScreenManager* scr = ScreenManager_new(0, header->height, 0, -1, HORIZONTAL, header, settings, false);
    scr->allowFocusChange = false;
@@ -75,8 +75,8 @@ Object* Action_pickFromVector(State* st, Panel* list, int x) {
    Panel* panelFocus;
    int ch;
    bool unfollow = false;
-   int pid = MainPanel_selectedPid((MainPanel*)panel);
-   if (header->pl->following == -1) {
+   int pid = followProcess ? MainPanel_selectedPid((MainPanel*)panel) : -1;
+   if (followProcess && header->pl->following == -1) {
       header->pl->following = pid;
       unfollow = true;
    }
@@ -88,11 +88,16 @@ Object* Action_pickFromVector(State* st, Panel* list, int x) {
    Panel_move(panel, 0, y);
    Panel_resize(panel, COLS, LINES-y-1);
    if (panelFocus == list && ch == 13) {
-      Process* selected = (Process*)Panel_getSelected(panel);
-      if (selected && selected->pid == pid)
+      if (followProcess) {
+         Process* selected = (Process*)Panel_getSelected(panel);
+         if (selected && selected->pid == pid)
+            return Panel_getSelected(list);
+         else
+            beep();
+      } else {
          return Panel_getSelected(list);
-      else
-         beep();
+      }
+
    }
    return NULL;
 }
@@ -189,7 +194,7 @@ static Htop_Reaction sortBy(State* st) {
          Panel_setSelected(sortPanel, i);
       free(name);
    }
-   ListItem* field = (ListItem*) Action_pickFromVector(st, sortPanel, 15);
+   ListItem* field = (ListItem*) Action_pickFromVector(st, sortPanel, 15, false);
    if (field) {
       reaction |= Action_setSortKey(st->settings, field->key);
    }
@@ -248,7 +253,18 @@ static Htop_Reaction actionIncFilter(State* st) {
 }
 
 static Htop_Reaction actionIncSearch(State* st) {
+   IncSet_reset(((MainPanel*)st->panel)->inc, INC_SEARCH);
    IncSet_activate(((MainPanel*)st->panel)->inc, INC_SEARCH, st->panel);
+   return HTOP_REFRESH | HTOP_KEEP_FOLLOWING;
+}
+
+static Htop_Reaction actionIncNext(State* st) {
+   IncSet_next(((MainPanel*)st->panel)->inc, INC_SEARCH, st->panel, (IncMode_GetPanelValue) MainPanel_getValue);
+   return HTOP_REFRESH | HTOP_KEEP_FOLLOWING;
+}
+
+static Htop_Reaction actionIncPrev(State* st) {
+   IncSet_prev(((MainPanel*)st->panel)->inc, INC_SEARCH, st->panel, (IncMode_GetPanelValue) MainPanel_getValue);
    return HTOP_REFRESH | HTOP_KEEP_FOLLOWING;
 }
 
@@ -297,20 +313,22 @@ static Htop_Reaction actionSetAffinity(State* st) {
       return HTOP_OK;
 #if (HAVE_LIBHWLOC || HAVE_LINUX_AFFINITY)
    Panel* panel = st->panel;
-   
+
    Process* p = (Process*) Panel_getSelected(panel);
    if (!p) return HTOP_OK;
-   Affinity* affinity = Affinity_get(p, st->pl);
-   if (!affinity) return HTOP_OK;
-   Panel* affinityPanel = AffinityPanel_new(st->pl, affinity);
-   Affinity_delete(affinity);
+   Affinity* affinity1 = Affinity_get(p, st->pl);
+   if (!affinity1) return HTOP_OK;
+   int width;
+   Panel* affinityPanel = AffinityPanel_new(st->pl, affinity1, &width);
+   width += 1; /* we add a gap between the panels */
+   Affinity_delete(affinity1);
 
-   void* set = Action_pickFromVector(st, affinityPanel, 15);
+   void* set = Action_pickFromVector(st, affinityPanel, width, true);
    if (set) {
-      Affinity* affinity = AffinityPanel_getAffinity(affinityPanel, st->pl);
-      bool ok = MainPanel_foreachProcess((MainPanel*)panel, (MainPanel_ForeachProcessFn) Affinity_set, (Arg){ .v = affinity }, NULL);
+      Affinity* affinity2 = AffinityPanel_getAffinity(affinityPanel, st->pl);
+      bool ok = MainPanel_foreachProcess((MainPanel*)panel, (MainPanel_ForeachProcessFn) Affinity_set, (Arg){ .v = affinity2 }, NULL);
       if (!ok) beep();
-      Affinity_delete(affinity);
+      Affinity_delete(affinity2);
    }
    Panel_delete((Object*)affinityPanel);
 #endif
@@ -319,7 +337,7 @@ static Htop_Reaction actionSetAffinity(State* st) {
 
 static Htop_Reaction actionKill(State* st) {
    Panel* signalsPanel = (Panel*) SignalsPanel_new();
-   ListItem* sgn = (ListItem*) Action_pickFromVector(st, signalsPanel, 15);
+   ListItem* sgn = (ListItem*) Action_pickFromVector(st, signalsPanel, 15, true);
    if (sgn) {
       if (sgn->key != 0) {
          Panel_setHeader(st->panel, "Sending...");
@@ -340,7 +358,7 @@ static Htop_Reaction actionFilterByUser(State* st) {
    Vector_insertionSort(usersPanel->items);
    ListItem* allUsers = ListItem_new("All users", -1);
    Panel_insert(usersPanel, 0, (Object*) allUsers);
-   ListItem* picked = (ListItem*) Action_pickFromVector(st, usersPanel, 20);
+   ListItem* picked = (ListItem*) Action_pickFromVector(st, usersPanel, 20, false);
    if (picked) {
       if (picked == allUsers) {
          st->pl->userId = -1;
@@ -463,7 +481,7 @@ static Htop_Reaction actionHelp(State* st) {
    if (settings->detailedCPUTime) {
       addattrstr(CRT_colors[CPU_NICE_TEXT], "low"); addstr("/");
       addattrstr(CRT_colors[CPU_NORMAL], "normal"); addstr("/");
-      addattrstr(CRT_colors[CPU_KERNEL], "kernel"); addstr("/");
+      addattrstr(CRT_colors[CPU_SYSTEM], "kernel"); addstr("/");
       addattrstr(CRT_colors[CPU_IRQ], "irq"); addstr("/");
       addattrstr(CRT_colors[CPU_SOFTIRQ], "soft-irq"); addstr("/");
       addattrstr(CRT_colors[CPU_STEAL], "steal"); addstr("/");
@@ -473,7 +491,7 @@ static Htop_Reaction actionHelp(State* st) {
    } else {
       addattrstr(CRT_colors[CPU_NICE_TEXT], "low-priority"); addstr("/");
       addattrstr(CRT_colors[CPU_NORMAL], "normal"); addstr("/");
-      addattrstr(CRT_colors[CPU_KERNEL], "kernel"); addstr("/");
+      addattrstr(CRT_colors[CPU_SYSTEM], "kernel"); addstr("/");
       addattrstr(CRT_colors[CPU_GUEST], "virtualiz");
       addattrstr(CRT_colors[BAR_SHADOW], "               used%");
    }
@@ -559,6 +577,8 @@ void Action_setBindings(Htop_Action* keys) {
    keys['\\'] = actionIncFilter;
    keys[KEY_F(3)] = actionIncSearch;
    keys['/'] = actionIncSearch;
+   keys['n'] = actionIncNext;
+   keys['N'] = actionIncPrev;
 
    keys[']'] = actionHigherPriority;
    keys[KEY_F(7)] = actionHigherPriority;
@@ -597,4 +617,3 @@ void Action_setBindings(Htop_Action* keys) {
    keys['c'] = actionTagAllChildren;
    keys['e'] = actionShowEnvScreen;
 }
-

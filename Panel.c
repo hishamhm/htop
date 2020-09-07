@@ -264,6 +264,14 @@ void Panel_setSelected(Panel* this, int selected) {
    }
 }
 
+void Panel_splice(Panel *this, Vector* from) {
+   assert (this != NULL);
+   assert (from != NULL);
+
+   Vector_splice(this->items, from);
+   this->needsRedraw = true;
+}
+
 void Panel_draw(Panel* this, bool focus) {
    assert (this != NULL);
 
@@ -372,7 +380,7 @@ void Panel_draw(Panel* this, bool focus) {
 
 bool Panel_onKey(Panel* this, int key) {
    assert (this != NULL);
-   
+
    int size = Vector_size(this->items);
    switch (key) {
    case KEY_DOWN:
@@ -455,7 +463,7 @@ bool Panel_onKey(Panel* this, int key) {
    if (this->selected < 0 || size == 0) {
       this->selected = 0;
       this->needsRedraw = true;
-   } else if (this->selected >= size) {   
+   } else if (this->selected >= size) {
       this->selected = size - 1;
       this->needsRedraw = true;
    }

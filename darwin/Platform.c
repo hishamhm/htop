@@ -15,6 +15,8 @@ in the source distribution for its full text.
 #include "ClockMeter.h"
 #include "HostnameMeter.h"
 #include "UptimeMeter.h"
+#include "zfs/ZfsArcMeter.h"
+#include "zfs/ZfsCompressedArcMeter.h"
 #include "DarwinProcessList.h"
 
 #include <stdlib.h>
@@ -90,7 +92,7 @@ ProcessFieldData Process_fields[] = {
    [PROCESSOR] = { .name = "PROCESSOR", .title = "CPU ", .description = "Id of the CPU the process last executed on", .flags = 0, },
    [M_SIZE] = { .name = "M_SIZE", .title = " VIRT ", .description = "Total program size in virtual memory", .flags = 0, },
    [M_RESIDENT] = { .name = "M_RESIDENT", .title = "  RES ", .description = "Resident set size, size of the text and data sections, plus stack usage", .flags = 0, },
-   [ST_UID] = { .name = "ST_UID", .title = " UID ", .description = "User ID of the process owner", .flags = 0, },
+   [ST_UID] = { .name = "ST_UID", .title = "  UID ", .description = "User ID of the process owner", .flags = 0, },
    [PERCENT_CPU] = { .name = "PERCENT_CPU", .title = "CPU% ", .description = "Percentage of the CPU time the process used in the last sampling", .flags = 0, },
    [PERCENT_MEM] = { .name = "PERCENT_MEM", .title = "MEM% ", .description = "Percentage of the memory the process is using, based on resident memory size", .flags = 0, },
    [USER] = { .name = "USER", .title = "USER      ", .description = "Username of the process owner (or user ID if name cannot be determined)", .flags = 0, },
@@ -117,6 +119,8 @@ MeterClass* Platform_meterTypes[] = {
    &RightCPUsMeter_class,
    &LeftCPUs2Meter_class,
    &RightCPUs2Meter_class,
+   &ZfsArcMeter_class,
+   &ZfsCompressedArcMeter_class,
    &BlankMeter_class,
    NULL
 };
@@ -217,6 +221,8 @@ double Platform_setCPUValues(Meter* mtr, int cpu) {
    /* Convert to percent and return */
    total = mtr->values[CPU_METER_NICE] + mtr->values[CPU_METER_NORMAL] + mtr->values[CPU_METER_KERNEL];
 
+   mtr->values[CPU_METER_FREQUENCY] = -1;
+
    return CLAMP(total, 0.0, 100.0);
 }
 
@@ -239,6 +245,18 @@ void Platform_setSwapValues(Meter* mtr) {
 
   mtr->total = swapused.xsu_total / 1024;
   mtr->values[0] = swapused.xsu_used / 1024;
+}
+
+void Platform_setZfsArcValues(Meter* this) {
+   DarwinProcessList* dpl = (DarwinProcessList*) this->pl;
+
+   ZfsArcMeter_readStats(this, &(dpl->zfs));
+}
+
+void Platform_setZfsCompressedArcValues(Meter* this) {
+   DarwinProcessList* dpl = (DarwinProcessList*) this->pl;
+
+   ZfsCompressedArcMeter_readStats(this, &(dpl->zfs));
 }
 
 char* Platform_getProcessEnv(pid_t pid) {

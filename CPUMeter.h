@@ -20,7 +20,8 @@ typedef enum {
    CPU_METER_STEAL = 5,
    CPU_METER_GUEST = 6,
    CPU_METER_IOWAIT = 7,
-   CPU_METER_ITEMCOUNT = 8, // number of entries in this enum
+   CPU_METER_FREQUENCY = 8,
+   CPU_METER_ITEMCOUNT = 9, // number of entries in this enum
 } CPUMeterValues;
 
 
@@ -47,5 +48,10 @@ extern MeterClass LeftCPUs2Meter_class;
 
 extern MeterClass RightCPUs2Meter_class;
 
+extern MeterClass AllCPUs4Meter_class;
+
+extern MeterClass LeftCPUs4Meter_class;
+
+extern MeterClass RightCPUs4Meter_class;
 
 #endif

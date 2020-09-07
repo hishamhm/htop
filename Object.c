@@ -1,6 +1,7 @@
 /*
 htop - Object.c
 (C) 2004-2012 Hisham H. Muhammad
+(C) 2020 Red Hat, Inc.  All Rights Reserved.
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
@@ -28,7 +29,7 @@ typedef void(*Object_Delete)(Object*);
 #define Class(class_)                 ((ObjectClass*)(&(class_ ## _class)))
 
 #define AllocThis(class_) (class_*) xMalloc(sizeof(class_)); Object_setClass(this, Class(class_));
- 
+
 typedef struct ObjectClass_ {
    const void* extends;
    const Object_Display display;
@@ -39,6 +40,11 @@ typedef struct ObjectClass_ {
 struct Object_ {
    ObjectClass* klass;
 };
+
+typedef union {
+   int i;
+   void* v;
+} Arg;
 
 }*/
 

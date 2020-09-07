@@ -10,8 +10,7 @@ in the source distribution for its full text.
 */
 
 #ifdef MAJOR_IN_MKDEV
-#elif defined(MAJOR_IN_SYSMACROS) || \
-   (defined(HAVE_SYS_SYSMACROS_H) && HAVE_SYS_SYSMACROS_H)
+#elif defined(MAJOR_IN_SYSMACROS)
 #endif
 
 #ifdef HAVE_DELAYACCT
@@ -19,6 +18,7 @@ in the source distribution for its full text.
 
 
 #include "ProcessList.h"
+#include "zfs/ZfsArcStats.h"
 
 extern long long btime;
 
@@ -35,7 +35,7 @@ typedef struct CPUData_ {
    unsigned long long int softIrqTime;
    unsigned long long int stealTime;
    unsigned long long int guestTime;
-   
+
    unsigned long long int totalPeriod;
    unsigned long long int userPeriod;
    unsigned long long int systemPeriod;
@@ -48,6 +48,8 @@ typedef struct CPUData_ {
    unsigned long long int softIrqPeriod;
    unsigned long long int stealPeriod;
    unsigned long long int guestPeriod;
+
+   double frequency;
 } CPUData;
 
 typedef struct TtyDriver_ {
@@ -59,18 +61,25 @@ typedef struct TtyDriver_ {
 
 typedef struct LinuxProcessList_ {
    ProcessList super;
-   
+
    CPUData* cpus;
    TtyDriver* ttyDrivers;
-   
+   bool haveSmapsRollup;
+
    #ifdef HAVE_DELAYACCT
    struct nl_sock *netlink_socket;
    int netlink_family;
    #endif
+
+   ZfsArcStats zfs;
 } LinuxProcessList;
 
 #ifndef PROCDIR
 #define PROCDIR "/proc"
+#endif
+
+#ifndef PROCCPUINFOFILE
+#define PROCCPUINFOFILE PROCDIR "/cpuinfo"
 #endif
 
 #ifndef PROCSTATFILE
@@ -79,6 +88,10 @@ typedef struct LinuxProcessList_ {
 
 #ifndef PROCMEMINFOFILE
 #define PROCMEMINFOFILE PROCDIR "/meminfo"
+#endif
+
+#ifndef PROCARCSTATSFILE
+#define PROCARCSTATSFILE PROCDIR "/spl/kstat/zfs/arcstats"
 #endif
 
 #ifndef PROCTTYDRIVERSFILE
@@ -98,9 +111,9 @@ typedef struct LinuxProcessList_ {
 
 #endif
 
-ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId);
+extern ProcessList* ProcessList_new(UsersTable* usersTable, Hashtable* pidWhiteList, uid_t userId);
 
-void ProcessList_delete(ProcessList* pl);
+extern void ProcessList_delete(ProcessList* pl);
 
 
 #ifdef HAVE_TASKSTATS
@@ -123,6 +136,6 @@ void ProcessList_delete(ProcessList* pl);
 
 #endif
 
-void ProcessList_goThroughEntries(ProcessList* super);
+extern void ProcessList_goThroughEntries(ProcessList* super);
 
 #endif

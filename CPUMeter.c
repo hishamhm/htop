@@ -28,13 +28,14 @@ typedef enum {
    CPU_METER_STEAL = 5,
    CPU_METER_GUEST = 6,
    CPU_METER_IOWAIT = 7,
-   CPU_METER_ITEMCOUNT = 8, // number of entries in this enum
+   CPU_METER_FREQUENCY = 8,
+   CPU_METER_ITEMCOUNT = 9, // number of entries in this enum
 } CPUMeterValues;
 
 }*/
 
 int CPUMeter_attributes[] = {
-   CPU_NICE, CPU_NORMAL, CPU_KERNEL, CPU_IRQ, CPU_SOFTIRQ, CPU_STEAL, CPU_GUEST, CPU_IOWAIT
+   CPU_NICE, CPU_NORMAL, CPU_SYSTEM, CPU_IRQ, CPU_SOFTIRQ, CPU_STEAL, CPU_GUEST, CPU_IOWAIT
 };
 
 #ifndef MIN
@@ -63,7 +64,30 @@ static void CPUMeter_updateValues(Meter* this, char* buffer, int size) {
    }
    memset(this->values, 0, sizeof(double) * CPU_METER_ITEMCOUNT);
    double percent = Platform_setCPUValues(this, cpu);
-   xSnprintf(buffer, size, "%5.1f%%", percent);
+   if (this->pl->settings->showCPUFrequency) {
+      /* Initial frequency is in MHz. Emit it as GHz if it's larger than 1000MHz */
+      double cpuFrequency = this->values[CPU_METER_FREQUENCY];
+      char unit = 'M';
+      char cpuFrequencyBuffer[16];
+      if (cpuFrequency < 0) {
+         xSnprintf(cpuFrequencyBuffer, sizeof(cpuFrequencyBuffer), "N/A");
+      } else {
+         if (cpuFrequency > 1000) {
+            cpuFrequency /= 1000;
+            unit = 'G';
+         }
+         xSnprintf(cpuFrequencyBuffer, sizeof(cpuFrequencyBuffer), "%.3f%cHz", cpuFrequency, unit);
+      }
+      if (this->pl->settings->showCPUUsage) {
+         xSnprintf(buffer, size, "%5.1f%% %s", percent, cpuFrequencyBuffer);
+      } else {
+         xSnprintf(buffer, size, "%s", cpuFrequencyBuffer);
+      }
+   } else if (this->pl->settings->showCPUUsage) {
+      xSnprintf(buffer, size, "%5.1f%%", percent);
+   } else if (size > 0) {
+      buffer[0] = '\0';
+   }
 }
 
 static void CPUMeter_display(Object* cast, RichString* out) {
@@ -80,7 +104,7 @@ static void CPUMeter_display(Object* cast, RichString* out) {
    if (this->pl->settings->detailedCPUTime) {
       xSnprintf(buffer, sizeof(buffer), "%5.1f%% ", this->values[CPU_METER_KERNEL]);
       RichString_append(out, CRT_colors[METER_TEXT], "sy:");
-      RichString_append(out, CRT_colors[CPU_KERNEL], buffer);
+      RichString_append(out, CRT_colors[CPU_SYSTEM], buffer);
       xSnprintf(buffer, sizeof(buffer), "%5.1f%% ", this->values[CPU_METER_NICE]);
       RichString_append(out, CRT_colors[METER_TEXT], "ni:");
       RichString_append(out, CRT_colors[CPU_NICE_TEXT], buffer);
@@ -106,7 +130,7 @@ static void CPUMeter_display(Object* cast, RichString* out) {
    } else {
       xSnprintf(buffer, sizeof(buffer), "%5.1f%% ", this->values[CPU_METER_KERNEL]);
       RichString_append(out, CRT_colors[METER_TEXT], "sys:");
-      RichString_append(out, CRT_colors[CPU_KERNEL], buffer);
+      RichString_append(out, CRT_colors[CPU_SYSTEM], buffer);
       xSnprintf(buffer, sizeof(buffer), "%5.1f%% ", this->values[CPU_METER_NICE]);
       RichString_append(out, CRT_colors[METER_TEXT], "low:");
       RichString_append(out, CRT_colors[CPU_NICE_TEXT], buffer);
@@ -137,6 +161,15 @@ static void AllCPUsMeter_getRange(Meter* this, int* start, int* count) {
    }
 }
 
+static int MapClassnameToColumncount(Meter* this){
+   if (strchr(Meter_name(this), '4'))
+      return 4;
+   else if (strchr(Meter_name(this), '2'))
+      return 2;
+   else
+      return 1;
+}
+
 static void AllCPUsMeter_init(Meter* this) {
    int cpus = this->pl->cpuCount;
    if (!this->drawData)
@@ -152,10 +185,8 @@ static void AllCPUsMeter_init(Meter* this) {
    if (this->mode == 0)
       this->mode = BAR_METERMODE;
    int h = Meter_modes[this->mode]->h;
-   if (strchr(Meter_name(this), '2'))
-      this->h = h * ((count+1) / 2);
-   else
-      this->h = h * count;
+   int ncol = MapClassnameToColumncount(this);
+   this->h = h * ((count + ncol - 1)/ ncol);
 }
 
 static void AllCPUsMeter_done(Meter* this) {
@@ -175,10 +206,8 @@ static void AllCPUsMeter_updateMode(Meter* this, int mode) {
    for (int i = 0; i < count; i++) {
       Meter_setMode(meters[i], mode);
    }
-   if (strchr(Meter_name(this), '2'))
-      this->h = h * ((count+1) / 2);
-   else
-      this->h = h * count;
+   int ncol = MapClassnameToColumncount(this);
+   this->h = h * ((count + ncol - 1)/ ncol);
 }
 
 static void DualColCPUsMeter_draw(Meter* this, int x, int y, int w) {
@@ -209,6 +238,22 @@ static void SingleColCPUsMeter_draw(Meter* this, int x, int y, int w) {
    }
 }
 
+static void MultiColCPUsMeter_draw(Meter* this, int x, int y, int w){
+  Meter** meters = (Meter**) this->drawData;
+  int start, count;
+  AllCPUsMeter_getRange(this, &start, &count);
+  int ncol = MapClassnameToColumncount(this);
+  int colwidth = (w-ncol)/ncol + 1;
+  int diff = (w - (colwidth * ncol));
+  int nrows = (count + ncol - 1) / ncol;
+  for (int i = 0; i < count; i++){
+    int d = (i/nrows) > diff ? diff : (i / nrows) ; // dynamic spacer
+    int xpos = x + ((i / nrows) * colwidth) + d;
+    int ypos = y + ((i % nrows) * meters[0]->h);
+    meters[i]->draw(meters[i], xpos, ypos, colwidth);
+  }
+}
+
 MeterClass CPUMeter_class = {
    .super = {
       .extends = Class(Meter),
@@ -219,7 +264,7 @@ MeterClass CPUMeter_class = {
    .defaultMode = BAR_METERMODE,
    .maxItems = CPU_METER_ITEMCOUNT,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "CPU",
    .uiName = "CPU",
    .caption = "CPU",
@@ -234,7 +279,7 @@ MeterClass AllCPUsMeter_class = {
    },
    .defaultMode = CUSTOM_METERMODE,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "AllCPUs",
    .uiName = "CPUs (1/1)",
    .description = "CPUs (1/1): all CPUs",
@@ -253,7 +298,7 @@ MeterClass AllCPUs2Meter_class = {
    },
    .defaultMode = CUSTOM_METERMODE,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "AllCPUs2",
    .uiName = "CPUs (1&2/2)",
    .description = "CPUs (1&2/2): all CPUs in 2 shorter columns",
@@ -272,7 +317,7 @@ MeterClass LeftCPUsMeter_class = {
    },
    .defaultMode = CUSTOM_METERMODE,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "LeftCPUs",
    .uiName = "CPUs (1/2)",
    .description = "CPUs (1/2): first half of list",
@@ -291,7 +336,7 @@ MeterClass RightCPUsMeter_class = {
    },
    .defaultMode = CUSTOM_METERMODE,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "RightCPUs",
    .uiName = "CPUs (2/2)",
    .description = "CPUs (2/2): second half of list",
@@ -310,7 +355,7 @@ MeterClass LeftCPUs2Meter_class = {
    },
    .defaultMode = CUSTOM_METERMODE,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "LeftCPUs2",
    .uiName = "CPUs (1&2/4)",
    .description = "CPUs (1&2/4): first half in 2 shorter columns",
@@ -329,7 +374,7 @@ MeterClass RightCPUs2Meter_class = {
    },
    .defaultMode = CUSTOM_METERMODE,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "RightCPUs2",
    .uiName = "CPUs (3&4/4)",
    .description = "CPUs (3&4/4): second half in 2 shorter columns",
@@ -340,3 +385,59 @@ MeterClass RightCPUs2Meter_class = {
    .done = AllCPUsMeter_done
 };
 
+MeterClass AllCPUs4Meter_class = {
+   .super = {
+      .extends = Class(Meter),
+      .delete = Meter_delete,
+      .display = CPUMeter_display
+   },
+   .defaultMode = CUSTOM_METERMODE,
+   .total = 100.0,
+   .attributes = CPUMeter_attributes,
+   .name = "AllCPUs4",
+   .uiName = "CPUs (1&2&3&4/4)",
+   .description = "CPUs (1&2&3&4/4): all CPUs in 4 shorter columns",
+   .caption = "CPU",
+   .draw = MultiColCPUsMeter_draw,
+   .init = AllCPUsMeter_init,
+   .updateMode = AllCPUsMeter_updateMode,
+   .done = AllCPUsMeter_done
+};
+
+MeterClass LeftCPUs4Meter_class = {
+   .super = {
+      .extends = Class(Meter),
+      .delete = Meter_delete,
+      .display = CPUMeter_display
+   },
+   .defaultMode = CUSTOM_METERMODE,
+   .total = 100.0,
+   .attributes = CPUMeter_attributes,
+   .name = "LeftCPUs4",
+   .uiName = "CPUs (1-4/8)",
+   .description = "CPUs (1-4/8): first half in 4 shorter columns",
+   .caption = "CPU",
+   .draw = MultiColCPUsMeter_draw,
+   .init = AllCPUsMeter_init,
+   .updateMode = AllCPUsMeter_updateMode,
+   .done = AllCPUsMeter_done
+};
+
+MeterClass RightCPUs4Meter_class = {
+   .super = {
+      .extends = Class(Meter),
+      .delete = Meter_delete,
+      .display = CPUMeter_display
+   },
+   .defaultMode = CUSTOM_METERMODE,
+   .total = 100.0,
+   .attributes = CPUMeter_attributes,
+   .name = "RightCPUs4",
+   .uiName = "CPUs (5-8/8)",
+   .description = "CPUs (5-8/8): second half in 4 shorter columns",
+   .caption = "CPU",
+   .draw = MultiColCPUsMeter_draw,
+   .init = AllCPUsMeter_init,
+   .updateMode = AllCPUsMeter_updateMode,
+   .done = AllCPUsMeter_done
+};

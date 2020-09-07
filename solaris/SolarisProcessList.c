@@ -25,7 +25,11 @@ in the source distribution for its full text.
 
 #define MAXCMDLINE 255
 
+#define GZONE	"global    "
+#define UZONE	"unknown   "
 /*{
+
+#include "zfs/ZfsArcStats.h"
 
 #include <kstat.h>
 #include <sys/param.h>
@@ -55,6 +59,7 @@ typedef struct SolarisProcessList_ {
    ProcessList super;
    kstat_ctl_t* kd;
    CPUData* cpus;
+   ZfsArcStats zfs;
 } SolarisProcessList;
 
 }*/
@@ -62,12 +67,12 @@ typedef struct SolarisProcessList_ {
 char* SolarisProcessList_readZoneName(kstat_ctl_t* kd, SolarisProcess* sproc) {
   char* zname;
   if ( sproc->zoneid == 0 ) {
-     zname = xStrdup("global    ");
+     zname = xStrdup(GZONE);
   } else if ( kd == NULL ) {
-     zname = xStrdup("unknown   ");
+     zname = xStrdup(UZONE);
   } else {
      kstat_t* ks = kstat_lookup( kd, "zones", sproc->zoneid, NULL );
-     zname = xStrdup(ks->ks_name);
+     zname = xStrdup(ks == NULL ? UZONE : ks->ks_name);
   }
   return zname;
 }
@@ -153,7 +158,7 @@ static inline void SolarisProcessList_scanCPUTime(ProcessList* pl) {
          idlebuf               += cpuData->idlePercent;
       }
    }
-   
+
    if (cpus > 1) {
       CPUData* cpuData          = &(spl->cpus[0]);
       cpuData->userPercent      = userbuf / cpus;
@@ -177,7 +182,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    uint64_t            totalswap = 0;
    uint64_t            totalfree = 0;
    int                 nswap = 0;
-   char                *spath = NULL; 
+   char                *spath = NULL;
    char                *spathbase = NULL;
 
    // Part 1 - physical memory
@@ -191,7 +196,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
       pl->totalMem   = totalmem_pgs->value.ui64 * PAGE_SIZE_KB;
       pl->usedMem    = lockedmem_pgs->value.ui64 * PAGE_SIZE_KB;
       // Not sure how to implement this on Solaris - suggestions welcome!
-      pl->cachedMem  = 0;     
+      pl->cachedMem  = 0;
       // Not really "buffers" but the best Solaris analogue that I can find to
       // "memory in use but not by programs or the kernel itself"
       pl->buffersMem = (totalmem_pgs->value.ui64 - pages->value.ui64) * PAGE_SIZE_KB;
@@ -202,12 +207,12 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
       pl->cachedMem  = 0;
       pl->usedMem    = pl->totalMem - (sysconf(_SC_AVPHYS_PAGES) * PAGE_SIZE);
    }
-   
+
    // Part 2 - swap
    nswap = swapctl(SC_GETNSWP, NULL);
    if (nswap >     0) { sl  = xMalloc((nswap * sizeof(swapent_t)) + sizeof(int)); }
    if (sl    != NULL) { spathbase = xMalloc( nswap * MAXPATHLEN ); }
-   if (spathbase != NULL) { 
+   if (spathbase != NULL) {
       spath = spathbase;
       swapdev = sl->swt_ent;
       for (int i = 0; i < nswap; i++, swapdev++) {
@@ -217,7 +222,7 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
       sl->swt_n = nswap;
    }
    nswap = swapctl(SC_LIST, sl);
-   if (nswap > 0) { 
+   if (nswap > 0) {
       swapdev = sl->swt_ent;
       for (int i = 0; i < nswap; i++, swapdev++) {
          totalswap += swapdev->ste_pages;
@@ -227,7 +232,50 @@ static inline void SolarisProcessList_scanMemoryInfo(ProcessList* pl) {
    free(spathbase);
    free(sl);
    pl->totalSwap = totalswap * PAGE_SIZE_KB;
-   pl->usedSwap  = pl->totalSwap - (totalfree * PAGE_SIZE_KB); 
+   pl->usedSwap  = pl->totalSwap - (totalfree * PAGE_SIZE_KB);
+}
+
+static inline void SolarisProcessList_scanZfsArcstats(ProcessList* pl) {
+   SolarisProcessList* spl = (SolarisProcessList*) pl;
+   kstat_t             *arcstats = NULL;
+   int                 ksrphyserr = -1;
+   kstat_named_t       *cur_kstat = NULL;
+
+   if (spl->kd != NULL)  { arcstats   = kstat_lookup(spl->kd,"zfs",0,"arcstats"); }
+   if (arcstats != NULL) { ksrphyserr = kstat_read(spl->kd,arcstats,NULL); }
+   if (ksrphyserr != -1) {
+      cur_kstat = kstat_data_lookup( arcstats, "size" );
+      spl->zfs.size = cur_kstat->value.ui64 / 1024;
+      spl->zfs.enabled = spl->zfs.size > 0 ? 1 : 0;
+
+      cur_kstat = kstat_data_lookup( arcstats, "c_max" );
+      spl->zfs.max = cur_kstat->value.ui64 / 1024;
+
+      cur_kstat = kstat_data_lookup( arcstats, "mfu_size" );
+      spl->zfs.MFU = cur_kstat->value.ui64 / 1024;
+
+      cur_kstat = kstat_data_lookup( arcstats, "mru_size" );
+      spl->zfs.MRU = cur_kstat->value.ui64 / 1024;
+
+      cur_kstat = kstat_data_lookup( arcstats, "anon_size" );
+      spl->zfs.anon = cur_kstat->value.ui64 / 1024;
+
+      cur_kstat = kstat_data_lookup( arcstats, "hdr_size" );
+      spl->zfs.header = cur_kstat->value.ui64 / 1024;
+
+      cur_kstat = kstat_data_lookup( arcstats, "other_size" );
+      spl->zfs.other = cur_kstat->value.ui64 / 1024;
+
+      if ((cur_kstat = kstat_data_lookup( arcstats, "compressed_size" )) != NULL) {
+         spl->zfs.compressed = cur_kstat->value.ui64 / 1024;
+         spl->zfs.isCompressed = 1;
+
+         cur_kstat = kstat_data_lookup( arcstats, "uncompressed_size" );
+         spl->zfs.uncompressed = cur_kstat->value.ui64 / 1024;
+      } else {
+         spl->zfs.isCompressed = 0;
+      }
+   }
 }
 
 void ProcessList_delete(ProcessList* pl) {
@@ -242,7 +290,7 @@ void ProcessList_delete(ProcessList* pl) {
  *       and MUST conform to the appropriate definition in order
  *       to work.  See libproc(3LIB) on a Solaris or Illumos
  *       system for more info.
- */ 
+ */
 
 int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *listptr) {
    struct timeval tv;
@@ -262,7 +310,7 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
       getpid = _psinfo->pr_pid * 1024;
    } else {
       getpid = lwpid;
-   } 
+   }
    Process *proc             = ProcessList_getProcess(pl, getpid, &preExisting, (Process_New) SolarisProcess_new);
    SolarisProcess *sproc     = (SolarisProcess*) proc;
 
@@ -275,7 +323,7 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
    sproc->poolid            = _psinfo->pr_poolid;
    sproc->contid            = _psinfo->pr_contract;
    proc->priority           = _lwpsinfo->pr_pri;
-   proc->nice               = _lwpsinfo->pr_nice;
+   proc->nice               = _lwpsinfo->pr_nice - NZERO;
    proc->processor          = _lwpsinfo->pr_onpro;
    proc->state              = _lwpsinfo->pr_sname;
    // NOTE: This 'percentage' is a 16-bit BINARY FRACTIONS where 1.0 = 0x8000
@@ -293,7 +341,7 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
       sproc->realpid        = _psinfo->pr_pid;
       sproc->lwpid          = lwpid_real;
       sproc->zoneid         = _psinfo->pr_zoneid;
-      sproc->zname          = SolarisProcessList_readZoneName(spl->kd,sproc); 
+      sproc->zname          = SolarisProcessList_readZoneName(spl->kd,sproc);
       proc->user            = UsersTable_getRef(pl->usersTable, proc->st_uid);
       proc->comm            = xStrdup(_psinfo->pr_fname);
       proc->commLen         = strnlen(_psinfo->pr_fname,PRFNSZ);
@@ -332,7 +380,7 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
       proc->percent_cpu        = ((uint16_t)_lwpsinfo->pr_pctcpu/(double)32768)*(double)100.0;
       proc->time               = _lwpsinfo->pr_time.tv_sec;
       if (!preExisting) { // Tasks done only for NEW LWPs
-         sproc->is_lwp         = true; 
+         sproc->is_lwp         = true;
          proc->basenameOffset  = -1;
          proc->ppid            = _psinfo->pr_pid * 1024;
          proc->tgid            = _psinfo->pr_pid * 1024;
@@ -367,7 +415,7 @@ int SolarisProcessList_walkproc(psinfo_t *_psinfo, lwpsinfo_t *_lwpsinfo, void *
 void ProcessList_goThroughEntries(ProcessList* this) {
    SolarisProcessList_scanCPUTime(this);
    SolarisProcessList_scanMemoryInfo(this);
+   SolarisProcessList_scanZfsArcstats(this);
    this->kernelThreads = 1;
    proc_walk(&SolarisProcessList_walkproc, this, PR_WALK_LWP);
 }
-

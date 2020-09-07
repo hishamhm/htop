@@ -76,17 +76,17 @@ void Header_populateFromSettings(Header* this) {
 void Header_writeBackToSettings(const Header* this) {
    Header_forEachColumn(this, col) {
       MeterColumnSettings* colSettings = &this->settings->columns[col];
-      
+
       String_freeArray(colSettings->names);
       free(colSettings->modes);
-      
+
       Vector* vec = this->columns[col];
       int len = Vector_size(vec);
-      
+
       colSettings->names = xCalloc(len+1, sizeof(char*));
       colSettings->modes = xCalloc(len, sizeof(int));
       colSettings->len = len;
-      
+
       for (int i = 0; i < len; i++) {
          Meter* meter = (Meter*) Vector_get(vec, i);
          char* name = xCalloc(64, sizeof(char));
@@ -120,6 +120,8 @@ MeterModeId Header_addMeterByName(Header* this, char* name, int column) {
          break;
       }
    }
+   if (paren)
+      *paren = '(';
    return mode;
 }
 
@@ -152,7 +154,7 @@ char* Header_readMeterName(Header* this, int i, int column) {
    int nameLen = strlen(Meter_name(meter));
    int len = nameLen + 100;
    char* name = xMalloc(len);
-   strncpy(name, Meter_name(meter), nameLen);
+   memcpy(name, Meter_name(meter), nameLen);
    name[nameLen] = '\0';
    if (meter->param)
       xSnprintf(name + nameLen, len - nameLen, "(%d)", meter->param);
@@ -186,7 +188,7 @@ void Header_draw(const Header* this) {
    }
    int width = COLS / this->nrColumns - (pad * this->nrColumns - 1) - 1;
    int x = pad;
-   
+
    Header_forEachColumn(this, col) {
       Vector* meters = this->columns[col];
       for (int y = (pad / 2), i = 0; i < Vector_size(meters); i++) {

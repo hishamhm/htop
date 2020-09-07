@@ -1,6 +1,7 @@
 /*
 htop - ColumnsPanel.c
 (C) 2004-2015 Hisham H. Muhammad
+(C) 2020 Red Hat, Inc.  All Rights Reserved.
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
@@ -25,18 +26,13 @@ typedef struct MainPanel_ {
    pid_t pidSearch;
 } MainPanel;
 
-typedef union {
-   int i;
-   void* v;
-} Arg;
-
 typedef bool(*MainPanel_ForeachProcessFn)(Process*, Arg);
 
 #define MainPanel_getFunctionBar(this_) (((Panel*)(this_))->defaultBar)
 
 }*/
 
-static const char* const MainFunctions[]  = {"Help  ", "Setup ", "Search", "Filter", "Tree  ", "SortBy", "Nice -", "Nice +", "Kill  ", "Quit  ", NULL};
+static const char* const MainFunctions[]  = {"Help   ", "Setup  ", "Search ", "Filter ", "Tree   ", "SortBy ", "Nice - ", "Nice + ", "Kill   ", "Quit   ", NULL};
 
 void MainPanel_updateTreeFunctions(MainPanel* this, bool mode) {
    FunctionBar* bar = MainPanel_getFunctionBar(this);
@@ -69,7 +65,7 @@ static HandlerResult MainPanel_eventHandler(Panel* super, int ch) {
    MainPanel* this = (MainPanel*) super;
 
    HandlerResult result = IGNORED;
-   
+
    Htop_Reaction reaction = HTOP_OK;
 
    if (EVENT_IS_HEADER_CLICK(ch)) {
@@ -84,7 +80,7 @@ static HandlerResult MainPanel_eventHandler(Panel* super, int ch) {
       } else {
          reaction |= Action_setSortKey(settings, field);
       }
-      reaction |= HTOP_RECALCULATE | HTOP_REDRAW_BAR | HTOP_SAVE_SETTINGS; 
+      reaction |= HTOP_RECALCULATE | HTOP_REDRAW_BAR | HTOP_SAVE_SETTINGS;
       result = HANDLED;
    } else if (ch != ERR && this->inc->active) {
       bool filterChanged = IncSet_handleKey(this->inc, ch, super, (IncMode_GetPanelValue) MainPanel_getValue, NULL);
@@ -121,7 +117,7 @@ static HandlerResult MainPanel_eventHandler(Panel* super, int ch) {
    }
    if (reaction & HTOP_REFRESH) {
       result |= REDRAW;
-   }      
+   }
    if (reaction & HTOP_RECALCULATE) {
       result |= RESCAN;
    }

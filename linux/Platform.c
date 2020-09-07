@@ -19,8 +19,11 @@ in the source distribution for its full text.
 #include "TasksMeter.h"
 #include "LoadAverageMeter.h"
 #include "UptimeMeter.h"
+#include "PressureStallMeter.h"
 #include "ClockMeter.h"
 #include "HostnameMeter.h"
+#include "zfs/ZfsArcMeter.h"
+#include "zfs/ZfsCompressedArcMeter.h"
 #include "LinuxProcess.h"
 
 #include <math.h>
@@ -41,7 +44,7 @@ in the source distribution for its full text.
 #define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
 #endif
 
-ProcessField Platform_defaultFields[] = { PID, USER, PRIORITY, NICE, M_SIZE, M_RESIDENT, M_SHARE, STATE, PERCENT_CPU, PERCENT_MEM, TIME, COMM, 0 };
+ProcessField Platform_defaultFields[] = { PID, USER, PRIORITY, NICE, M_SIZE, M_RESIDENT, (int)M_SHARE, STATE, PERCENT_CPU, PERCENT_MEM, TIME, COMM, 0 };
 
 //static ProcessField defaultIoFields[] = { PID, IO_PRIORITY, USER, IO_READ_RATE, IO_WRITE_RATE, IO_RATE, COMM, 0 };
 
@@ -91,12 +94,12 @@ static Htop_Reaction Platform_actionSetIOPriority(State* st) {
 
    LinuxProcess* p = (LinuxProcess*) Panel_getSelected(panel);
    if (!p) return HTOP_OK;
-   IOPriority ioprio = p->ioPriority;
-   Panel* ioprioPanel = IOPriorityPanel_new(ioprio);
-   void* set = Action_pickFromVector(st, ioprioPanel, 21);
+   IOPriority ioprio1 = p->ioPriority;
+   Panel* ioprioPanel = IOPriorityPanel_new(ioprio1);
+   void* set = Action_pickFromVector(st, ioprioPanel, 21, true);
    if (set) {
-      IOPriority ioprio = IOPriorityPanel_getIOPriority(ioprioPanel);
-      bool ok = MainPanel_foreachProcess((MainPanel*)panel, (MainPanel_ForeachProcessFn) LinuxProcess_setIOPriority, (Arg){ .i = ioprio }, NULL);
+      IOPriority ioprio2 = IOPriorityPanel_getIOPriority(ioprioPanel);
+      bool ok = MainPanel_foreachProcess((MainPanel*)panel, (MainPanel_ForeachProcessFn) LinuxProcess_setIOPriority, (Arg){ .i = ioprio2 }, NULL);
       if (!ok)
          beep();
    }
@@ -121,11 +124,21 @@ MeterClass* Platform_meterTypes[] = {
    &HostnameMeter_class,
    &AllCPUsMeter_class,
    &AllCPUs2Meter_class,
+   &AllCPUs4Meter_class,
    &LeftCPUsMeter_class,
    &RightCPUsMeter_class,
    &LeftCPUs2Meter_class,
    &RightCPUs2Meter_class,
+   &LeftCPUs4Meter_class,
+   &RightCPUs4Meter_class,
    &BlankMeter_class,
+   &PressureStallCPUSomeMeter_class,
+   &PressureStallIOSomeMeter_class,
+   &PressureStallIOFullMeter_class,
+   &PressureStallMemorySomeMeter_class,
+   &PressureStallMemoryFullMeter_class,
+   &ZfsArcMeter_class,
+   &ZfsCompressedArcMeter_class,
    NULL
 };
 
@@ -192,6 +205,9 @@ double Platform_setCPUValues(Meter* this, int cpu) {
    }
    percent = CLAMP(percent, 0.0, 100.0);
    if (isnan(percent)) percent = 0.0;
+
+   v[CPU_METER_FREQUENCY] = cpuData->frequency;
+
    return percent;
 }
 
@@ -213,6 +229,17 @@ void Platform_setSwapValues(Meter* this) {
    this->values[0] = pl->usedSwap;
 }
 
+void Platform_setZfsArcValues(Meter* this) {
+   LinuxProcessList* lpl = (LinuxProcessList*) this->pl;
+
+   ZfsArcMeter_readStats(this, &(lpl->zfs));
+}
+
+void Platform_setZfsCompressedArcValues(Meter* this) {
+   LinuxProcessList* lpl = (LinuxProcessList*) this->pl;
+
+   ZfsCompressedArcMeter_readStats(this, &(lpl->zfs));
+}
 char* Platform_getProcessEnv(pid_t pid) {
    char procname[32+1];
    xSnprintf(procname, 32, "/proc/%d/environ", pid);
@@ -236,4 +263,22 @@ char* Platform_getProcessEnv(pid_t pid) {
       }
    }
    return env;
+}
+
+void Platform_getPressureStall(const char *file, bool some, double* ten, double* sixty, double* threehundred) {
+   *ten = *sixty = *threehundred = 0;
+   char procname[128+1];
+   xSnprintf(procname, 128, PROCDIR "/pressure/%s", file);
+   FILE *fd = fopen(procname, "r");
+   if (!fd) {
+      *ten = *sixty = *threehundred = NAN;
+      return;
+   }
+   int total = fscanf(fd, "some avg10=%32lf avg60=%32lf avg300=%32lf total=%*f ", ten, sixty, threehundred);
+   if (!some) {
+      total = fscanf(fd, "full avg10=%32lf avg60=%32lf avg300=%32lf total=%*f ", ten, sixty, threehundred);
+   }
+   (void) total;
+   assert(total == 3);
+   fclose(fd);
 }

@@ -163,7 +163,7 @@ static Panel* setCurrentPanel(Panel* panel) {
 void ScreenManager_run(ScreenManager* this, Panel** lastFocus, int* lastKey) {
    bool quit = false;
    int focus = 0;
-   
+
    Panel* panelFocus = setCurrentPanel((Panel*) Vector_get(this->panels, focus));
 
    double oldTime = 0.0;
@@ -181,7 +181,7 @@ void ScreenManager_run(ScreenManager* this, Panel** lastFocus, int* lastKey) {
       if (this->header) {
          checkRecalculation(this, &oldTime, &sortTimeout, &redraw, &rescan, &timedOut);
       }
-      
+
       if (redraw) {
          ScreenManager_drawPanels(this, focus);
       }
@@ -190,8 +190,24 @@ void ScreenManager_run(ScreenManager* this, Panel** lastFocus, int* lastKey) {
       set_escdelay(25);
       ch = getch();
 
+      if (this->settings->vimMode) {
+         switch (ch) {
+            case 'h': ch = KEY_LEFT; break;
+            case 'j': ch = KEY_DOWN; break;
+            case 'k': ch = KEY_UP; break;
+            case 'l': ch = KEY_RIGHT; break;
+            case KEY_LEFT: ch = 'h'; break;
+            case KEY_DOWN: ch = 'j'; break;
+            case KEY_UP: ch = 'k'; break;
+            case KEY_RIGHT: ch = 'l'; break;
+            case 'K': ch = 'k'; break;
+            case 'J': ch = 'K'; break;
+            case 'L': ch = 'l'; break;
+         }
+      }
+
       HandlerResult result = IGNORED;
-      if (ch == KEY_MOUSE) {
+      if (ch == KEY_MOUSE && this->settings->enableMouse) {
          ch = ERR;
          MEVENT mevent;
          int ok = getmouse(&mevent);
@@ -269,7 +285,7 @@ void ScreenManager_run(ScreenManager* this, Panel** lastFocus, int* lastKey) {
          quit = true;
          continue;
       }
-      
+
       switch (ch) {
       case KEY_RESIZE:
       {

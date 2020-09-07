@@ -63,7 +63,7 @@ typedef struct RichString_ {
 #define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
 #endif
 
-#define charBytes(n) (sizeof(CharType) * (n)) 
+#define charBytes(n) (sizeof(CharType) * (n))
 
 #define RichString_setLen(this, len) do{ if(len < RICHSTRING_MAXLEN && this->chlen < RICHSTRING_MAXLEN) { RichString_setChar(this,len,0); this->chlen=len; } else RichString_extendLen(this,len); }while(0)
 
@@ -71,24 +71,24 @@ typedef struct RichString_ {
 
 extern void RichString_setAttrn(RichString* this, int attrs, int start, int finish);
 
-int RichString_findChar(RichString* this, char c, int start);
+extern int RichString_findChar(RichString* this, char c, int start);
 
 #else
 
-void RichString_setAttrn(RichString* this, int attrs, int start, int finish);
+extern void RichString_setAttrn(RichString* this, int attrs, int start, int finish);
 
-int RichString_findChar(RichString* this, char c, int start);
+extern int RichString_findChar(RichString* this, char c, int start);
 
 #endif
 
-void RichString_prune(RichString* this);
+extern void RichString_prune(RichString* this);
 
-void RichString_setAttr(RichString* this, int attrs);
+extern void RichString_setAttr(RichString* this, int attrs);
 
-void RichString_append(RichString* this, int attrs, const char* data);
+extern void RichString_append(RichString* this, int attrs, const char* data);
 
-void RichString_appendn(RichString* this, int attrs, const char* data, int len);
+extern void RichString_appendn(RichString* this, int attrs, const char* data, int len);
 
-void RichString_write(RichString* this, int attrs, const char* data);
+extern void RichString_write(RichString* this, int attrs, const char* data);
 
 #endif

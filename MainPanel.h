@@ -5,6 +5,7 @@
 /*
 htop - ColumnsPanel.h
 (C) 2004-2015 Hisham H. Muhammad
+(C) 2020 Red Hat, Inc.  All Rights Reserved.
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 */
@@ -21,32 +22,27 @@ typedef struct MainPanel_ {
    pid_t pidSearch;
 } MainPanel;
 
-typedef union {
-   int i;
-   void* v;
-} Arg;
-
 typedef bool(*MainPanel_ForeachProcessFn)(Process*, Arg);
 
 #define MainPanel_getFunctionBar(this_) (((Panel*)(this_))->defaultBar)
 
 
-void MainPanel_updateTreeFunctions(MainPanel* this, bool mode);
+extern void MainPanel_updateTreeFunctions(MainPanel* this, bool mode);
 
-void MainPanel_pidSearch(MainPanel* this, int ch);
+extern void MainPanel_pidSearch(MainPanel* this, int ch);
 
-int MainPanel_selectedPid(MainPanel* this);
+extern int MainPanel_selectedPid(MainPanel* this);
 
-const char* MainPanel_getValue(MainPanel* this, int i);
+extern const char* MainPanel_getValue(MainPanel* this, int i);
 
-bool MainPanel_foreachProcess(MainPanel* this, MainPanel_ForeachProcessFn fn, Arg arg, bool* wasAnyTagged);
+extern bool MainPanel_foreachProcess(MainPanel* this, MainPanel_ForeachProcessFn fn, Arg arg, bool* wasAnyTagged);
 
 extern PanelClass MainPanel_class;
 
-MainPanel* MainPanel_new();
+extern MainPanel* MainPanel_new();
 
-void MainPanel_setState(MainPanel* this, State* state);
+extern void MainPanel_setState(MainPanel* this, State* state);
 
-void MainPanel_delete(Object* object);
+extern void MainPanel_delete(Object* object);
 
 #endif

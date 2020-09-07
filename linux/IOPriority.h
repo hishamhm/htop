@@ -8,7 +8,7 @@ htop - IOPriority.h
 Released under the GNU GPL, see the COPYING file
 in the source distribution for its full text.
 
-Based on ionice, 
+Based on ionice,
 Copyright (C) 2005 Jens Axboe <jens@axboe.dk>
 Released under the terms of the GNU General Public License version 2
 */
@@ -37,7 +37,6 @@ typedef int IOPriority;
 
 #define IOPriority_None IOPriority_tuple(IOPRIO_CLASS_NONE, 0)
 #define IOPriority_Idle IOPriority_tuple(IOPRIO_CLASS_IDLE, 7)
-
 
 
 #endif
