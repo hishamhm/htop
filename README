@@ -4,15 +4,18 @@
 [htop](http://hisham.hm/htop/)
 ====
 
-by Hisham Muhammad <hisham@gobolinux.org> (2004 - 2016)
+by Hisham Muhammad <hisham@gobolinux.org> (2004 - 2018)
+
+This repository is archived as htop is now maintained by a team of
+volunteers at [htop.dev](https://htop.dev/) using an organisation-
+based git [repository](https://github.com/htop-dev/htop/).
 
 Introduction
 ------------
 
 This is `htop`, an interactive process viewer.
 It requires `ncurses`. It is developed primarily on Linux,
-but we also have code for running under FreeBSD and Mac OS X
-(help and testing are wanted for these platforms!)
+but we also have code for running under FreeBSD and Mac OS X.
 
 This software has evolved considerably over the years,
 and is reasonably complete, but there is always room for improvement.
