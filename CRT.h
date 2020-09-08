@@ -116,6 +116,13 @@ typedef enum ColorElements_ {
    CPU_SOFTIRQ,
    CPU_STEAL,
    CPU_GUEST,
+   ZFS_MFU,
+   ZFS_MRU,
+   ZFS_ANON,
+   ZFS_HEADER,
+   ZFS_OTHER,
+   ZFS_COMPRESSED,
+   ZFS_RATIO,
    LAST_COLORELEMENT
 } ColorElements;
 
