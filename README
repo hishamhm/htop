@@ -1,63 +1,11 @@
-[![Build Status](https://travis-ci.org/hishamhm/htop.svg?branch=master)](https://travis-ci.org/hishamhm/htop)
-[![PayPal donate](https://img.shields.io/badge/paypal-donate-green.svg)](http://hisham.hm/htop/index.php?page=donate)
-
-[htop](http://hisham.hm/htop/)
+htop
 ====
 
-by Hisham Muhammad <hisham@gobolinux.org> (2004 - 2018)
+by Hisham Muhammad <hisham@gobolinux.org>
 
-This repository is archived as htop is now maintained by a team of
-volunteers at [htop.dev](https://htop.dev/) using an organisation-
-based git [repository](https://github.com/htop-dev/htop/).
-
-Introduction
-------------
-
-This is `htop`, an interactive process viewer.
-It requires `ncurses`. It is developed primarily on Linux,
-but we also have code for running under FreeBSD and Mac OS X.
-
-This software has evolved considerably over the years,
-and is reasonably complete, but there is always room for improvement.
-
-Comparison between `htop` and classic `top`
--------------------------------------------
-
-* In `htop` you can scroll the list vertically and horizontally
-  to see all processes and full command lines.
-* In `top` you are subject to a delay for each unassigned
-  key you press (especially annoying when multi-key escape
-  sequences are triggered by accident).
-* `htop` starts faster (`top` seems to collect data for a while
-  before displaying anything).
-* In `htop` you don't need to type the process number to
-  kill a process, in `top` you do.
-* In `htop` you don't need to type the process number or
-  the priority value to renice a process, in `top` you do.
-* In `htop` you can kill multiple processes at once.
-* `top` is older, hence, more tested.
-
-Compilation instructions
-------------------------
-
-This program is distributed as a standard autotools-based package.
-See the [INSTALL](/INSTALL) file for detailed instructions.
-
-When compiling from a [release tarball](https://hisham.hm/htop/releases/), run:
-
-    ./configure && make
-
-For compiling sources downloaded from the Git repository, run:
-
-    ./autogen.sh && ./configure && make
-
-By default `make install` will install into `/usr/local`, for changing
-the path use `./configure --prefix=/some/path`.
-
-See the manual page (`man htop`) or the on-line help ('F1' or 'h'
-inside `htop`) for a list of supported key commands.
-
-If not all keys work check your curses configuration.
+**This repository is archived as htop is now maintained by a team of
+volunteers at [htop.dev](https://htop.dev/) using an organisation-based
+git [repository](https://github.com/htop-dev/htop/)**.
 
 ## License
 
