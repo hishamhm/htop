@@ -225,7 +225,7 @@ void Platform_setMemoryValues(Meter* mtr) {
    vm_statistics_t vm = &dpl->vm_stats;
    double page_K = (double)vm_page_size / (double)1024;
 
-   mtr->total = dpl->host_info.max_mem / 1024;
+   mtr->full = dpl->host_info.max_mem / 1024;
    mtr->values[0] = (double)(vm->active_count + vm->wire_count) * page_K;
    mtr->values[1] = (double)vm->purgeable_count * page_K;
    mtr->values[2] = (double)vm->inactive_count * page_K;
@@ -237,7 +237,7 @@ void Platform_setSwapValues(Meter* mtr) {
   size_t swlen = sizeof(swapused);
   sysctl(mib, 2, &swapused, &swlen, NULL, 0);
 
-  mtr->total = swapused.xsu_total / 1024;
+  mtr->full = swapused.xsu_total / 1024;
   mtr->values[0] = swapused.xsu_used / 1024;
 }
 

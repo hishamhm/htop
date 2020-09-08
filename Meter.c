@@ -13,11 +13,14 @@ in the source distribution for its full text.
 #include "StringUtils.h"
 #include "ListItem.h"
 #include "Settings.h"
+#include "ProcessList.h"
 
 #include <math.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <float.h>
+#include <limits.h>
 #include <assert.h>
 #include <sys/time.h>
 
@@ -26,6 +29,7 @@ in the source distribution for its full text.
 #define GRAPH_DELAY (DEFAULT_DELAY/2)
 
 #define GRAPH_HEIGHT 4 /* Unit: rows (lines) */
+#define GRAPH_NUM_RECORDS 256
 
 /*{
 #include "ListItem.h"
@@ -48,7 +52,12 @@ typedef struct MeterClass_ {
    const Meter_Draw draw;
    const Meter_UpdateValues updateValues;
    const int defaultMode;
-   const double total;
+   // For "full" variable, sign matters.
+   // >0: Full/maximum value is stable (at least for a short duration). Will
+   //     draw as percent graph. e.g. CPU & swap.
+   // <0: No stable maximum. Will draw with dynamic scale. e.g. loadavg.
+   // (full == 0) will bring weird behavior for now. Avoid.
+   const double full;
    const int* attributes;
    const char* name;
    const char* uiName;
@@ -71,6 +80,7 @@ typedef struct MeterClass_ {
 #define Meter_defaultMode(this_)       As_Meter(this_)->defaultMode
 #define Meter_getItems(this_)          As_Meter(this_)->curItems
 #define Meter_setItems(this_, n_)      As_Meter(this_)->curItems = (n_)
+#define Meter_getMaxItems(this_)       As_Meter(this_)->maxItems
 #define Meter_attributes(this_)        As_Meter(this_)->attributes
 #define Meter_name(this_)              As_Meter(this_)->name
 #define Meter_uiName(this_)            As_Meter(this_)->uiName
@@ -86,7 +96,7 @@ struct Meter_ {
    int h;
    struct ProcessList_* pl;
    double* values;
-   double total;
+   double full;
 };
 
 typedef struct MeterMode_ {
@@ -106,7 +116,12 @@ typedef enum {
 
 typedef struct GraphData_ {
    struct timeval time;
-   double values[METER_BUFFER_LEN];
+   double* values;
+   double* stack1;
+   double* stack2;
+   int* colors;
+   unsigned int colorRowSize;
+   int drawOffset;
 } GraphData;
 
 }*/
@@ -120,6 +135,27 @@ typedef struct GraphData_ {
 #ifndef CLAMP
 #define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
 #endif
+
+#define IS_POWER_OF_2(x) ((x) > 0 && !((x) & ((x) - 1)))
+
+#ifndef __has_builtin
+# define __has_builtin(x) 0
+#endif
+#if (__has_builtin(__builtin_clz) || \
+    ((__GNUC__ > 3) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)))
+# define HAS_BUILTIN_CLZ 1
+# define HAS_ILOG2 1
+/*
+ * ilog2(x): base-2 logarithm of an unsigned integer x, rounded down, but
+ *           ilog2(0U) yields undefined behavior.
+ * (You may use ilog2(x | 1) to define the (x == 0) behavior.)
+ */
+# define ilog2(x) ((sizeof(x) <= sizeof(unsigned int)) ? \
+     (CHAR_BIT*sizeof(unsigned int)-1-__builtin_clz(x)) : \
+     (sizeof(x) <= sizeof(unsigned long)) ? \
+     (CHAR_BIT*sizeof(unsigned long)-1-__builtin_clzl(x)) : \
+     (CHAR_BIT*sizeof(unsigned long long)-1-__builtin_clzll(x)))
+#endif // __has_builtin(__builtin_clz) || GNU C 3.4 or later
 
 MeterClass Meter_class = {
    .super = {
@@ -135,7 +171,7 @@ Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type) {
    this->pl = pl;
    type->curItems = type->maxItems;
    this->values = xCalloc(type->maxItems, sizeof(double));
-   this->total = type->total;
+   this->full = type->full;
    this->caption = xStrdup(type->caption);
    if (Meter_initFn(this))
       Meter_init(this);
@@ -143,8 +179,10 @@ Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type) {
    return this;
 }
 
+static const char* Meter_prefixes = "KMGTPEZY";
+
 int Meter_humanUnit(char* buffer, unsigned long int value, int size) {
-   const char * prefix = "KMGTPEZY";
+   const char* prefix = Meter_prefixes;
    unsigned long int powi = 1;
    unsigned int written, powj = 1, precision = 2;
 
@@ -240,6 +278,98 @@ ListItem* Meter_toListItem(Meter* this, bool moving) {
    return li;
 }
 
+/* ---------- GraphData ---------- */
+
+static GraphData* GraphData_new(size_t nValues, size_t nItems, bool isPercentGraph) {
+   // colors[] is designed to be two-dimensional, but without a column of row
+   // pointers (unlike var[m][n] declaration).
+   // GraphMeterMode_draw() will print this table in 90-deg counter-clockwise
+   // rotated form.
+   unsigned int colorRowSize;
+   if (nItems <= 1) { // 1 or less item
+      colorRowSize = 1;
+   } else if (isPercentGraph) { // Percent graph: a linear row of color cells.
+      colorRowSize = GRAPH_HEIGHT;
+   } else { // Non-percentage & dynamic scale: a binary tree of cells.
+      colorRowSize = 2 * GRAPH_HEIGHT;
+   }
+   GraphData* data = xCalloc(1, sizeof(GraphData) +
+                                sizeof(double) * nValues +
+                                sizeof(double) * (nItems + 2) * 2 +
+                                sizeof(int) * (nValues * colorRowSize));
+   data->values = (double*)(data + 1);
+   // values[nValues + 1]
+   // It's intentional that values[nValues] and stack1[0] share the same cell;
+   // the cell's value will be always 0.0.
+   data->stack1 = (double*)(data->values + nValues);
+   // stack1[nItems + 2]
+   data->stack2 = (double*)(data->stack1 + (nItems + 2));
+   // stack2[nItems + 2]
+   data->colors = (int*)(data->stack2 + (nItems + 2));
+   // colors[nValues * colorRowSize]
+
+   // Initialize colors[].
+   data->colorRowSize = colorRowSize;
+   for (unsigned int i = 0; i < (nValues * colorRowSize); i++) {
+      data->colors[i] = BAR_SHADOW;
+   }
+   return data;
+}
+
+static inline void GraphData_delete(GraphData* this) {
+   // GraphData is designed to be deleted by a simple free() call,
+   // hence you shouldn't call this.
+   free(this);
+}
+
+static int GraphData_getColor(GraphData* this, int vIndex, int h, int scaleExp) {
+   // level step  _________index_________  (tree form)
+   //     3    8 |_______________8_______|
+   //     2    4 |_______4_______|___10__|
+   //     1    2 |___2___|___6___|___10__|
+   //     0    1 |_1_|_3_|_5_|_7_|_9_|_11|
+
+   // level step  _________index_________  (linear form (percent graph or
+   //     0    1 |_0_|_1_|_2_|_3_|_4_|_5_|  one item))
+
+   if (this->colorRowSize > GRAPH_HEIGHT) {
+      const int maxLevel = ((int) log2(GRAPH_HEIGHT - 1)) + 1;
+      int exp;
+      (void) frexp(MAX(this->values[vIndex], this->values[vIndex + 1]), &exp);
+      int level = MIN((scaleExp - exp), maxLevel);
+      assert(level >= 0);
+      if (((unsigned int) h << (level + 1)) + 1 >= this->colorRowSize) {
+         return BAR_SHADOW;
+      }
+      unsigned int j, offset;
+   #if IS_POWER_OF_2(GRAPH_HEIGHT)
+      j = 1 << level;
+      offset = (h << (level + 1)) + j;
+      assert(offset < this->colorRowSize);
+      return this->colors[vIndex * this->colorRowSize + offset];
+   #elif HAS_ILOG2
+      // (1 << ilog2(x)) == (greatest power of two that is <= x)
+      j = 1 << MIN(level, ilog2(this->colorRowSize - 1 - (h << (level + 1))));
+      offset = (h << (level + 1)) + j;
+      assert(offset < this->colorRowSize);
+      return this->colors[vIndex * this->colorRowSize + offset];
+   #else
+      for (j = 1 << level; ; j >>= 1) {
+         assert(j > 0);
+         offset = (h << (level + 1)) + j;
+         if (offset < this->colorRowSize) {
+            return this->colors[vIndex * this->colorRowSize + offset];
+         }
+      }
+   #endif // !(IS_POWER_OF_2(GRAPH_HEIGHT) || HAS_ILOG2)
+   } else if (this->colorRowSize == GRAPH_HEIGHT) {
+      return this->colors[vIndex * this->colorRowSize + h];
+   } else {
+      assert(this->colorRowSize == 1);
+      return this->colors[vIndex * this->colorRowSize];
+   }
+}
+
 /* ---------- TextMeterMode ---------- */
 
 static void TextMeterMode_draw(Meter* this, int x, int y, int w) {
@@ -292,11 +422,22 @@ static void BarMeterMode_draw(Meter* this, int x, int y, int w) {
    // First draw in the bar[] buffer...
    int offset = 0;
    int items = Meter_getItems(this);
+   double full = this->full;
+   if (full <= 0.0) {
+      double sum = 0.0;
+      for (int i = 0; i < items; i++) {
+         sum += this->values[i];
+      }
+      if (sum > -(this->full)) {
+         this->full = -sum;
+      }
+      full = -(this->full);
+   }
    for (int i = 0; i < items; i++) {
       double value = this->values[i];
-      value = CLAMP(value, 0.0, this->total);
+      value = CLAMP(value, 0.0, full);
       if (value > 0) {
-         blockSizes[i] = ceil((value/this->total) * w);
+         blockSizes[i] = ceil((value/full) * w);
       } else {
          blockSizes[i] = 0;
       }
@@ -356,11 +497,34 @@ static const char* const GraphMeterMode_dotsAscii[] = {
 static const char* const* GraphMeterMode_dots;
 static int GraphMeterMode_pixPerRow;
 
-static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
+static void GraphMeterMode_printScale(unsigned int scaleExp) {
+   const char* divisors = "842";
+   if (scaleExp > 86) { // > 99 yotta
+      return;
+   } else if (scaleExp < 10) { // <= 512
+      printw("%3d", 1 << scaleExp);
+      return;
+   } else if (scaleExp % 10 <= 6) { // {1|2|4|8|16|32|64}{K|M|G|T|P|E|Z|Y}
+      printw("%2d%c", 1 << (scaleExp % 10),
+                      Meter_prefixes[(scaleExp / 10) - 1]);
+      return;
+   } else {
+      // Output like "128K" is more than 3 chars. We express in fractions like
+      // "M/8" instead. Likewise for "G/4" (=256M), "T/2" (=512G) etc.
+      printw("%c/%c", Meter_prefixes[(scaleExp / 10)],
+                      divisors[(scaleExp % 10) - 7]);
+      return;
+   }
+}
 
-   if (!this->drawData) this->drawData = xCalloc(1, sizeof(GraphData));
+static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
+   bool isPercentGraph = (this->full > 0.0);
+   if (!this->drawData) {
+      this->drawData = (void*) GraphData_new(GRAPH_NUM_RECORDS,
+                                             Meter_getMaxItems(this),
+                                             isPercentGraph);
+   }
    GraphData* data = (GraphData*) this->drawData;
-   const int nValues = METER_BUFFER_LEN;
 
 #ifdef HAVE_LIBNCURSESW
    if (CRT_utf8) {
@@ -373,50 +537,166 @@ static void GraphMeterMode_draw(Meter* this, int x, int y, int w) {
       GraphMeterMode_pixPerRow = PIXPERROW_ASCII;
    }
 
-   attrset(CRT_colors[METER_TEXT]);
-   int captionLen = 3;
-   mvaddnstr(y, x, this->caption, captionLen);
-   x += captionLen;
-   w -= captionLen;
-   
    struct timeval now;
    gettimeofday(&now, NULL);
    if (!timercmp(&now, &(data->time), <)) {
       struct timeval delay = { .tv_sec = (int)(CRT_delay/10), .tv_usec = (CRT_delay-((int)(CRT_delay/10)*10)) * 100000 };
       timeradd(&now, &delay, &(data->time));
 
-      for (int i = 0; i < nValues - 1; i++)
-         data->values[i] = data->values[i+1];
+      data->drawOffset = (this->pl->settings->alignGraphMeter) ?
+                         (data->drawOffset + 1) % 2 : 0;
+
+      for (int i = 0; i < GRAPH_NUM_RECORDS - 1; i++) {
+         data->values[i] = data->values[i + 1];
+         memcpy(&(data->colors[i * data->colorRowSize]),
+                &(data->colors[(i + 1) * data->colorRowSize]),
+                sizeof(*data->colors) * data->colorRowSize);
+      }
    
-      char buffer[nValues];
-      Meter_updateValues(this, buffer, nValues - 1);
+      char buffer[METER_BUFFER_LEN];
+      Meter_updateValues(this, buffer, METER_BUFFER_LEN - 1);
    
-      double value = 0.0;
       int items = Meter_getItems(this);
-      for (int i = 0; i < items; i++)
-         value += this->values[i];
-      value /= this->total;
-      data->values[nValues - 1] = value;
+
+      double *stack1 = data->stack1;
+      double *stack2 = data->stack2;
+      stack1[0] = stack2[0] = 0.0;
+      for (int i = 0; i < items; i++) {
+         stack1[i + 1] = stack2[i + 1];
+         stack2[i + 1] = stack2[i] + this->values[i];
+      }
+      // May not assume this->full be constant. (Example: Swap meter when user
+      // does swapon/swapoff.)
+      stack1[items + 1] = stack2[items + 1];
+      stack2[items + 1] = this->full;
+      data->values[GRAPH_NUM_RECORDS - 1] = stack2[items];
+      double scale;
+      if (isPercentGraph) {
+         data->values[GRAPH_NUM_RECORDS - 1] /= this->full;
+         if (stack1[items + 1] != this->full && stack1[items + 1] > 0) {
+            for (int i = 0; i < items; i++) {
+               stack1[i + 1] = stack1[i + 1] * this->full / stack1[items + 1];
+            }
+         }
+         scale = this->full;
+      } else {
+         int exp;
+         (void) frexp(MAX(stack1[items], stack2[items]), &exp);
+         scale = ldexp(1.0, exp);
+      }
+
+      // Determine the dominant color per cell in the graph.
+      // O(GRAPH_HEIGHT + items) (linear time)
+      for (int step = 1; ; step <<= 1) {
+         int stack1Start = 0, stack2Start = 0;
+         double low, high = 0.0;
+         for (int h = 0; ; h += step) {
+            size_t offset = (data->colorRowSize <= GRAPH_HEIGHT) ? h :
+                            (h * 2) + step;
+            if (offset >= data->colorRowSize)
+               break;
+
+            low = high;
+            high = scale * (h + step) / GRAPH_HEIGHT;
+            assert(low == scale * (h) / GRAPH_HEIGHT);
+
+            double maxArea = 0.0;
+            int color = BAR_SHADOW;
+            double maxArea2 = 0.0;
+            int color2 = BAR_SHADOW;
+            for (int i = MIN(stack1Start, stack2Start); ; i++) {
+               if (stack1[i] < high)
+                  stack1Start = i;
+               if (stack2[i] < high)
+                  stack2Start = i;
+               if (i >= items)
+                  break; // No more items
+               if (stack1[i] >= high && stack2[i] >= high) {
+                  // This cell is finished. Rest of values are out of this.
+                  break;
+               }
+               // Skip items that have no area in this cell.
+               if (stack1[i] >= high)
+                  i = MAX(i, stack2Start);
+               if (stack2[i] >= high)
+                  i = MAX(i, stack1Start);
+               double area;
+               area = CLAMP(stack1[i + 1], low, high) +
+                      CLAMP(stack2[i + 1], low, high);
+               area -= (CLAMP(stack1[i], low, high) +
+                        CLAMP(stack2[i], low, high));
+               if (area > maxArea) {
+                  maxArea = area;
+                  color = Meter_attributes(this)[i];
+               }
+               if (data->drawOffset > 0) {
+                  area = CLAMP(stack2[i + 1], low, high);
+                  area -= CLAMP(stack2[i], low, high);
+                  if (area > maxArea2) {
+                     maxArea2 = area;
+                     color2 = Meter_attributes(this)[i];
+                  }
+               }
+            }
+            data->colors[(GRAPH_NUM_RECORDS - 2) * data->colorRowSize +
+                         offset] = color;
+            if (data->drawOffset > 0) {
+               data->colors[(GRAPH_NUM_RECORDS - 1) * data->colorRowSize + offset] = color2;
+            }
+         }
+         if (data->colorRowSize <= GRAPH_HEIGHT) {
+            break;
+         } else if (step >= 2 * GRAPH_HEIGHT) {
+            break;
+         }
+      }
    }
-   
-   int i = nValues - (w*2) + 2, k = 0;
-   if (i < 0) {
-      k = -i/2;
-      i = 0;
+
+   // How many values (and columns) we can draw for this graph.
+   const int captionLen = 3;
+   w -= captionLen;
+   int index = GRAPH_NUM_RECORDS - (w * 2) + 2, col = 0;
+   if (index < 0) {
+      col = -index / 2;
+      index = 0;
    }
-   for (; i < nValues - 1; i+=2, k++) {
+   index += data->drawOffset;
+
+   // If it's not percent graph, determine the scale.
+   int exp = 0;
+   double scale = 1.0;
+   if (this->full < 0.0) {
+      double max = 1.0 - (DBL_EPSILON / FLT_RADIX); // For minimum scale 1.0.
+      for (int j = GRAPH_NUM_RECORDS - 1; j >= index; j--) {
+         max = (data->values[j] > max) ? data->values[j] : max;
+      }
+      (void) frexp(max, &exp);
+      scale = ldexp(1.0, exp);
+   }
+
+   // Print caption and scale
+   move(y, x);
+   attrset(CRT_colors[METER_TEXT]);
+   if (GRAPH_HEIGHT > 1 && this->full < 0.0) {
+      GraphMeterMode_printScale(exp);
+      move(y + 1, x);
+   }
+   addnstr(this->caption, captionLen);
+   x += captionLen;
+
+   // Print the graph
+   for (; index < GRAPH_NUM_RECORDS - 1; index += 2, col++) {
       int pix = GraphMeterMode_pixPerRow * GRAPH_HEIGHT;
-      int v1 = CLAMP((int) lround(data->values[i] * pix), 1, pix);
-      int v2 = CLAMP((int) lround(data->values[i+1] * pix), 1, pix);
+      int v1 = CLAMP((int) lround(data->values[index] / scale * pix), 1, pix);
+      int v2 = CLAMP((int) lround(data->values[index + 1] / scale * pix), 1, pix);
 
-      int colorIdx = GRAPH_1;
-      for (int line = 0; line < GRAPH_HEIGHT; line++) {
-         int line1 = CLAMP(v1 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line)), 0, GraphMeterMode_pixPerRow);
-         int line2 = CLAMP(v2 - (GraphMeterMode_pixPerRow * (GRAPH_HEIGHT - 1 - line)), 0, GraphMeterMode_pixPerRow);
-
-         attrset(CRT_colors[colorIdx]);
-         mvaddstr(y+line, x+k, GraphMeterMode_dots[line1 * (GraphMeterMode_pixPerRow + 1) + line2]);
-         colorIdx = GRAPH_2;
+      // Vertical bars from bottom up
+      for (int h = 0; h < GRAPH_HEIGHT; h++) {
+         int line = GRAPH_HEIGHT - 1 - h;
+         int col1 = CLAMP(v1 - (GraphMeterMode_pixPerRow * h), 0, GraphMeterMode_pixPerRow);
+         int col2 = CLAMP(v2 - (GraphMeterMode_pixPerRow * h), 0, GraphMeterMode_pixPerRow);
+         attrset(CRT_colors[GraphData_getColor(data, index, h, exp)]);
+         mvaddstr(y+line, x+col, GraphMeterMode_dots[col1 * (GraphMeterMode_pixPerRow + 1) + col2]);
       }
    }
    attrset(CRT_colors[RESET_COLOR]);
@@ -543,7 +823,7 @@ MeterClass BlankMeter_class = {
    .updateValues = BlankMeter_updateValues,
    .defaultMode = TEXT_METERMODE,
    .maxItems = 0,
-   .total = 100.0,
+   .full = 1.0,
    .attributes = BlankMeter_attributes,
    .name = "Blank",
    .uiName = "Blank",

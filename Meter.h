@@ -14,6 +14,7 @@ in the source distribution for its full text.
 #define GRAPH_DELAY (DEFAULT_DELAY/2)
 
 #define GRAPH_HEIGHT 4 /* Unit: rows (lines) */
+#define GRAPH_NUM_RECORDS 256
 
 #include "ListItem.h"
 
@@ -35,7 +36,12 @@ typedef struct MeterClass_ {
    const Meter_Draw draw;
    const Meter_UpdateValues updateValues;
    const int defaultMode;
-   const double total;
+   // For "full" variable, sign matters.
+   // >0: Full/maximum value is stable (at least for a short duration). Will
+   //     draw as percent graph. e.g. CPU & swap.
+   // <0: No stable maximum. Will draw with dynamic scale. e.g. loadavg.
+   // (full == 0) will bring weird behavior for now. Avoid.
+   const double full;
    const int* attributes;
    const char* name;
    const char* uiName;
@@ -58,6 +64,7 @@ typedef struct MeterClass_ {
 #define Meter_defaultMode(this_)       As_Meter(this_)->defaultMode
 #define Meter_getItems(this_)          As_Meter(this_)->curItems
 #define Meter_setItems(this_, n_)      As_Meter(this_)->curItems = (n_)
+#define Meter_getMaxItems(this_)       As_Meter(this_)->maxItems
 #define Meter_attributes(this_)        As_Meter(this_)->attributes
 #define Meter_name(this_)              As_Meter(this_)->name
 #define Meter_uiName(this_)            As_Meter(this_)->uiName
@@ -73,7 +80,7 @@ struct Meter_ {
    int h;
    struct ProcessList_* pl;
    double* values;
-   double total;
+   double full;
 };
 
 typedef struct MeterMode_ {
@@ -93,7 +100,12 @@ typedef enum {
 
 typedef struct GraphData_ {
    struct timeval time;
-   double values[METER_BUFFER_LEN];
+   double* values;
+   double* stack1;
+   double* stack2;
+   int* colors;
+   unsigned int colorRowSize;
+   int drawOffset;
 } GraphData;
 
 
@@ -106,6 +118,27 @@ typedef struct GraphData_ {
 #ifndef CLAMP
 #define CLAMP(x,low,high) (((x)>(high))?(high):(((x)<(low))?(low):(x)))
 #endif
+
+#define IS_POWER_OF_2(x) ((x) > 0 && !((x) & ((x) - 1)))
+
+#ifndef __has_builtin
+# define __has_builtin(x) 0
+#endif
+#if (__has_builtin(__builtin_clz) || \
+    ((__GNUC__ > 3) || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)))
+# define HAS_BUILTIN_CLZ 1
+# define HAS_ILOG2 1
+/*
+ * ilog2(x): base-2 logarithm of an unsigned integer x, rounded down, but
+ *           ilog2(0U) yields undefined behavior.
+ * (You may use ilog2(x | 1) to define the (x == 0) behavior.)
+ */
+# define ilog2(x) ((sizeof(x) <= sizeof(unsigned int)) ? \
+     (CHAR_BIT*sizeof(unsigned int)-1-__builtin_clz(x)) : \
+     (sizeof(x) <= sizeof(unsigned long)) ? \
+     (CHAR_BIT*sizeof(unsigned long)-1-__builtin_clzl(x)) : \
+     (CHAR_BIT*sizeof(unsigned long long)-1-__builtin_clzll(x)))
+#endif // __has_builtin(__builtin_clz) || GNU C 3.4 or later
 
 extern MeterClass Meter_class;
 
@@ -120,6 +153,8 @@ void Meter_setCaption(Meter* this, const char* caption);
 void Meter_setMode(Meter* this, int modeIndex);
 
 ListItem* Meter_toListItem(Meter* this, bool moving);
+
+/* ---------- GraphData ---------- */
 
 /* ---------- TextMeterMode ---------- */
 
