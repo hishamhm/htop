@@ -148,10 +148,12 @@ extern char Process_pidFormat[20];
 
 typedef Process*(*Process_New)(struct Settings_*);
 typedef void (*Process_WriteField)(Process*, RichString*, ProcessField);
+typedef const char* (*Process_GetCommandStr)(const Process*);
 
 typedef struct ProcessClass_ {
    const ObjectClass super;
    const Process_WriteField writeField;
+   const Process_GetCommandStr getCommandStr;
 } ProcessClass;
 
 #define As_Process(this_)              ((ProcessClass*)((this_)->super.klass))
@@ -202,6 +204,8 @@ bool Process_changePriorityBy(Process* this, int delta);
 void Process_sendSignal(Process* this, int sgn);
 
 long Process_pidCompare(const void* v1, const void* v2);
+
+const char* Process_getCommandStr(const Process* p);
 
 long Process_compare(const void* v1, const void* v2);
 

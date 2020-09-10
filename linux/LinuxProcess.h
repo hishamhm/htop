@@ -85,6 +85,10 @@ typedef enum LinuxProcessFields {
 
 typedef struct LinuxProcess_ {
    Process super;
+   char *procComm;
+   char *procExe;
+   int procExeBasenameOffset;
+   int procCmdlineBasenameOffset;
    bool isKernelThread;
    IOPriority ioPriority;
    unsigned long int cminflt;
@@ -174,7 +178,19 @@ bool LinuxProcess_setIOPriority(LinuxProcess* this, IOPriority ioprio);
 void LinuxProcess_printDelay(float delay_percent, char* buffer, int n);
 #endif
 
+/* TASK_COMM_LEN is defined to be 16 for /proc/[pid]/comm in man proc(5), but it
+ * is not available in an userspace header - so define it. Note that when
+ * colorizing a basename with the comm prefix, the entire basename (not just the
+ * comm prefix) is colorized for better readability, and it is implicit that
+ * only (TASK_COMM_LEN - 1) could be comm */
+#define TASK_COMM_LEN 16
+
 void LinuxProcess_writeField(Process* this, RichString* str, ProcessField field);
+
+/* This function returns the string displayed in Command column, so that sorting
+ * happens on what is displayed - whether comm, full path, basename, etc.. So
+ * this follows LinuxProcess_writeField(COMM) and LinuxProcess_writeCommand */
+const char* LinuxProcess_getCommandStr(const Process *this);
 
 long LinuxProcess_compare(const void* v1, const void* v2);
 

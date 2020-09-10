@@ -690,6 +690,7 @@ static bool LinuxProcessList_readCmdlineFile(Process* process, const char* dirna
    int amtRead = xread(fd, command, sizeof(command) - 1);
    close(fd);
    int tokenEnd = 0; 
+   int tokenStart = 0;
    int lastChar = 0;
    if (amtRead == 0) {
       ((LinuxProcess*)process)->isKernelThread = true;
@@ -698,12 +699,20 @@ static bool LinuxProcessList_readCmdlineFile(Process* process, const char* dirna
       return false;
    }
    for (int i = 0; i < amtRead; i++) {
-      if (command[i] == '\0' || command[i] == '\n') {
-         if (tokenEnd == 0) {
+      /* newline used as delimiter - during display this is translated to space
+       * (see RichString_writeFrom) */
+      if (command[i] == '\0')
+         command[i] = '\n';
+
+      if (command[i] == '\n') {
+         if (tokenEnd == 0)
             tokenEnd = i;
-         }
-         command[i] = ' ';
       } else {
+         /* htop considers the next character after the last / that is before
+          * basenameOffset, as the start of the basename in cmdline - see
+          * Process_writeCommand */ 
+         if (!tokenEnd && command[i] == '/')
+            tokenStart = i + 1;
          lastChar = i;
       }
    }
@@ -714,6 +723,36 @@ static bool LinuxProcessList_readCmdlineFile(Process* process, const char* dirna
    process->basenameOffset = tokenEnd;
    setCommand(process, command, lastChar + 1);
 
+   LinuxProcess *lp = (LinuxProcess *)process;
+   lp->procCmdlineBasenameOffset = tokenStart;
+
+   /* /proc/[pid]/comm could change, so should be udpated */
+   if (lp->procComm)
+      free(lp->procComm);
+   xSnprintf(filename, MAX_NAME, "%s/%s/comm", dirname, name);
+   if ((fd = open(filename, O_RDONLY)) != -1 &&
+       (amtRead = xread(fd, command, sizeof(command) - 1)) > 0) {
+      close(fd);
+      command[amtRead - 1] = 0;
+      lp->procComm = xStrdup(command);
+   } else {
+      lp->procComm = NULL;
+   }
+         
+   /* execve could change /proc/[pid]/exe, so procExe should be udpated */
+   if (lp->procExe)
+      free(lp->procExe);
+   xSnprintf(command, sizeof(command), "%s/%s/exe", dirname, name);
+   if ((amtRead = readlink(command, filename, sizeof(filename) - 1)) > 0) {
+      filename[amtRead] = 0;
+      lp->procExe = xStrdup(filename);
+      /* exe is guaranteed to contain at least one /, but validate anyway */
+      while (amtRead && filename[--amtRead] != '/')
+         ;
+      lp->procExeBasenameOffset = amtRead + 1;
+   } else {
+      lp->procExe = NULL;
+   }
    return true;
 }
 
