@@ -8,4 +8,4 @@ os:
   - linux
   - osx
 
-script: ./autogen.sh && ./configure && make
+script: ./autogen.sh && ./configure CFLAGS="-O2 -fno-common" && make
