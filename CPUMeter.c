@@ -137,6 +137,15 @@ static void AllCPUsMeter_getRange(Meter* this, int* start, int* count) {
    }
 }
 
+static int MapClassnameToColumncount(Meter* this){
+   if (strchr(Meter_name(this), '4'))
+      return 4;
+   else if (strchr(Meter_name(this), '2'))
+      return 2;
+   else
+      return 1;
+}
+
 static void AllCPUsMeter_init(Meter* this) {
    int cpus = this->pl->cpuCount;
    if (!this->drawData)
@@ -152,10 +161,8 @@ static void AllCPUsMeter_init(Meter* this) {
    if (this->mode == 0)
       this->mode = BAR_METERMODE;
    int h = Meter_modes[this->mode]->h;
-   if (strchr(Meter_name(this), '2'))
-      this->h = h * ((count+1) / 2);
-   else
-      this->h = h * count;
+   int ncol = MapClassnameToColumncount(this);
+   this->h = h * ((count + ncol - 1)/ ncol);
 }
 
 static void AllCPUsMeter_done(Meter* this) {
@@ -175,10 +182,8 @@ static void AllCPUsMeter_updateMode(Meter* this, int mode) {
    for (int i = 0; i < count; i++) {
       Meter_setMode(meters[i], mode);
    }
-   if (strchr(Meter_name(this), '2'))
-      this->h = h * ((count+1) / 2);
-   else
-      this->h = h * count;
+   int ncol = MapClassnameToColumncount(this);
+   this->h = h * ((count + ncol - 1)/ ncol);
 }
 
 static void DualColCPUsMeter_draw(Meter* this, int x, int y, int w) {
@@ -209,6 +214,22 @@ static void SingleColCPUsMeter_draw(Meter* this, int x, int y, int w) {
    }
 }
 
+static void MultiColCPUsMeter_draw(Meter* this, int x, int y, int w){
+  Meter** meters = (Meter**) this->drawData;
+  int start, count;
+  AllCPUsMeter_getRange(this, &start, &count);
+  int ncol = MapClassnameToColumncount(this);
+  int colwidth = (w-ncol)/ncol + 1;
+  int diff = (w - (colwidth * ncol));
+  int nrows = (count + ncol - 1) / ncol;
+  for (int i = 0; i < count; i++){
+    int d = (i/nrows) > diff ? diff : (i / nrows) ; // dynamic spacer
+    int xpos = x + ((i / nrows) * colwidth) + d;
+    int ypos = y + ((i % nrows) * meters[0]->h);
+    meters[i]->draw(meters[i], xpos, ypos, colwidth);
+  }
+}
+
 MeterClass CPUMeter_class = {
    .super = {
       .extends = Class(Meter),
@@ -219,7 +240,7 @@ MeterClass CPUMeter_class = {
    .defaultMode = BAR_METERMODE,
    .maxItems = CPU_METER_ITEMCOUNT,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "CPU",
    .uiName = "CPU",
    .caption = "CPU",
@@ -234,7 +255,7 @@ MeterClass AllCPUsMeter_class = {
    },
    .defaultMode = CUSTOM_METERMODE,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "AllCPUs",
    .uiName = "CPUs (1/1)",
    .description = "CPUs (1/1): all CPUs",
@@ -253,7 +274,7 @@ MeterClass AllCPUs2Meter_class = {
    },
    .defaultMode = CUSTOM_METERMODE,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "AllCPUs2",
    .uiName = "CPUs (1&2/2)",
    .description = "CPUs (1&2/2): all CPUs in 2 shorter columns",
@@ -272,7 +293,7 @@ MeterClass LeftCPUsMeter_class = {
    },
    .defaultMode = CUSTOM_METERMODE,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "LeftCPUs",
    .uiName = "CPUs (1/2)",
    .description = "CPUs (1/2): first half of list",
@@ -291,7 +312,7 @@ MeterClass RightCPUsMeter_class = {
    },
    .defaultMode = CUSTOM_METERMODE,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "RightCPUs",
    .uiName = "CPUs (2/2)",
    .description = "CPUs (2/2): second half of list",
@@ -310,7 +331,7 @@ MeterClass LeftCPUs2Meter_class = {
    },
    .defaultMode = CUSTOM_METERMODE,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "LeftCPUs2",
    .uiName = "CPUs (1&2/4)",
    .description = "CPUs (1&2/4): first half in 2 shorter columns",
@@ -329,7 +350,7 @@ MeterClass RightCPUs2Meter_class = {
    },
    .defaultMode = CUSTOM_METERMODE,
    .total = 100.0,
-   .attributes = CPUMeter_attributes, 
+   .attributes = CPUMeter_attributes,
    .name = "RightCPUs2",
    .uiName = "CPUs (3&4/4)",
    .description = "CPUs (3&4/4): second half in 2 shorter columns",
@@ -340,3 +361,59 @@ MeterClass RightCPUs2Meter_class = {
    .done = AllCPUsMeter_done
 };
 
+MeterClass AllCPUs4Meter_class = {
+   .super = {
+      .extends = Class(Meter),
+      .delete = Meter_delete,
+      .display = CPUMeter_display
+   },
+   .defaultMode = CUSTOM_METERMODE,
+   .total = 100.0,
+   .attributes = CPUMeter_attributes,
+   .name = "AllCPUs4",
+   .uiName = "CPUs (1&2&3&4/4)",
+   .description = "CPUs (1&2&3&4/4): all CPUs in 4 shorter columns",
+   .caption = "CPU",
+   .draw = MultiColCPUsMeter_draw,
+   .init = AllCPUsMeter_init,
+   .updateMode = AllCPUsMeter_updateMode,
+   .done = AllCPUsMeter_done
+};
+
+MeterClass LeftCPUs4Meter_class = {
+   .super = {
+      .extends = Class(Meter),
+      .delete = Meter_delete,
+      .display = CPUMeter_display
+   },
+   .defaultMode = CUSTOM_METERMODE,
+   .total = 100.0,
+   .attributes = CPUMeter_attributes,
+   .name = "LeftCPUs4",
+   .uiName = "CPUs (1-4/8)",
+   .description = "CPUs (1-4/8): first half in 4 shorter columns",
+   .caption = "CPU",
+   .draw = MultiColCPUsMeter_draw,
+   .init = AllCPUsMeter_init,
+   .updateMode = AllCPUsMeter_updateMode,
+   .done = AllCPUsMeter_done
+};
+
+MeterClass RightCPUs4Meter_class = {
+   .super = {
+      .extends = Class(Meter),
+      .delete = Meter_delete,
+      .display = CPUMeter_display
+   },
+   .defaultMode = CUSTOM_METERMODE,
+   .total = 100.0,
+   .attributes = CPUMeter_attributes,
+   .name = "RightCPUs4",
+   .uiName = "CPUs (5-8/8)",
+   .description = "CPUs (5-8/8): second half in 4 shorter columns",
+   .caption = "CPU",
+   .draw = MultiColCPUsMeter_draw,
+   .init = AllCPUsMeter_init,
+   .updateMode = AllCPUsMeter_updateMode,
+   .done = AllCPUsMeter_done
+};
