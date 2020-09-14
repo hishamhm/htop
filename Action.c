@@ -13,6 +13,7 @@ in the source distribution for its full text.
 #include "CategoriesPanel.h"
 #include "CRT.h"
 #include "EnvScreen.h"
+#include "CommandScreen.h"
 #include "MainPanel.h"
 #include "OpenFilesScreen.h"
 #include "Process.h"
@@ -436,8 +437,8 @@ static const struct { const char* key; const char* info; } helpRight[] = {
    { .key = "      e: ", .info = "show process environment" },
    { .key = "      i: ", .info = "set IO priority" },
    { .key = "      l: ", .info = "list open files with lsof" },
+   { .key = "      L: ", .info = "show process command line" },
    { .key = "      s: ", .info = "trace syscalls with strace" },
-   { .key = "         ", .info = "" },
    { .key = " F2 C S: ", .info = "setup" },
    { .key = "   F1 h: ", .info = "show this help screen" },
    { .key = "  F10 q: ", .info = "quit" },
@@ -544,6 +545,16 @@ static Htop_Reaction actionShowEnvScreen(State* st) {
    return HTOP_REFRESH | HTOP_REDRAW_BAR;
 }
 
+static Htop_Reaction actionShowCommandScreen(State* st) {
+   Process* p = (Process*) Panel_getSelected(st->panel);
+   if (!p) return HTOP_OK;
+   CommandScreen* cmdScr = CommandScreen_new(p);
+   InfoScreen_run((InfoScreen*)cmdScr);
+   CommandScreen_delete((Object*)cmdScr);
+   clear();
+   CRT_enableDelay();
+   return HTOP_REFRESH | HTOP_REDRAW_BAR;
+}
 
 void Action_setBindings(Htop_Action* keys) {
    keys[KEY_RESIZE] = actionResize;
@@ -596,5 +607,6 @@ void Action_setBindings(Htop_Action* keys) {
    keys['U'] = actionUntagAll;
    keys['c'] = actionTagAllChildren;
    keys['e'] = actionShowEnvScreen;
+   keys['L'] = actionShowCommandScreen;
 }
 
