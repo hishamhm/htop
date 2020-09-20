@@ -116,7 +116,12 @@ static void Settings_defaultMeters(Settings* this) {
    }
    
    int r = 0;
-   if (this->cpuCount > 8) {
+   if (this->cpuCount > 32) {
+      this->columns[0].names[0] = xStrdup("LeftCPUs4");
+      this->columns[0].modes[0] = BAR_METERMODE;
+      this->columns[1].names[r] = xStrdup("RightCPUs4");
+      this->columns[1].modes[r++] = BAR_METERMODE;
+   } else if (this->cpuCount > 8) {
       this->columns[0].names[0] = xStrdup("LeftCPUs2");
       this->columns[0].modes[0] = BAR_METERMODE;
       this->columns[1].names[r] = xStrdup("RightCPUs2");
