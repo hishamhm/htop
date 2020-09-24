@@ -8,4 +8,13 @@ os:
   - linux
   - osx
 
+arch:
+  - amd64
+  - s390x
+
+before_script:
+  if [[ $(uname -m) == 's390x' ]]; then
+      sudo apt-get update && sudo apt-get install -y libncursesw5-dev ;
+  fi
+  
 script: ./autogen.sh && ./configure && make
