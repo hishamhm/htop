@@ -53,6 +53,8 @@ MeterModeId Header_readMeterMode(Header* this, int i, int column);
 
 void Header_reinit(Header* this);
 
+/* --- rounding shifts [#cols][corr][col+1]  --- */
+
 void Header_draw(const Header* this);
 
 int Header_calculateHeight(Header* this);
