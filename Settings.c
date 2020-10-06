@@ -244,8 +244,24 @@ static bool Settings_read(Settings* this, const char* fileName) {
       } else if (String_eq(option[0], "right_meter_modes")) {
          Settings_readMeterModes(this, option[1], 1);
          didReadMeters = true;
-      }
+      } else if (String_eq(option[0], "column_padding")) {
+        int nData;
+        char** data = String_split(option[1], ':', &nData);
+        if (data) {
+           if (nData >= 2) {
+              for (int i = 0; i != LAST_PROCESSFIELD; ++i) {
+                 if (!Process_fields[i].name) {
+                    continue;
+                 }
+                 if (!strcmp(Process_fields[i].name, data[0])) {
+                    Process_fields[i].width = atoi(data[1]);
+                 }
+              }
+           }
+           String_freeArray(data);
+        }
       String_freeArray(option);
+     }
    }
    fclose(fd);
    if (!didReadMeters) {
@@ -320,6 +336,12 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "left_meter_modes="); writeMeterModes(this, fd, 0);
    fprintf(fd, "right_meters="); writeMeters(this, fd, 1);
    fprintf(fd, "right_meter_modes="); writeMeterModes(this, fd, 1);
+   for (int i = 0; i != LAST_PROCESSFIELD; ++i) {
+      if (Process_fields[i].width <= 0) {
+        continue;
+     }
+     fprintf(fd, "column_padding=%s:%d\n", Process_fields[i].name, Process_fields[i].width);
+   }
    fclose(fd);
    return true;
 }

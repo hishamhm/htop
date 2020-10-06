@@ -135,6 +135,7 @@ typedef struct ProcessFieldData_ {
    const char* title;
    const char* description;
    int flags;
+   int width;
 } ProcessFieldData;
 
 // Implemented in platform-specific code:

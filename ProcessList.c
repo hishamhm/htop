@@ -128,6 +128,12 @@ void ProcessList_printHeader(ProcessList* this, RichString* header) {
    for (int i = 0; fields[i]; i++) {
       const char* field = Process_fields[fields[i]].title;
       if (!field) field = "- ";
+         if (Process_fields[fields[i]].width > 0) {
+         char* dummy;
+         if (asprintf(&dummy, "%-*s", Process_fields[fields[i]].width, field) != -1) {
+            field = dummy;
+         }
+      }
       if (!this->settings->treeView && this->settings->sortKey == fields[i])
          RichString_append(header, CRT_colors[PANEL_SELECTION_FOCUS], field);
       else
