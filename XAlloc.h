@@ -7,7 +7,34 @@
 #define _GNU_SOURCE
 #endif
 
+#ifdef HAVE_ERR_H
 #include <err.h>
+#else
+#include <unistd.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <errno.h>
+#include <string.h>
+
+static inline void
+err (int eval, const char *fmt, ...)
+{
+	char msg[0x100]; // arbitrary
+	va_list args;
+	va_start(args, fmt);
+	if (fmt != NULL) {
+		vsnprintf (msg, 0x100, fmt, args);
+		// htop is assumed to be the program name
+		// we also don't care if strerror requires freeing/is const or
+		// not since we're exiting after this anyways
+		fprintf(stderr, "htop: %s: %s\n", msg, strerror(errno));
+	} else {
+		fprintf(stderr, "htop: %s\n", strerror(errno));
+	}
+	va_end(args);
+	_exit (eval);
+}
+#endif
 #include <assert.h>
 #include <stdlib.h>
 

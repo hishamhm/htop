@@ -46,6 +46,9 @@ darwin*)
 solaris*)
    my_htop_platform=solaris
    ;;
+aix*|os400*)
+   my_htop_platform=aix
+   ;;
 *)
    my_htop_platform=unsupported
    ;;
@@ -62,7 +65,7 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([stdlib.h string.h strings.h sys/param.h sys/time.h unistd.h],[:],[
   missing_headers="$missing_headers $ac_header"
 ])
-AC_CHECK_HEADERS([execinfo.h],[:],[:])
+AC_CHECK_HEADERS([execinfo.h err.h getopt.h],[:],[:])
 
 AC_HEADER_MAJOR
 dnl glibc 2.25 deprecates 'major' and 'minor' in <sys/types.h> and requires to
@@ -86,7 +89,7 @@ AC_TYPE_UID_T
 AC_FUNC_CLOSEDIR_VOID
 AC_TYPE_SIGNAL
 AC_FUNC_STAT
-AC_CHECK_FUNCS([memmove strncasecmp strstr strdup])
+AC_CHECK_FUNCS([memmove strncasecmp strcasestr strstr strdup])
 
 save_cflags="${CFLAGS}"
 CFLAGS="${CFLAGS} -std=c99"
@@ -227,10 +230,10 @@ else
       missing_libraries="$missing_libraries libncurses"
    ))))
    
-   AC_CHECK_HEADERS([curses.h],[:],
-      [AC_CHECK_HEADERS([ncurses/curses.h],[:],
-         [AC_CHECK_HEADERS([ncurses/ncurses.h],[:],
-            [AC_CHECK_HEADERS([ncurses.h],[:],[missing_headers="$missing_headers $ac_header"])])])])
+   AC_CHECK_HEADERS([ncurses.h],[:],
+      [AC_CHECK_HEADERS([ncurses/ncurses.h],[:],
+         [AC_CHECK_HEADERS([ncurses/curses.h],[:],
+            [AC_CHECK_HEADERS([curses.h],[:],[missing_headers="$missing_headers $ac_header"])])])])
 fi
 
 if test "$my_htop_platform" = "freebsd"; then
@@ -245,6 +248,13 @@ if test "$my_htop_platform" = "solaris"; then
    AC_CHECK_LIB([kstat], [kstat_open], [], [missing_libraries="$missing_libraries libkstat"])
    AC_CHECK_LIB([proc], [Pgrab_error], [], [missing_libraries="$missing_libraries libproc"])
    AC_CHECK_LIB([malloc], [free], [], [missing_libraries="$missing_libraries libmalloc"])
+fi
+
+if test "$my_htop_platform" = "aix"; then
+   dnl Required for vsnprintf definition
+   CPPFLAGS="$CPPFLAGS -D_XOPEN_SOURCE=700"
+   dnl AIX has this, PASE does not
+   AC_CHECK_LIB([perfstat], [perfstat_memory_total])
 fi
 
 AC_ARG_ENABLE(linux_affinity, [AS_HELP_STRING([--enable-linux-affinity], [enable Linux sched_setaffinity and sched_getaffinity for affinity support, disables hwloc])], ,enable_linux_affinity="yes")
@@ -318,6 +328,7 @@ AM_CONDITIONAL([HTOP_DRAGONFLYBSD], [test "$my_htop_platform" = dragonflybsd])
 AM_CONDITIONAL([HTOP_OPENBSD], [test "$my_htop_platform" = openbsd])
 AM_CONDITIONAL([HTOP_DARWIN], [test "$my_htop_platform" = darwin])
 AM_CONDITIONAL([HTOP_SOLARIS], [test "$my_htop_platform" = solaris])
+AM_CONDITIONAL([HTOP_AIX], [test "$my_htop_platform" = aix])
 AM_CONDITIONAL([HTOP_UNSUPPORTED], [test "$my_htop_platform" = unsupported])
 AC_SUBST(my_htop_platform)
 AC_CONFIG_FILES([Makefile htop.1])

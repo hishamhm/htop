@@ -18,7 +18,9 @@ in the source distribution for its full text.
 #include "UsersTable.h"
 #include "Platform.h"
 
+#ifdef HAVE_GETOPT_H
 #include <getopt.h>
+#endif
 #include <locale.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -76,6 +78,7 @@ static CommandLineSettings parseArguments(int argc, char** argv) {
       .treeView = false,
    };
 
+#ifdef HAVE_GETOPT_H
    static struct option long_opts[] =
    {
       {"help",     no_argument,         0, 'h'},
@@ -91,8 +94,15 @@ static CommandLineSettings parseArguments(int argc, char** argv) {
    };
 
    int opt, opti=0;
+#else
+   int opt;
+#endif
    /* Parse arguments */
+#ifdef HAVE_GETOPT_H
    while ((opt = getopt_long(argc, argv, "hvCs:td:u:p:", long_opts, &opti))) {
+#else
+   while ((opt = getopt(argc, argv, "hvCs:td:u:p:"))) {
+#endif
       if (opt == EOF) break;
       switch (opt) {
          case 'h':
