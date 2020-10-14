@@ -51,6 +51,18 @@ solaris*)
    ;;
 esac
 
+# Signal tables for these architectures differ from other common ones
+# (x86, arm, and others) in Linux.
+AS_CASE(["$target_cpu"],
+[alpha*],
+   [AC_DEFINE([TARGET_CPU_ALPHA], 1, [Define to 1 if target CPU architecture is Alpha.])],
+[sparc*],
+   [AC_DEFINE([TARGET_CPU_SPARC], 1, [Define to 1 if target CPU architecture is SPARC.])],
+[mips*],
+   [AC_DEFINE([TARGET_CPU_MIPS], 1, [Define to 1 if target CPU architecture is MIPS.])],
+[hppa*],
+   [AC_DEFINE([TARGET_CPU_HPPA], 1, [Define to 1 if target CPU architecture is PA-RISC.])])
+
 # Checks for libraries.
 # ----------------------------------------------------------------------
 AC_CHECK_LIB([m], [ceil], [], [missing_libraries="$missing_libraries libm"])
