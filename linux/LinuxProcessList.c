@@ -670,12 +670,8 @@ static void LinuxProcessList_readDelayAcctData(LinuxProcessList* this, LinuxProc
 #endif
 
 static void setCommand(Process* process, const char* command, int len) {
-   if (process->comm && process->commLen >= len) {
-      strncpy(process->comm, command, len + 1);
-   } else {
-      free(process->comm);
-      process->comm = xStrdup(command);
-   }
+   free(process->comm);
+   process->comm = xStrdup(command);
    process->commLen = len;
 }
 
