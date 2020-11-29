@@ -332,7 +332,7 @@ Settings* Settings_new(int cpuCount) {
    this->direction = 1;
    this->hideThreads = false;
    this->shadowOtherUsers = false;
-   this->showThreadNames = false;
+   this->showThreadNames = true;
    this->hideKernelThreads = false;
    this->hideUserlandThreads = false;
    this->treeView = false;
