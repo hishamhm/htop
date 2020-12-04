@@ -46,6 +46,8 @@ typedef struct Settings_ {
    bool countCPUsFromZero;
    bool detailedCPUTime;
    bool treeView;
+   bool showParentsInFilter;
+   bool showChildrenInFilter;
    bool showProgramPath;
    bool hideThreads;
    bool shadowOtherUsers;
@@ -196,6 +198,10 @@ static bool Settings_read(Settings* this, const char* fileName) {
          this->direction = atoi(option[1]);
       } else if (String_eq(option[0], "tree_view")) {
          this->treeView = atoi(option[1]);
+      } else if (String_eq(option[0], "show_parents_in_filter")) {
+         this->showParentsInFilter = atoi(option[1]);
+      } else if (String_eq(option[0], "show_children_in_filter")) {
+         this->showChildrenInFilter = atoi(option[1]);
       } else if (String_eq(option[0], "hide_threads")) {
          this->hideThreads = atoi(option[1]);
       } else if (String_eq(option[0], "hide_kernel_threads")) {
@@ -309,6 +315,8 @@ bool Settings_write(Settings* this) {
    fprintf(fd, "highlight_megabytes=%d\n", (int) this->highlightMegabytes);
    fprintf(fd, "highlight_threads=%d\n", (int) this->highlightThreads);
    fprintf(fd, "tree_view=%d\n", (int) this->treeView);
+   fprintf(fd, "show_parents_in_filter=%d\n", (int) this->showParentsInFilter);
+   fprintf(fd, "show_children_in_filter=%d\n", (int) this->showChildrenInFilter);
    fprintf(fd, "header_margin=%d\n", (int) this->headerMargin);
    fprintf(fd, "detailed_cpu_time=%d\n", (int) this->detailedCPUTime);
    fprintf(fd, "cpu_count_from_zero=%d\n", (int) this->countCPUsFromZero);
@@ -336,6 +344,8 @@ Settings* Settings_new(int cpuCount) {
    this->hideKernelThreads = false;
    this->hideUserlandThreads = false;
    this->treeView = false;
+   this->showParentsInFilter = false;
+   this->showChildrenInFilter = false;
    this->highlightBaseName = false;
    this->highlightMegabytes = false;
    this->detailedCPUTime = false;
