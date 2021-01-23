@@ -155,6 +155,35 @@ static bool expandCollapse(Panel* panel) {
    return true;
 }
 
+static bool expandCollapseChilds(State *st) {
+   int size = Vector_size(st->pl->processes);
+   Process* current = (Process*) Panel_getSelected(st->panel);
+   current->showChildren = true;
+   for (int i = 0; i < size; i++) {
+      Process* p = (Process*) Vector_get(st->pl->processes, i);
+      if (p->ppid == current->pid)
+         p->showChildren = !p->showChildren;
+   }
+   return true;
+}
+
+static bool expandCollapseAll(State *st) {
+   int size = Vector_size(st->pl->processes);
+   Process* current = (Process*) Panel_getSelected(st->panel);
+   bool final = false;
+   if (current->pid != 1)
+      final = !current->showChildren;
+   else
+      final = !((Process*)Vector_get(st->pl->processes, 1))->showChildren;
+
+   for (int i = 0; i < size; i++) {
+      Process* p = (Process*) Vector_get(st->pl->processes, i);
+      if (p->ppid)
+         p->showChildren = final;
+   }
+   return true;
+}
+
 static bool collapseIntoParent(Panel* panel) {
    Process* p = (Process*) Panel_getSelected(panel);
    if (!p) return false;
@@ -274,6 +303,16 @@ static Htop_Reaction actionSetSortColumn(State* st) {
 static Htop_Reaction actionExpandOrCollapse(State* st) {
    bool changed = expandCollapse(st->panel);
    return changed ? HTOP_RECALCULATE : HTOP_OK;
+}
+
+static Htop_Reaction actionExpandOrCollapseChilds(State* st) {
+   bool changed = expandCollapseChilds(st);
+   return changed ? HTOP_REFRESH : HTOP_OK;
+}
+
+static Htop_Reaction actionExpandOrCollapseAll(State *st) {
+   bool changed = expandCollapseAll(st);
+   return changed ? HTOP_REFRESH : HTOP_OK;
 }
 
 static Htop_Reaction actionCollapseIntoParent(State* st) {
@@ -578,8 +617,8 @@ void Action_setBindings(Htop_Action* keys) {
    keys['k'] = actionKill;
    keys[KEY_RECLICK] = actionExpandOrCollapse;
    keys['+'] = actionExpandOrCollapse;
-   keys['='] = actionExpandOrCollapse;
-   keys['-'] = actionExpandOrCollapse;
+   keys['='] = actionExpandOrCollapseAll;
+   keys['-'] = actionExpandOrCollapseChilds;
    keys['\177'] = actionCollapseIntoParent;
    keys['u'] = actionFilterByUser;
    keys['F'] = Action_follow;
