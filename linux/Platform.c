@@ -28,6 +28,7 @@ in the source distribution for its full text.
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/sysinfo.h>
 
 /*{
 #include "Action.h"
@@ -135,9 +136,15 @@ int Platform_getUptime() {
    if (fd) {
       int n = fscanf(fd, "%64lf", &uptime);
       fclose(fd);
-      if (n <= 0) return 0;
+      if (n > 0) {
+         return (int) floor(uptime);
+      }
    }
-   return (int) floor(uptime);
+   struct sysinfo info;
+   if (!sysinfo(&info)) {
+      return (int) info.uptime;
+   }
+   return 0;
 }
 
 void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
@@ -150,6 +157,15 @@ void Platform_getLoadAverage(double* one, double* five, double* fifteen) {
       (void) total;
       assert(total == 6);
       fclose(fd);
+      return;
+   }
+   struct sysinfo info;
+   if (!sysinfo(&info)) {
+      double scale = 1. / (1 << SI_LOAD_SHIFT);
+      *one = info.loads[0] * scale;
+      *five = info.loads[1] * scale;
+      *fifteen = info.loads[2] * scale;
+      return;
    }
 }
 
