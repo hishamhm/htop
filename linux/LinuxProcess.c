@@ -13,6 +13,7 @@ in the source distribution for its full text.
 
 #include <stdlib.h>
 #include <unistd.h>
+#include <linux/unistd.h>
 #include <string.h>
 #include <sys/syscall.h>
 #include <time.h>
