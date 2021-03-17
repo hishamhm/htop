@@ -86,6 +86,7 @@ struct Meter_ {
    int h;
    struct ProcessList_* pl;
    double* values;
+   char** strings;
    double total;
 };
 
@@ -107,6 +108,7 @@ typedef enum {
 typedef struct GraphData_ {
    struct timeval time;
    double values[METER_BUFFER_LEN];
+   char* strings[METER_BUFFER_LEN];
 } GraphData;
 
 }*/
@@ -134,7 +136,9 @@ Meter* Meter_new(struct ProcessList_* pl, int param, MeterClass* type) {
    this->param = param;
    this->pl = pl;
    type->curItems = type->maxItems;
-   this->values = xCalloc(type->maxItems, sizeof(double));
+   this->values  = xCalloc(type->maxItems, sizeof(double));
+   this->strings = xCalloc(type->maxItems, sizeof(char*));
+   for( int i = 0; i < type->maxItems; ++i ) { this->strings[i] = NULL; }
    this->total = type->total;
    this->caption = xStrdup(type->caption);
    if (Meter_initFn(this))
@@ -184,6 +188,7 @@ void Meter_delete(Object* cast) {
    free(this->drawData);
    free(this->caption);
    free(this->values);
+   free(this->strings);
    free(this);
 }
 
