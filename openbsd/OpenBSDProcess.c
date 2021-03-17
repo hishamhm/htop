@@ -193,9 +193,7 @@ OpenBSDProcess* OpenBSDProcess_new(Settings* settings) {
 }
 
 void Process_delete(Object* cast) {
-   OpenBSDProcess* this = (OpenBSDProcess*) cast;
    Process_done((Process*)cast);
-   free(this);
 }
 
 void OpenBSDProcess_writeField(Process* this, RichString* str, ProcessField field) {
