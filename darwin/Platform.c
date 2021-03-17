@@ -15,6 +15,7 @@ in the source distribution for its full text.
 #include "ClockMeter.h"
 #include "HostnameMeter.h"
 #include "UptimeMeter.h"
+#include "UnameMeter.h"
 #include "DarwinProcessList.h"
 
 #include <stdlib.h>
@@ -108,9 +109,10 @@ MeterClass* Platform_meterTypes[] = {
    &MemoryMeter_class,
    &SwapMeter_class,
    &TasksMeter_class,
+   &UptimeMeter_class,
    &BatteryMeter_class,
    &HostnameMeter_class,
-   &UptimeMeter_class,
+   &UnameMeter_class,
    &AllCPUsMeter_class,
    &AllCPUs2Meter_class,
    &LeftCPUsMeter_class,
